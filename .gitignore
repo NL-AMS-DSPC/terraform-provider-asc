@@ -1,5 +1,7 @@
+.DS_Store
 .terraform/
 *.tfstate
 *.tfstate.*
 coverage.out
 terraform-provider-asc
+
