@@ -35,7 +35,7 @@ resource "asc_subnet" "example" {
 
 ### Optional
 
-- `tags` (Map of String)
+- `tags` (Map of String) Tags applied to the subnet. infra-gateway patches subnet tags in place, so changing them does not replace the subnet.
 
 ### Read-Only
 

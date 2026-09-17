@@ -101,3 +101,20 @@ type IgnitionCustomization struct {
 	Format string `json:"format"`
 	Config string `json:"config"`
 }
+
+// lifecycle and tags implement resourceView, the view the shared waiters and
+// the tag reconciler in wait.go and tags.go use. Every infra-gateway read model
+// reports the same status, lastError and tags triple, so each resource only
+// needs to point the shared helpers at its own fields.
+
+func (v VPC) lifecycle() (string, string) { return v.Status, v.LastError }
+
+func (v VPC) tags() []Tag { return v.Tags }
+
+func (s Subnet) lifecycle() (string, string) { return s.Status, s.LastError }
+
+func (s Subnet) tags() []Tag { return s.Tags }
+
+func (v VM) lifecycle() (string, string) { return v.Status, v.LastError }
+
+func (v VM) tags() []Tag { return v.Tags }

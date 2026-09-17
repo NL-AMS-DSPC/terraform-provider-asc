@@ -2,11 +2,13 @@ package provider
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 )
 
 func TestProviderMetadataAndSchema(t *testing.T) {
@@ -31,16 +33,35 @@ func TestProviderMetadataAndSchema(t *testing.T) {
 	if !ok || !password.Sensitive {
 		t.Fatalf("password attribute = %#v, want sensitive string", response.Schema.Attributes["password"])
 	}
-	if resources := implementation.Resources(context.Background()); len(resources) != 3 {
-		t.Fatalf("resources = %d, want exactly 3", len(resources))
+	// The registered set is asserted by name, not just by count, so a resource
+	// can neither go missing nor appear without this test being updated. Load
+	// balancers are deliberately absent: infra-gateway serves no read route for
+	// them, so no truthful resource is possible.
+	wantResources := []string{
+		"asc_vpc", "asc_subnet", "asc_virtual_machine",
+		"asc_vm_group", "asc_volume", "asc_volume_attachment",
 	}
-	dataSources := implementation.DataSources(context.Background())
-	if len(dataSources) != 1 {
-		t.Fatalf("data sources = %d, want exactly 1", len(dataSources))
+	var gotResources []string
+	for _, factory := range implementation.Resources(context.Background()) {
+		var metadata resource.MetadataResponse
+		factory().Metadata(context.Background(), resource.MetadataRequest{ProviderTypeName: "asc"}, &metadata)
+		gotResources = append(gotResources, metadata.TypeName)
 	}
-	var dataSourceMetadata datasource.MetadataResponse
-	dataSources[0]().Metadata(context.Background(), datasource.MetadataRequest{ProviderTypeName: "asc"}, &dataSourceMetadata)
-	if dataSourceMetadata.TypeName != "asc_skus" {
-		t.Fatalf("data source type = %q, want asc_skus", dataSourceMetadata.TypeName)
+	if !slices.Equal(gotResources, wantResources) {
+		t.Fatalf("resources = %v, want %v", gotResources, wantResources)
+	}
+
+	wantDataSources := []string{
+		"asc_skus", "asc_vpc", "asc_subnet", "asc_virtual_machine",
+		"asc_vm_group", "asc_volume",
+	}
+	var gotDataSources []string
+	for _, factory := range implementation.DataSources(context.Background()) {
+		var metadata datasource.MetadataResponse
+		factory().Metadata(context.Background(), datasource.MetadataRequest{ProviderTypeName: "asc"}, &metadata)
+		gotDataSources = append(gotDataSources, metadata.TypeName)
+	}
+	if !slices.Equal(gotDataSources, wantDataSources) {
+		t.Fatalf("data sources = %v, want %v", gotDataSources, wantDataSources)
 	}
 }

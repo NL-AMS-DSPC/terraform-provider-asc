@@ -34,7 +34,7 @@ resource "asc_vpc" "example" {
 
 ### Optional
 
-- `tags` (Map of String)
+- `tags` (Map of String) Tags applied to the VPC. infra-gateway patches VPC tags in place, so changing them does not replace the VPC. The tags on an inline subnet are part of the replacement-forcing subnets list.
 
 ### Read-Only
 

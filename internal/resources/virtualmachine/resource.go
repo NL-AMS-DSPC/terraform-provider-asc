@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -32,6 +31,7 @@ var (
 type resourceClient interface {
 	CreateVM(context.Context, client.CreateVMRequest) (client.VM, error)
 	GetVM(context.Context, string) (client.VM, error)
+	UpdateVMTags(context.Context, string, []client.Tag, []client.Tag) (client.VM, error)
 	DeleteVM(context.Context, string) error
 }
 
@@ -111,6 +111,13 @@ func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, res
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	replaceString := []planmodifier.String{stringplanmodifier.RequiresReplace()}
+	// An attribute that is both Optional and Computed plans as unknown whenever
+	// the configuration leaves it out, which on its own would look like a change
+	// and make RequiresReplace destroy the machine on every update. Keeping the
+	// prior value first means replacement is only forced when the configuration
+	// really asks for a different one.
+	keepOrReplaceString := []planmodifier.String{stringplanmodifier.UseStateForUnknown(), stringplanmodifier.RequiresReplace()}
+	keepOrReplaceBool := []planmodifier.Bool{boolplanmodifier.UseStateForUnknown(), boolplanmodifier.RequiresReplace()}
 	computedSKU := map[string]schema.Attribute{
 		"id": schema.StringAttribute{Computed: true}, "name": schema.StringAttribute{Computed: true},
 		"family": schema.StringAttribute{Computed: true}, "threads": schema.Int64Attribute{Computed: true},
@@ -140,16 +147,21 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"sku":    schema.SingleNestedAttribute{Computed: true, Attributes: computedSKU},
 			"vpc_id": schema.StringAttribute{Required: true, PlanModifiers: replaceString},
 			"image": schema.StringAttribute{
-				Optional: true, Computed: true, PlanModifiers: replaceString,
+				Optional: true, Computed: true, PlanModifiers: keepOrReplaceString,
 			},
 			"status":     schema.StringAttribute{Computed: true},
 			"last_error": schema.StringAttribute{Computed: true},
 			"tags": schema.MapAttribute{
+				Description: "Tags applied to the virtual machine. infra-gateway patches virtual " +
+					"machine tags in place, so changing them does not replace the machine.",
 				Optional: true, ElementType: types.StringType,
-				PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplace()},
 			},
-			"attached_volumes": schema.ListAttribute{Computed: true, ElementType: types.StringType},
-			"os":               schema.SingleNestedAttribute{Computed: true, Attributes: computedOS},
+			"attached_volumes": schema.ListAttribute{
+				Description: "Names of the volumes attached to the machine, sorted. infra-gateway " +
+					"assembles this list from a map, so it is sorted here to keep state stable.",
+				Computed: true, ElementType: types.StringType,
+			},
+			"os": schema.SingleNestedAttribute{Computed: true, Attributes: computedOS},
 			"customization": schema.SingleNestedAttribute{
 				Optional: true, Sensitive: true,
 				PlanModifiers: []planmodifier.Object{objectplanmodifier.RequiresReplace()},
@@ -172,7 +184,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			},
 			"enable_logging": schema.BoolAttribute{
 				Optional: true, Computed: true,
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
+				PlanModifiers: keepOrReplaceBool,
 			},
 		},
 	}
@@ -228,7 +240,35 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (r *Resource) Update(context.Context, resource.UpdateRequest, *resource.UpdateResponse) {}
+// Update handles the one field infra-gateway can change on a live virtual
+// machine. sku_id is deliberately not in-place: the request_vm_resizing slice
+// latches isResizingRequested on the first resize and never clears it, so a
+// machine accepts exactly one resize for its whole lifetime and every later one
+// is refused. An in-place sku_id update would therefore work once and then fail
+// permanently, so it forces replacement instead and tags are the only thing
+// that reaches here.
+func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan, state Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	current := common.TagsToClient(ctx, state.Tags, &resp.Diagnostics)
+	desired := common.TagsToClient(ctx, plan.Tags, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	updated, err := r.client.UpdateVMTags(ctx, state.Name.ValueString(), current, desired)
+	if err != nil {
+		resp.Diagnostics.AddError("Error updating virtual machine tags", err.Error())
+		return
+	}
+	setFromVM(ctx, &plan, updated, &resp.Diagnostics)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
 
 func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state Model

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -12,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -30,6 +30,7 @@ var (
 type resourceClient interface {
 	CreateVPC(context.Context, client.CreateVPCRequest) (client.VPC, error)
 	GetVPC(context.Context, string) (client.VPC, error)
+	UpdateVPCTags(context.Context, string, []client.Tag, []client.Tag) (client.VPC, error)
 	DeleteVPC(context.Context, string) error
 }
 
@@ -101,13 +102,19 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 					"last_error": schema.StringAttribute{Computed: true},
 					"tags":       schema.MapAttribute{Optional: true, ElementType: types.StringType},
 				}},
-				PlanModifiers: []planmodifier.List{listplanmodifier.RequiresReplace()},
-				Validators:    []validator.List{listvalidator.SizeAtLeast(1)},
+				PlanModifiers: []planmodifier.List{listplanmodifier.RequiresReplaceIf(
+					inlineSubnetsRequireReplacement,
+					"Changing an inline subnet replaces the VPC.",
+					"Changing an inline subnet replaces the VPC.",
+				)},
+				Validators: []validator.List{listvalidator.SizeAtLeast(1)},
 			},
 			"tags": schema.MapAttribute{
-				Optional:      true,
-				ElementType:   types.StringType,
-				PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplace()},
+				Description: "Tags applied to the VPC. infra-gateway patches VPC tags in place, " +
+					"so changing them does not replace the VPC. The tags on an inline subnet are " +
+					"part of the replacement-forcing subnets list.",
+				Optional:    true,
+				ElementType: types.StringType,
 			},
 		},
 	}
@@ -170,7 +177,31 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (r *Resource) Update(context.Context, resource.UpdateRequest, *resource.UpdateResponse) {}
+// Update handles the one field infra-gateway can change on a live VPC. Every
+// other attribute forces replacement, so tags are the only thing that reaches
+// here.
+func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan, state Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	current := common.TagsToClient(ctx, state.Tags, &resp.Diagnostics)
+	desired := common.TagsToClient(ctx, plan.Tags, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	updated, err := r.client.UpdateVPCTags(ctx, state.Name.ValueString(), current, desired)
+	if err != nil {
+		resp.Diagnostics.AddError("Error updating VPC tags", err.Error())
+		return
+	}
+	setFromVPC(ctx, &plan, updated, true, &resp.Diagnostics)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
 
 func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state Model
@@ -185,6 +216,52 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 
 func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("name"), req, resp)
+}
+
+// inlineSubnetsRequireReplacement fires only when a configured field of an
+// inline subnet changed.
+//
+// A blanket list RequiresReplace cannot be used here. The nested id, urn,
+// vpc_id, status and last_error attributes are computed, so the planned list
+// carries them as unknown whenever anything else on the VPC changes; comparing
+// the whole planned list against prior state would then report a difference and
+// replace the VPC for an unrelated tag edit. Only the fields the configuration
+// actually sets are compared, which is what "infra-gateway cannot change an
+// inline subnet in place" really means.
+func inlineSubnetsRequireReplacement(ctx context.Context, req planmodifier.ListRequest, resp *listplanmodifier.RequiresReplaceIfFuncResponse) {
+	if req.ConfigValue.IsUnknown() {
+		// The inline subnets are not known until apply, so they cannot be
+		// proven unchanged and an inline subnet change is not appliable in
+		// place. Replacing is the honest answer.
+		resp.RequiresReplace = true
+		return
+	}
+
+	configured := configuredInlineSubnets(ctx, req.ConfigValue, &resp.Diagnostics)
+	prior := configuredInlineSubnets(ctx, req.StateValue, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.RequiresReplace = !slices.Equal(configured, prior)
+}
+
+// configuredInlineSubnets projects the list onto the fields a configuration can
+// set, in order, so two lists can be compared without the computed attributes
+// getting in the way.
+func configuredInlineSubnets(ctx context.Context, value types.List, diags *diag.Diagnostics) []string {
+	if value.IsNull() || value.IsUnknown() {
+		return nil
+	}
+	var models []inlineSubnetModel
+	diags.Append(value.ElementsAs(ctx, &models, false)...)
+	if diags.HasError() {
+		return nil
+	}
+	result := make([]string, 0, len(models))
+	for _, model := range models {
+		result = append(result, fmt.Sprintf("%s|%s|%s|%s", model.Name, model.CIDR, model.Type, model.Tags))
+	}
+	return result
 }
 
 func inlineSubnetsToClient(ctx context.Context, value types.List, diags *diag.Diagnostics) []client.CreateSubnetRequest {
