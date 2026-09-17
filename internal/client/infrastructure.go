@@ -2,64 +2,47 @@ package client
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 )
 
-func (c *Runtime) CreateVPC(ctx context.Context, request CreateVPCRequest) (VPC, error) {
-	operationCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
-	defer cancel()
-	for {
-		err := c.post(operationCtx, "/vpcs/", request)
-		if err == nil {
-			return c.waitForVPCPresent(operationCtx, request.Name)
-		}
-		if !errors.Is(err, ErrResourceConflict) {
-			return VPC{}, err
-		}
+const (
+	vpcKind    = "VPC"
+	subnetKind = "subnet"
+	vmKind     = "VM"
+)
 
-		current, getErr := c.GetVPC(operationCtx, request.Name)
-		switch {
-		case getErr == nil && !strings.EqualFold(current.Status, "deleting"):
-			return VPC{}, fmt.Errorf("create VPC %q: %w", request.Name, err)
-		case getErr == nil:
-			if waitErr := c.waitForVPCAbsent(operationCtx, request.Name); waitErr != nil {
-				return VPC{}, waitErr
-			}
-		case errors.Is(getErr, ErrResourceNotFound):
-			// The read projector is absent but the independent name reservation
-			// is stale. Only the typed 409 makes this retry safe.
-		default:
-			return VPC{}, fmt.Errorf("inspect conflicting VPC %q: %w", request.Name, getErr)
-		}
-		if err := c.waitPoll(operationCtx); err != nil {
-			return VPC{}, fmt.Errorf("retry VPC %q after conflict: %w", request.Name, err)
-		}
-	}
+func (c *Runtime) CreateVPC(ctx context.Context, request CreateVPCRequest) (VPC, error) {
+	return createWithNameReservation(ctx, c, vpcKind, request.Name,
+		func(ctx context.Context) error { return c.post(ctx, "/vpcs/", request) },
+		c.vpcReader(request.Name),
+	)
 }
 
 func (c *Runtime) GetVPC(ctx context.Context, name string) (VPC, error) {
 	var result VPC
-	err := c.get(ctx, "/vpcs/"+escapedPathSegment(name), &result)
+	err := c.get(ctx, vpcPath(name), &result)
 	return result, err
 }
 
+// UpdateVPCTags moves a VPC's tags from current to desired. The gateway applies
+// a patch rather than a replacement, so reconcileTags turns a removed key into
+// an explicit empty-valued entry and then reads the result back.
+func (c *Runtime) UpdateVPCTags(ctx context.Context, name string, current, desired []Tag) (VPC, error) {
+	return reconcileTags(ctx, c, vpcKind, name, vpcPath(name), current, desired, c.vpcReader(name))
+}
+
 func (c *Runtime) DeleteVPC(ctx context.Context, name string) error {
-	operationCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
-	defer cancel()
-	if err := c.delete(operationCtx, "/vpcs/"+escapedPathSegment(name)); err != nil {
-		if errors.Is(err, ErrResourceNotFound) {
-			return nil
-		}
-		return err
-	}
-	return c.waitForVPCAbsent(operationCtx, name)
+	return deleteAndWait(ctx, c, vpcKind, name,
+		func(ctx context.Context) error { return c.delete(ctx, vpcPath(name)) },
+		c.vpcReader(name),
+	)
 }
 
 func (c *Runtime) CreateSubnet(ctx context.Context, vpcName string, request CreateSubnetRequest) (Subnet, error) {
-	if err := c.post(ctx, fmt.Sprintf("/vpcs/%s/subnets/", escapedPathSegment(vpcName)), request); err != nil {
+	if err := c.post(ctx, subnetsPath(vpcName), request); err != nil {
 		return Subnet{}, err
 	}
 	return c.GetSubnet(ctx, vpcName, request.Name)
@@ -67,10 +50,12 @@ func (c *Runtime) CreateSubnet(ctx context.Context, vpcName string, request Crea
 
 func (c *Runtime) ListSubnets(ctx context.Context, vpcName string) ([]Subnet, error) {
 	var result []Subnet
-	err := c.get(ctx, fmt.Sprintf("/vpcs/%s/subnets/", escapedPathSegment(vpcName)), &result)
+	err := c.get(ctx, subnetsPath(vpcName), &result)
 	return result, err
 }
 
+// GetSubnet reads one subnet by name. infra-gateway serves no single-subnet
+// route, so the VPC's subnets are listed and matched on the exact name.
 func (c *Runtime) GetSubnet(ctx context.Context, vpcName, subnetName string) (Subnet, error) {
 	subnets, err := c.ListSubnets(ctx, vpcName)
 	if err != nil {
@@ -84,141 +69,71 @@ func (c *Runtime) GetSubnet(ctx context.Context, vpcName, subnetName string) (Su
 	return Subnet{}, fmt.Errorf("%w: subnet %q in VPC %q", ErrResourceNotFound, subnetName, vpcName)
 }
 
+// UpdateSubnetTags moves a subnet's tags from current to desired.
+func (c *Runtime) UpdateSubnetTags(ctx context.Context, vpcName, subnetName string, current, desired []Tag) (Subnet, error) {
+	return reconcileTags(ctx, c, subnetKind, subnetName, subnetPath(vpcName, subnetName), current, desired,
+		func(ctx context.Context) (Subnet, error) { return c.GetSubnet(ctx, vpcName, subnetName) })
+}
+
 func (c *Runtime) DeleteSubnet(ctx context.Context, vpcName, subnetName string) error {
-	return c.delete(ctx, fmt.Sprintf("/vpcs/%s/subnets/%s", escapedPathSegment(vpcName), escapedPathSegment(subnetName)))
+	return c.delete(ctx, subnetPath(vpcName, subnetName))
 }
 
 func (c *Runtime) CreateVM(ctx context.Context, request CreateVMRequest) (VM, error) {
-	operationCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
-	defer cancel()
-	for {
-		err := c.post(operationCtx, "/vms/", request)
-		if err == nil {
-			return c.waitForVMPresent(operationCtx, request.Name)
-		}
-		if !errors.Is(err, ErrResourceConflict) {
-			return VM{}, err
-		}
-
-		current, getErr := c.GetVM(operationCtx, request.Name)
-		switch {
-		case getErr == nil && !strings.EqualFold(current.Status, "deleting"):
-			return VM{}, fmt.Errorf("create VM %q: %w", request.Name, err)
-		case getErr == nil:
-			if waitErr := c.waitForVMAbsent(operationCtx, request.Name); waitErr != nil {
-				return VM{}, waitErr
-			}
-		case errors.Is(getErr, ErrResourceNotFound):
-			// Retry only the typed stale-reservation conflict.
-		default:
-			return VM{}, fmt.Errorf("inspect conflicting VM %q: %w", request.Name, getErr)
-		}
-		if err := c.waitPoll(operationCtx); err != nil {
-			return VM{}, fmt.Errorf("retry VM %q after conflict: %w", request.Name, err)
-		}
-	}
+	return createWithNameReservation(ctx, c, vmKind, request.Name,
+		func(ctx context.Context) error { return c.post(ctx, "/vms/", request) },
+		c.vmReader(request.Name),
+	)
 }
 
+// GetVM reads one virtual machine by name.
+//
+// The attached volumes are sorted before they leave the client. The read model
+// assembles that slice by ranging over a Go map
+// (infra-gateway cqrs/queries/get_vm/query.go), so the order differs between two
+// reads of an unchanged machine and an unsorted list would surface as a diff no
+// configuration change can settle.
 func (c *Runtime) GetVM(ctx context.Context, name string) (VM, error) {
 	var result VM
-	err := c.get(ctx, "/vms/"+escapedPathSegment(name), &result)
-	return result, err
+	if err := c.get(ctx, vmPath(name), &result); err != nil {
+		return VM{}, err
+	}
+	slices.Sort(result.AttachedVolumes)
+	return result, nil
+}
+
+// UpdateVMTags moves a virtual machine's tags from current to desired. The
+// PATCH response echoes only the patched keys, so reconcileTags discards it and
+// takes state from the authoritative read instead.
+func (c *Runtime) UpdateVMTags(ctx context.Context, name string, current, desired []Tag) (VM, error) {
+	return reconcileTags(ctx, c, vmKind, name, vmPath(name), current, desired, c.vmReader(name))
 }
 
 func (c *Runtime) DeleteVM(ctx context.Context, name string) error {
-	operationCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
-	defer cancel()
-	if err := c.delete(operationCtx, "/vms/"+escapedPathSegment(name)); err != nil {
-		if errors.Is(err, ErrResourceNotFound) {
-			return nil
-		}
-		return err
-	}
-	return c.waitForVMAbsent(operationCtx, name)
+	return deleteAndWait(ctx, c, vmKind, name,
+		func(ctx context.Context) error { return c.delete(ctx, vmPath(name)) },
+		c.vmReader(name),
+	)
 }
 
-func (c *Runtime) waitForVPCPresent(ctx context.Context, name string) (VPC, error) {
-	for {
-		current, err := c.GetVPC(ctx, name)
-		if err == nil {
-			if stateErr := terminalStateError("VPC", name, current.Status, current.LastError); stateErr != nil {
-				return VPC{}, stateErr
-			}
-			if !strings.EqualFold(current.Status, "deleting") {
-				return current, nil
-			}
-			if err := c.waitPoll(ctx); err != nil {
-				return VPC{}, fmt.Errorf("wait for created VPC %q: %w", name, err)
-			}
-			continue
-		}
-		if !errors.Is(err, ErrResourceNotFound) {
-			return VPC{}, fmt.Errorf("read created VPC %q: %w", name, err)
-		}
-		if err := c.waitPoll(ctx); err != nil {
-			return VPC{}, fmt.Errorf("wait for created VPC %q: %w", name, err)
-		}
-	}
+func (c *Runtime) vpcReader(name string) readFunc[VPC] {
+	return func(ctx context.Context) (VPC, error) { return c.GetVPC(ctx, name) }
 }
 
-func (c *Runtime) waitForVMPresent(ctx context.Context, name string) (VM, error) {
-	for {
-		current, err := c.GetVM(ctx, name)
-		if err == nil {
-			if stateErr := terminalStateError("VM", name, current.Status, current.LastError); stateErr != nil {
-				return VM{}, stateErr
-			}
-			if !strings.EqualFold(current.Status, "deleting") {
-				return current, nil
-			}
-			if err := c.waitPoll(ctx); err != nil {
-				return VM{}, fmt.Errorf("wait for created VM %q: %w", name, err)
-			}
-			continue
-		}
-		if !errors.Is(err, ErrResourceNotFound) {
-			return VM{}, fmt.Errorf("read created VM %q: %w", name, err)
-		}
-		if err := c.waitPoll(ctx); err != nil {
-			return VM{}, fmt.Errorf("wait for created VM %q: %w", name, err)
-		}
-	}
+func (c *Runtime) vmReader(name string) readFunc[VM] {
+	return func(ctx context.Context) (VM, error) { return c.GetVM(ctx, name) }
 }
 
-func (c *Runtime) waitForVPCAbsent(ctx context.Context, name string) error {
-	for {
-		current, err := c.GetVPC(ctx, name)
-		if errors.Is(err, ErrResourceNotFound) {
-			return nil
-		}
-		if err != nil {
-			return fmt.Errorf("wait for VPC %q deletion: %w", name, err)
-		}
-		if stateErr := terminalStateError("VPC", name, current.Status, current.LastError); stateErr != nil {
-			return stateErr
-		}
-		if err := c.waitPoll(ctx); err != nil {
-			return fmt.Errorf("wait for VPC %q deletion: %w", name, err)
-		}
-	}
+func vpcPath(name string) string { return "/vpcs/" + escapedPathSegment(name) }
+
+func vmPath(name string) string { return "/vms/" + escapedPathSegment(name) }
+
+func subnetsPath(vpcName string) string {
+	return fmt.Sprintf("/vpcs/%s/subnets/", escapedPathSegment(vpcName))
 }
 
-func (c *Runtime) waitForVMAbsent(ctx context.Context, name string) error {
-	for {
-		current, err := c.GetVM(ctx, name)
-		if errors.Is(err, ErrResourceNotFound) {
-			return nil
-		}
-		if err != nil {
-			return fmt.Errorf("wait for VM %q deletion: %w", name, err)
-		}
-		if stateErr := terminalStateError("VM", name, current.Status, current.LastError); stateErr != nil {
-			return stateErr
-		}
-		if err := c.waitPoll(ctx); err != nil {
-			return fmt.Errorf("wait for VM %q deletion: %w", name, err)
-		}
-	}
+func subnetPath(vpcName, subnetName string) string {
+	return subnetsPath(vpcName) + escapedPathSegment(subnetName)
 }
 
 func terminalStateError(kind, name, status, lastError string) error {

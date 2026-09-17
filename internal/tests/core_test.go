@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"regexp"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -217,17 +218,22 @@ func TestVPCProvisioningReplacementWaitsForNameRelease(t *testing.T) {
 	deleting := false
 	deletionReads := 0
 
+	// The inline subnet drives the replacement. Tags are patched in place now,
+	// so changing one no longer replaces the VPC; the subnets list is the
+	// remaining configurable field that infra-gateway cannot change on a live
+	// VPC, and it keeps the name the same, which is what the name reservation
+	// under test needs.
 	currentVPC := func() client.VPC {
-		version := "one"
+		cidr := "10.0.0.0/25"
 		if posts >= 3 {
-			version = "two"
+			cidr = "10.0.0.0/26"
 		}
 		return client.VPC{
 			ID: "00000000-0000-4000-8000-000000000001", URN: "asc:vpc:test-vpc", Name: "test-vpc",
-			CIDR: "10.0.0.0/24", Status: "active", Tags: []client.Tag{{Key: "version", Value: version}},
+			CIDR: "10.0.0.0/24", Status: "active",
 			Subnets: []client.Subnet{{
 				ID: "00000000-0000-4000-8000-000000000002", URN: "asc:subnet:bootstrap", Name: "bootstrap",
-				VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.0/25", Type: "private", Status: "active",
+				VPCID: "00000000-0000-4000-8000-000000000001", CIDR: cidr, Type: "private", Status: "active",
 			}},
 		}
 	}
@@ -273,17 +279,16 @@ func TestVPCProvisioningReplacementWaitsForNameRelease(t *testing.T) {
 		},
 	})
 
-	config := func(version string) string {
+	config := func(cidr string) string {
 		return environment.providerConfig() + fmt.Sprintf(`
 resource "asc_vpc" "test" {
   name = "test-vpc"
-  subnets = [{ name = "bootstrap", cidr = "10.0.0.0/25", type = "private" }]
-  tags = { version = %q }
-}`, version)
+  subnets = [{ name = "bootstrap", cidr = %q, type = "private" }]
+}`, cidr)
 	}
 	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: providerFactories, Steps: []resource.TestStep{
-		{Config: config("one"), Check: resource.TestCheckResourceAttr("asc_vpc.test", "tags.version", "one")},
-		{Config: config("two"), Check: resource.TestCheckResourceAttr("asc_vpc.test", "tags.version", "two")},
+		{Config: config("10.0.0.0/25"), Check: resource.TestCheckResourceAttr("asc_vpc.test", "subnets.0.cidr", "10.0.0.0/25")},
+		{Config: config("10.0.0.0/26"), Check: resource.TestCheckResourceAttr("asc_vpc.test", "subnets.0.cidr", "10.0.0.0/26")},
 	}})
 
 	mu.Lock()
@@ -369,4 +374,223 @@ resource "asc_virtual_machine" "test" {
 	if posts != 3 {
 		t.Fatalf("POST count = %d, want 3 (initial, stale conflict, retry)", posts)
 	}
+}
+
+// taggedHandlers serves one resource whose tags start at current and move to
+// whatever a PATCH asks for, applying the gateway's own patch semantics: an
+// entry with an empty value deletes its key. It answers the PATCH the way the
+// virtual machine handler does, echoing only the patch entries, so a resource
+// that trusted the PATCH body instead of re-reading would fail these tests.
+func taggedTagStore(initial map[string]string) (func() []client.Tag, http.HandlerFunc) {
+	var mu sync.Mutex
+	tags := map[string]string{}
+	for key, value := range initial {
+		tags[key] = value
+	}
+
+	read := func() []client.Tag {
+		mu.Lock()
+		defer mu.Unlock()
+		keys := make([]string, 0, len(tags))
+		for key := range tags {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		result := make([]client.Tag, 0, len(keys))
+		for _, key := range keys {
+			result = append(result, client.Tag{Key: key, Value: tags[key]})
+		}
+		return result
+	}
+
+	patch := func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Tags []client.Tag `json:"tags"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		mu.Lock()
+		for _, tag := range body.Tags {
+			if tag.Value == "" {
+				delete(tags, tag.Key)
+				continue
+			}
+			tags[tag.Key] = tag.Value
+		}
+		mu.Unlock()
+		writeData(w, http.StatusOK, map[string]any{"tags": body.Tags})
+	}
+	return read, patch
+}
+
+func TestVPCTagsUpdateInPlace(t *testing.T) {
+	var deleted atomic.Bool
+	tags, patch := taggedTagStore(map[string]string{"env": "test", "owner": "platform"})
+	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
+		"POST /api/infra-gateway/vpcs/": func(w http.ResponseWriter, _ *http.Request) {
+			writeData(w, http.StatusCreated, map[string]string{"created": "test-vpc"})
+		},
+		"GET /api/infra-gateway/vpcs/test-vpc": func(w http.ResponseWriter, _ *http.Request) {
+			if deleted.Load() {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			writeData(w, http.StatusOK, client.VPC{
+				ID: "00000000-0000-4000-8000-000000000001", URN: "asc:vpc:test-vpc", Name: "test-vpc",
+				CIDR: "10.0.0.0/24", Status: "active", Tags: tags(),
+				Subnets: []client.Subnet{{
+					ID: "00000000-0000-4000-8000-000000000002", URN: "asc:subnet:bootstrap", Name: "bootstrap",
+					VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.0/25", Type: "private", Status: "active",
+				}},
+			})
+		},
+		"PATCH /api/infra-gateway/vpcs/test-vpc": patch,
+		"DELETE /api/infra-gateway/vpcs/test-vpc": func(w http.ResponseWriter, _ *http.Request) {
+			deleted.Store(true)
+			writeData(w, http.StatusOK, map[string]string{"deleted": "test-vpc"})
+		},
+	})
+
+	config := func(tags string) string {
+		return environment.providerConfig() + fmt.Sprintf(`
+resource "asc_vpc" "test" {
+  name = "test-vpc"
+  subnets = [{ name = "bootstrap", cidr = "10.0.0.0/25", type = "private" }]
+  tags = %s
+}`, tags)
+	}
+	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: providerFactories, Steps: []resource.TestStep{
+		{
+			Config: config(`{ env = "test", owner = "platform" }`),
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr("asc_vpc.test", "tags.env", "test"),
+				resource.TestCheckResourceAttr("asc_vpc.test", "tags.owner", "platform"),
+			),
+		},
+		{
+			// A changed value and a removed key in one step. The removal only
+			// lands if the provider sent an explicit empty-valued patch entry,
+			// and the surviving id proves the VPC was not replaced.
+			Config: config(`{ env = "prod" }`),
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr("asc_vpc.test", "tags.env", "prod"),
+				resource.TestCheckNoResourceAttr("asc_vpc.test", "tags.owner"),
+				resource.TestCheckResourceAttr("asc_vpc.test", "id", "00000000-0000-4000-8000-000000000001"),
+			),
+		},
+	}})
+}
+
+func TestSubnetTagsUpdateInPlace(t *testing.T) {
+	var deleted atomic.Bool
+	tags, patch := taggedTagStore(map[string]string{"env": "test"})
+	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
+		"POST /api/infra-gateway/vpcs/test-vpc/subnets/": func(w http.ResponseWriter, _ *http.Request) {
+			writeData(w, http.StatusCreated, map[string]string{"created": "test-subnet"})
+		},
+		"GET /api/infra-gateway/vpcs/test-vpc/subnets/": func(w http.ResponseWriter, _ *http.Request) {
+			if deleted.Load() {
+				writeData(w, http.StatusOK, []client.Subnet{})
+				return
+			}
+			writeData(w, http.StatusOK, []client.Subnet{{
+				ID: "00000000-0000-4000-8000-000000000002", URN: "asc:subnet:test-subnet", Name: "test-subnet",
+				VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.128/25", Type: "public",
+				Status: "active", Tags: tags(),
+			}})
+		},
+		"PATCH /api/infra-gateway/vpcs/test-vpc/subnets/test-subnet": patch,
+		"DELETE /api/infra-gateway/vpcs/test-vpc/subnets/test-subnet": func(w http.ResponseWriter, _ *http.Request) {
+			deleted.Store(true)
+			writeData(w, http.StatusOK, map[string]string{"deleted": "test-subnet"})
+		},
+	})
+
+	config := func(tags string) string {
+		return environment.providerConfig() + fmt.Sprintf(`
+resource "asc_subnet" "test" {
+  name = "test-subnet"
+  vpc_name = "test-vpc"
+  vpc_id = "00000000-0000-4000-8000-000000000001"
+  cidr = "10.0.0.128/25"
+  type = "public"
+  tags = %s
+}`, tags)
+	}
+	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: providerFactories, Steps: []resource.TestStep{
+		{Config: config(`{ env = "test" }`), Check: resource.TestCheckResourceAttr("asc_subnet.test", "tags.env", "test")},
+		{
+			Config: config(`{ env = "prod", tier = "public" }`),
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr("asc_subnet.test", "tags.env", "prod"),
+				resource.TestCheckResourceAttr("asc_subnet.test", "tags.tier", "public"),
+				resource.TestCheckResourceAttr("asc_subnet.test", "id", "00000000-0000-4000-8000-000000000002"),
+			),
+		},
+	}})
+}
+
+func TestVirtualMachineTagsUpdateInPlaceAndVolumesStaySorted(t *testing.T) {
+	tags, patch := taggedTagStore(map[string]string{"env": "test", "owner": "platform"})
+	var reads atomic.Int64
+	var deleted atomic.Bool
+	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
+		"POST /api/infra-gateway/vms/": func(w http.ResponseWriter, _ *http.Request) {
+			writeData(w, http.StatusCreated, map[string]string{"created": "test-vm"})
+		},
+		"GET /api/infra-gateway/vms/test-vm": func(w http.ResponseWriter, _ *http.Request) {
+			if deleted.Load() {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			// The gateway assembles the attachments from a map, so the order it
+			// serves them in changes between reads. Alternating here proves the
+			// provider sorts rather than storing whatever arrived.
+			volumes := []string{"vol-c", "vol-a", "vol-b"}
+			if reads.Add(1)%2 == 0 {
+				volumes = []string{"vol-b", "vol-c", "vol-a"}
+			}
+			writeData(w, http.StatusOK, client.VM{
+				URN: "asc:vm:test-vm", Name: "test-vm", VPCID: "00000000-0000-4000-8000-000000000001",
+				SKU: client.SKU{ID: "gp-2", Name: "general-purpose"}, Status: "active",
+				Tags: tags(), AttachedVolumes: volumes,
+			})
+		},
+		"PATCH /api/infra-gateway/vms/test-vm": patch,
+		"DELETE /api/infra-gateway/vms/test-vm": func(w http.ResponseWriter, _ *http.Request) {
+			deleted.Store(true)
+			writeData(w, http.StatusOK, map[string]string{"deleted": "test-vm"})
+		},
+	})
+
+	config := func(tags string) string {
+		return environment.providerConfig() + fmt.Sprintf(`
+resource "asc_virtual_machine" "test" {
+  name = "test-vm"
+  sku_id = "gp-2"
+  vpc_id = "00000000-0000-4000-8000-000000000001"
+  tags = %s
+}`, tags)
+	}
+	sortedVolumes := resource.ComposeAggregateTestCheckFunc(
+		resource.TestCheckResourceAttr("asc_virtual_machine.test", "attached_volumes.0", "vol-a"),
+		resource.TestCheckResourceAttr("asc_virtual_machine.test", "attached_volumes.1", "vol-b"),
+		resource.TestCheckResourceAttr("asc_virtual_machine.test", "attached_volumes.2", "vol-c"),
+	)
+	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: providerFactories, Steps: []resource.TestStep{
+		{
+			Config: config(`{ env = "test", owner = "platform" }`),
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr("asc_virtual_machine.test", "tags.env", "test"), sortedVolumes,
+			),
+		},
+		{
+			Config: config(`{ env = "prod" }`),
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr("asc_virtual_machine.test", "tags.env", "prod"),
+				resource.TestCheckNoResourceAttr("asc_virtual_machine.test", "tags.owner"),
+				resource.TestCheckResourceAttr("asc_virtual_machine.test", "urn", "asc:vm:test-vm"),
+				sortedVolumes,
+			),
+		},
+	}})
 }

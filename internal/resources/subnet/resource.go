@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -30,6 +29,7 @@ var (
 type resourceClient interface {
 	CreateSubnet(context.Context, string, client.CreateSubnetRequest) (client.Subnet, error)
 	GetSubnet(context.Context, string, string) (client.Subnet, error)
+	UpdateSubnetTags(context.Context, string, string, []client.Tag, []client.Tag) (client.Subnet, error)
 	DeleteSubnet(context.Context, string, string) error
 }
 
@@ -82,9 +82,10 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"status":     schema.StringAttribute{Computed: true},
 			"last_error": schema.StringAttribute{Computed: true},
 			"tags": schema.MapAttribute{
-				Optional:      true,
-				ElementType:   types.StringType,
-				PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplace()},
+				Description: "Tags applied to the subnet. infra-gateway patches subnet tags in " +
+					"place, so changing them does not replace the subnet.",
+				Optional:    true,
+				ElementType: types.StringType,
 			},
 		},
 	}
@@ -141,7 +142,31 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (r *Resource) Update(context.Context, resource.UpdateRequest, *resource.UpdateResponse) {}
+// Update handles the one field infra-gateway can change on a live subnet.
+// Every other attribute forces replacement, so tags are the only thing that
+// reaches here.
+func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan, state Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	current := common.TagsToClient(ctx, state.Tags, &resp.Diagnostics)
+	desired := common.TagsToClient(ctx, plan.Tags, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	updated, err := r.client.UpdateSubnetTags(ctx, state.VPCName.ValueString(), state.Name.ValueString(), current, desired)
+	if err != nil {
+		resp.Diagnostics.AddError("Error updating subnet tags", err.Error())
+		return
+	}
+	setFromSubnet(ctx, &plan, updated, &resp.Diagnostics)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
 
 func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state Model
