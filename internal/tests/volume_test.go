@@ -178,7 +178,8 @@ func TestVolumeProvisioning(t *testing.T) {
 		{Config: volumeConfig(environment, "10Gi", `{ env = "test" }`), PlanOnly: true},
 		// A resize and a tag change in the same apply, both in place.
 		{
-			Config: volumeConfig(environment, "20Gi", `{ env = "test", owner = "platform" }`),
+			Config:           volumeConfig(environment, "20Gi", `{ env = "test", owner = "platform" }`),
+			ConfigPlanChecks: inPlace("asc_volume.test"),
 			Check: resource.ComposeAggregateTestCheckFunc(
 				resource.TestCheckResourceAttr("asc_volume.test", "size", "20Gi"),
 				resource.TestCheckResourceAttr("asc_volume.test", "size_bytes", "21474836480"),
@@ -187,7 +188,8 @@ func TestVolumeProvisioning(t *testing.T) {
 		},
 		// Dropping a tag needs the explicit empty-valued patch entry.
 		{
-			Config: volumeConfig(environment, "20Gi", `{ env = "test" }`),
+			Config:           volumeConfig(environment, "20Gi", `{ env = "test" }`),
+			ConfigPlanChecks: inPlace("asc_volume.test"),
 			Check: resource.ComposeAggregateTestCheckFunc(
 				resource.TestCheckResourceAttr("asc_volume.test", "tags.%", "1"),
 				resource.TestCheckNoResourceAttr("asc_volume.test", "tags.owner"),

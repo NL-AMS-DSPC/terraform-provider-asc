@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/client"
 	ascprovider "github.com/nl-ams-dspc/terraform-provider-asc/internal/provider"
 )
@@ -65,6 +66,15 @@ provider "asc" {
   password  = "test-secret"
 }
 `, e.api.URL, e.auth.URL)
+}
+
+// inPlace asserts the step updates the resource instead of replacing it. The
+// assertion is explicit because a replacement still reaches the same end state
+// and would pass every attribute check while silently destroying the resource.
+func inPlace(address string) resource.ConfigPlanChecks {
+	return resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+		plancheck.ExpectResourceAction(address, plancheck.ResourceActionUpdate),
+	}}
 }
 
 func writeData(w http.ResponseWriter, status int, value any) {
@@ -470,7 +480,8 @@ resource "asc_vpc" "test" {
 			// A changed value and a removed key in one step. The removal only
 			// lands if the provider sent an explicit empty-valued patch entry,
 			// and the surviving id proves the VPC was not replaced.
-			Config: config(`{ env = "prod" }`),
+			Config:           config(`{ env = "prod" }`),
+			ConfigPlanChecks: inPlace("asc_vpc.test"),
 			Check: resource.ComposeAggregateTestCheckFunc(
 				resource.TestCheckResourceAttr("asc_vpc.test", "tags.env", "prod"),
 				resource.TestCheckNoResourceAttr("asc_vpc.test", "tags.owner"),
@@ -519,7 +530,8 @@ resource "asc_subnet" "test" {
 	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: providerFactories, Steps: []resource.TestStep{
 		{Config: config(`{ env = "test" }`), Check: resource.TestCheckResourceAttr("asc_subnet.test", "tags.env", "test")},
 		{
-			Config: config(`{ env = "prod", tier = "public" }`),
+			Config:           config(`{ env = "prod", tier = "public" }`),
+			ConfigPlanChecks: inPlace("asc_subnet.test"),
 			Check: resource.ComposeAggregateTestCheckFunc(
 				resource.TestCheckResourceAttr("asc_subnet.test", "tags.env", "prod"),
 				resource.TestCheckResourceAttr("asc_subnet.test", "tags.tier", "public"),
@@ -584,7 +596,8 @@ resource "asc_virtual_machine" "test" {
 			),
 		},
 		{
-			Config: config(`{ env = "prod" }`),
+			Config:           config(`{ env = "prod" }`),
+			ConfigPlanChecks: inPlace("asc_virtual_machine.test"),
 			Check: resource.ComposeAggregateTestCheckFunc(
 				resource.TestCheckResourceAttr("asc_virtual_machine.test", "tags.env", "prod"),
 				resource.TestCheckNoResourceAttr("asc_virtual_machine.test", "tags.owner"),
