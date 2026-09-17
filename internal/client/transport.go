@@ -59,7 +59,7 @@ func (c *Runtime) request(ctx context.Context, method, path string, input, outpu
 	if err != nil {
 		return fmt.Errorf("send infra-gateway request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
 		_, _ = io.Copy(io.Discard, resp.Body)

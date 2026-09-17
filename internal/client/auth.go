@@ -84,7 +84,7 @@ func (m *tokenManager) tokenFor(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("request access token: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return "", fmt.Errorf("authentication service returned HTTP %d", resp.StatusCode)
