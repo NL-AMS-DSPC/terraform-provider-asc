@@ -33,7 +33,7 @@ output "volume_size_bytes" {
 
 - `access_mode` (String) Access mode of the volume.
 - `annotations` (Map of String) Annotations infra-gateway reports for the volume.
-- `attached_to_vm` (String) Name of the virtual machine the volume is attached to, empty when it is detached.
+- `attached_to_vm` (String) Instance id of the virtual machine the volume is attached to, empty when it is detached. infra-gateway reports the machine's uuid here, not its name.
 - `labels` (Map of String) Labels infra-gateway reports for the volume.
 - `last_error` (String) Last error reported by infra-gateway, empty when there is none.
 - `size` (String) Capacity as infra-gateway spells it, for example "10Gi".

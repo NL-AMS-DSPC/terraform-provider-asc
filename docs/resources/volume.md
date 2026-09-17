@@ -42,7 +42,7 @@ resource "asc_volume" "example" {
 ### Read-Only
 
 - `annotations` (Map of String) Annotations infra-gateway reports for the volume.
-- `attached_to_vm` (String) Name of the virtual machine the volume is attached to, empty when it is detached.
+- `attached_to_vm` (String) Instance id of the virtual machine the volume is attached to, empty when it is detached. infra-gateway reports the machine's uuid here, not its name.
 - `labels` (Map of String) Labels infra-gateway reports for the volume.
 - `last_error` (String) Last error reported by infra-gateway, empty when there is none.
 - `size_bytes` (Number) Capacity in bytes. infra-gateway may echo back a different but numerically equal spelling of size, so this is the value to compare against.

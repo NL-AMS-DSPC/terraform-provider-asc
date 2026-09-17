@@ -96,7 +96,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"urn":            schema.StringAttribute{Description: "URN of the volume, which carries its uuid.", Computed: true},
 			"status":         schema.StringAttribute{Description: "Lifecycle status reported by infra-gateway.", Computed: true},
 			"last_error":     schema.StringAttribute{Description: "Last error reported by infra-gateway, empty when there is none.", Computed: true},
-			"attached_to_vm": schema.StringAttribute{Description: "Name of the virtual machine the volume is attached to, empty when it is detached.", Computed: true},
+			"attached_to_vm": schema.StringAttribute{Description: "Instance id of the virtual machine the volume is attached to, empty when it is detached. infra-gateway reports the machine's uuid here, not its name.", Computed: true},
 			"tags": schema.MapAttribute{
 				Description: "Tags applied to the volume. Tags are updated in place.",
 				Optional:    true, ElementType: types.StringType,

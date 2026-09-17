@@ -34,9 +34,23 @@ func (f *attachmentFixture) volume() client.Volume {
 	}
 }
 
+// appInstanceID is the value infra-gateway really puts in a volume's
+// attachedToVM: the machine's instance uuid, not its name. The fixture serves
+// it so the suite exercises the gateway's actual contract.
+const (
+	appInstanceID = "20000000-0000-4000-8000-000000000001"
+	appVMURN      = "asc:atos:compute:tenant:virtual_machine:" + appInstanceID
+)
+
 func (f *attachmentFixture) handlers(t *testing.T) map[string]http.HandlerFunc {
 	t.Helper()
 	return map[string]http.HandlerFunc{
+		"GET /api/infra-gateway/vms/app": func(w http.ResponseWriter, _ *http.Request) {
+			writeData(w, http.StatusOK, client.VM{
+				URN: appVMURN, Name: "app", VPCID: "00000000-0000-4000-8000-000000000001",
+				SKU: client.SKU{ID: "gp-2", Name: "general-purpose"}, Status: "active",
+			})
+		},
 		"POST /api/infra-gateway/volumes/": func(w http.ResponseWriter, _ *http.Request) {
 			writeData(w, http.StatusCreated, map[string]string{"created": "data"})
 		},
@@ -63,7 +77,7 @@ func (f *attachmentFixture) handlers(t *testing.T) map[string]http.HandlerFunc {
 		"POST /api/infra-gateway/volumes/data/attach/app": func(w http.ResponseWriter, _ *http.Request) {
 			f.mu.Lock()
 			f.status, f.reads = "attaching", 0
-			f.pending = func(f *attachmentFixture) { f.status, f.attachedToVM = "attached", "app" }
+			f.pending = func(f *attachmentFixture) { f.status, f.attachedToVM = "attached", appInstanceID }
 			f.mu.Unlock()
 			writeData(w, http.StatusOK, map[string]string{"volumeName": "data", "vmName": "app"})
 		},
@@ -116,7 +130,7 @@ func TestVolumeAttachmentDetectsReassignment(t *testing.T) {
 			PreConfig: func() {
 				fixture.mu.Lock()
 				defer fixture.mu.Unlock()
-				fixture.attachedToVM = "other"
+				fixture.attachedToVM = "30000000-0000-4000-8000-000000000002"
 			},
 			Config:             environment.providerConfig() + attachmentConfig,
 			ExpectNonEmptyPlan: true,

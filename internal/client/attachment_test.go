@@ -27,6 +27,21 @@ type attachmentServer struct {
 	settled     func(*Volume)
 }
 
+// appVMID is what infra-gateway actually reports in a volume's attachedToVM:
+// the machine's instance uuid, taken from the acknowledgement event's
+// InstanceID. appVMURN is the urn the VM read model carries it in, which is the
+// only place the provider can recover it from.
+const (
+	appVMID  = "20000000-0000-4000-8000-000000000001"
+	appVMURN = "asc:atos:compute:tenant:virtual_machine:" + appVMID
+)
+
+// writeVM serves the machine read model the attachment code resolves the
+// instance id from.
+func writeVM(w http.ResponseWriter, name string) {
+	writeEnvelope(w, VM{Name: name, URN: appVMURN, Status: "active"})
+}
+
 func newAttachmentRuntime(t *testing.T, state *attachmentServer) *Runtime {
 	t.Helper()
 	return newLifecycleRuntime(t, func(w http.ResponseWriter, r *http.Request) {
@@ -40,6 +55,8 @@ func newAttachmentRuntime(t *testing.T, state *attachmentServer) *Runtime {
 		case r.Method == http.MethodDelete && strings.Contains(r.URL.Path, "/attach/"):
 			state.detaches++
 			writeEnvelope(w, map[string]string{"volumeName": "data", "vmName": "app"})
+		case r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/vms/"):
+			writeVM(w, "app")
 		case r.Method == http.MethodGet:
 			state.reads++
 			current := state.volume
@@ -62,7 +79,7 @@ func TestAttachVolumeWaitsForTheVolumeToReportAttached(t *testing.T) {
 	state := &attachmentServer{
 		volume:      Volume{Name: "data", Status: "attaching"},
 		settleAfter: 1,
-		settled:     func(v *Volume) { v.Status = "attached"; v.AttachedToVM = "app" },
+		settled:     func(v *Volume) { v.Status = "attached"; v.AttachedToVM = appVMID },
 	}
 	runtime := newAttachmentRuntime(t, state)
 
@@ -70,8 +87,8 @@ func TestAttachVolumeWaitsForTheVolumeToReportAttached(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AttachVolume() error = %v", err)
 	}
-	if attached.AttachedToVM != "app" || attached.Status != "attached" {
-		t.Fatalf("AttachVolume() = %#v, want attached to app", attached)
+	if attached.AttachedToVM != appVMID || attached.Status != "attached" {
+		t.Fatalf("AttachVolume() = %#v, want attached to the app instance id", attached)
 	}
 
 	state.mu.Lock()
@@ -112,7 +129,7 @@ func TestAttachVolumeSurfacesATerminalVolumeError(t *testing.T) {
 func TestDetachVolumeWaitsForTheAttachmentToClear(t *testing.T) {
 	t.Parallel()
 	state := &attachmentServer{
-		volume:      Volume{Name: "data", Status: "detaching", AttachedToVM: "app"},
+		volume:      Volume{Name: "data", Status: "detaching", AttachedToVM: appVMID},
 		settleAfter: 1,
 		settled:     func(v *Volume) { v.Status = "detached"; v.AttachedToVM = "" },
 	}
@@ -157,10 +174,72 @@ func TestDetachVolumeAcceptsAn404FromTheDetachRoute(t *testing.T) {
 	}
 }
 
+// newVolumeReadRuntime serves the machine on /vms/ and the given volume
+// everywhere else, which is the shape GetVolumeAttachment reads.
+func newVolumeReadRuntime(t *testing.T, volume Volume) *Runtime {
+	t.Helper()
+	return newLifecycleRuntime(t, func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/vms/") {
+			writeVM(w, "app")
+			return
+		}
+		writeEnvelope(w, volume)
+	})
+}
+
 func TestGetVolumeAttachmentReportsAReassignedVolumeAsAbsent(t *testing.T) {
 	t.Parallel()
-	runtime := newLifecycleRuntime(t, func(w http.ResponseWriter, _ *http.Request) {
-		writeEnvelope(w, Volume{Name: "data", Status: "attached", AttachedToVM: "other"})
+	runtime := newVolumeReadRuntime(t, Volume{Name: "data", Status: "attached", AttachedToVM: "other"})
+
+	_, err := runtime.GetVolumeAttachment(context.Background(), "data", "app")
+	if !errors.Is(err, ErrResourceNotFound) {
+		t.Fatalf("GetVolumeAttachment() error = %v, want ErrResourceNotFound", err)
+	}
+}
+
+// TestGetVolumeAttachmentMatchesTheInstanceID is the regression: infra-gateway
+// reports attachedToVM as the machine's uuid, so comparing it against the
+// configured name alone would drop a live attachment from state on every
+// refresh.
+func TestGetVolumeAttachmentMatchesTheInstanceID(t *testing.T) {
+	t.Parallel()
+	runtime := newVolumeReadRuntime(t, Volume{Name: "data", Status: "attached", AttachedToVM: appVMID})
+
+	current, err := runtime.GetVolumeAttachment(context.Background(), "data", "app")
+	if err != nil {
+		t.Fatalf("GetVolumeAttachment() error = %v, want the attachment matched on the instance id", err)
+	}
+	if current.AttachedToVM != appVMID {
+		t.Fatalf("GetVolumeAttachment() = %#v", current)
+	}
+}
+
+// TestGetVolumeAttachmentStillMatchesTheName keeps the other spelling working,
+// so a gateway that starts reporting the name the field is documented to hold
+// does not break the provider.
+func TestGetVolumeAttachmentStillMatchesTheName(t *testing.T) {
+	t.Parallel()
+	runtime := newVolumeReadRuntime(t, Volume{Name: "data", Status: "attached", AttachedToVM: "app"})
+
+	current, err := runtime.GetVolumeAttachment(context.Background(), "data", "app")
+	if err != nil {
+		t.Fatalf("GetVolumeAttachment() error = %v", err)
+	}
+	if current.AttachedToVM != "app" {
+		t.Fatalf("GetVolumeAttachment() = %#v", current)
+	}
+}
+
+// TestGetVolumeAttachmentReportsAMissingMachineAsAbsent covers the machine
+// being deleted out of band: the attachment cannot outlive it.
+func TestGetVolumeAttachmentReportsAMissingMachineAsAbsent(t *testing.T) {
+	t.Parallel()
+	runtime := newLifecycleRuntime(t, func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/vms/") {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		writeEnvelope(w, Volume{Name: "data", Status: "attached", AttachedToVM: appVMID})
 	})
 
 	_, err := runtime.GetVolumeAttachment(context.Background(), "data", "app")
@@ -169,18 +248,15 @@ func TestGetVolumeAttachmentReportsAReassignedVolumeAsAbsent(t *testing.T) {
 	}
 }
 
-func TestGetVolumeAttachmentReturnsTheAttachedVolume(t *testing.T) {
+func TestURNResourceIDRejectsAMalformedURN(t *testing.T) {
 	t.Parallel()
-	runtime := newLifecycleRuntime(t, func(w http.ResponseWriter, _ *http.Request) {
-		writeEnvelope(w, Volume{Name: "data", Status: "attached", AttachedToVM: "app"})
-	})
-
-	current, err := runtime.GetVolumeAttachment(context.Background(), "data", "app")
-	if err != nil {
-		t.Fatalf("GetVolumeAttachment() error = %v", err)
+	if got := urnResourceID(appVMURN); got != appVMID {
+		t.Fatalf("urnResourceID(%q) = %q, want %q", appVMURN, got, appVMID)
 	}
-	if current.AttachedToVM != "app" {
-		t.Fatalf("GetVolumeAttachment() = %#v", current)
+	for _, urn := range []string{"", "app", "asc:atos:compute:tenant:virtual_machine", "urn:atos:compute:t:virtual_machine:1"} {
+		if got := urnResourceID(urn); got != "" {
+			t.Fatalf("urnResourceID(%q) = %q, want an empty string", urn, got)
+		}
 	}
 }
 

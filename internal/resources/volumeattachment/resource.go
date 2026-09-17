@@ -150,9 +150,12 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("vm_name"), req.ID[separator+1:])...)
 }
 
+// setFromVolume records the volume state that proves the attachment landed.
+// Neither name is taken from the response: volume_name and vm_name are the
+// configured identity, and the volume's attachedToVM holds the machine's
+// instance id rather than its name, so writing it back would replace the
+// configured name with a uuid.
 func setFromVolume(model *Model, value client.Volume) {
-	model.VolumeName = types.StringValue(value.Name)
-	model.VMName = types.StringValue(value.AttachedToVM)
 	model.Status = types.StringValue(value.Status)
 	model.LastError = types.StringValue(value.LastError)
 }

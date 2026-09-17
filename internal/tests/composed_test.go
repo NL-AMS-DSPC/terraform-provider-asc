@@ -11,6 +11,14 @@ import (
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/client"
 )
 
+// The machine's instance uuid, and the urn it is recoverable from. A volume's
+// attachedToVM carries this uuid rather than the machine's name, so the fixture
+// serves what a live gateway serves.
+const (
+	composedVMID  = "20000000-0000-4000-8000-000000000004"
+	composedVMURN = "asc:atos:compute:tenant:virtual_machine:" + composedVMID
+)
+
 // composedGateway is a small stateful stand-in for infra-gateway covering the
 // four resources a realistic configuration chains together. It exists to prove
 // the ordering Terraform derives from the references actually works against the
@@ -89,10 +97,10 @@ func (g *composedGateway) handlers() map[string]http.HandlerFunc {
 				return
 			}
 			vm := client.VM{
-				URN: "asc:vm:composed-vm", Name: "composed-vm", VPCID: vpcID,
+				URN: composedVMURN, Name: "composed-vm", VPCID: vpcID,
 				SKU: client.SKU{ID: "gp-2", Name: "general-purpose"}, Status: "active",
 			}
-			if g.attachedToVM == "composed-vm" {
+			if g.attachedToVM == composedVMID {
 				vm.AttachedVolumes = []string{"composed-volume"}
 			}
 			writeData(w, http.StatusOK, vm)
@@ -153,7 +161,7 @@ func (g *composedGateway) handlers() map[string]http.HandlerFunc {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
-			g.attachedToVM = "composed-vm"
+			g.attachedToVM = composedVMID
 			g.record("attach")
 			writeData(w, http.StatusOK, map[string]string{"volumeName": "composed-volume", "vmName": "composed-vm"})
 		},
@@ -236,7 +244,7 @@ func TestComposedInfrastructureAppliesAndDestroysInOrder(t *testing.T) {
 			{
 				Config: composedConfig(environment),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("asc_volume.test", "attached_to_vm", "composed-vm"),
+					resource.TestCheckResourceAttr("asc_volume.test", "attached_to_vm", composedVMID),
 					resource.TestCheckResourceAttr("asc_virtual_machine.test", "attached_volumes.#", "1"),
 					resource.TestCheckResourceAttr("asc_virtual_machine.test", "attached_volumes.0", "composed-volume"),
 				),
