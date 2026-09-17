@@ -16,8 +16,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/client"
 	skudatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/sku"
+	subnetdatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/subnet"
+	virtualmachinedatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/virtualmachine"
+	vmgroupdatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/vmgroup"
+	volumedatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/volume"
+	vpcdatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/vpc"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/subnet"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/virtualmachine"
+	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/vmgroup"
+	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/volume"
+	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/volumeattachment"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/vpc"
 )
 
@@ -161,11 +169,18 @@ func resolveTimeout(value types.Int64) (time.Duration, error) {
 	return time.Duration(seconds) * time.Second, nil
 }
 
+// Resources exposes only resources implemented against the approved UAM and
+// infra-gateway boundary. Load balancers are absent on purpose: infra-gateway
+// registers no read route for them, so a resource could not refresh, detect
+// drift or import.
 func (p *ASCProvider) Resources(context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		vpc.NewResource,
 		subnet.NewResource,
 		virtualmachine.NewResource,
+		vmgroup.NewResource,
+		volume.NewResource,
+		volumeattachment.NewResource,
 	}
 }
 
@@ -174,5 +189,10 @@ func (p *ASCProvider) Resources(context.Context) []func() resource.Resource {
 func (p *ASCProvider) DataSources(context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		skudatasource.NewDataSource,
+		vpcdatasource.NewDataSource,
+		subnetdatasource.NewDataSource,
+		virtualmachinedatasource.NewDataSource,
+		vmgroupdatasource.NewDataSource,
+		volumedatasource.NewDataSource,
 	}
 }

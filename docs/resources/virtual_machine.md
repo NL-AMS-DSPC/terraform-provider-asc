@@ -37,11 +37,11 @@ resource "asc_virtual_machine" "example" {
 - `customization` (Attributes, Sensitive) (see [below for nested schema](#nestedatt--customization))
 - `enable_logging` (Boolean)
 - `image` (String)
-- `tags` (Map of String)
+- `tags` (Map of String) Tags applied to the virtual machine. infra-gateway patches virtual machine tags in place, so changing them does not replace the machine.
 
 ### Read-Only
 
-- `attached_volumes` (List of String)
+- `attached_volumes` (List of String) Names of the volumes attached to the machine, sorted. infra-gateway assembles this list from a map, so it is sorted here to keep state stable.
 - `last_error` (String)
 - `os` (Attributes) (see [below for nested schema](#nestedatt--os))
 - `sku` (Attributes) (see [below for nested schema](#nestedatt--sku))
