@@ -127,43 +127,38 @@ func TestCreateVMGroupWaitsForTheGroupToAppear(t *testing.T) {
 	}
 }
 
-func TestCreateVMGroupRetriesTypedStaleReservation(t *testing.T) {
+// TestCreateVMGroupReportsAConflictWithoutRetrying is the regression.
+// infra-gateway holds a group's name in vm_names_in_use until it acknowledges
+// the group's deletion, so a 409 whose group is absent from the read model is
+// not a reservation about to be released. Retrying it polled until the
+// lifecycle timeout and then reported a deadline instead of the reason, on
+// every asc_vm_group replacement.
+func TestCreateVMGroupReportsAConflictWithoutRetrying(t *testing.T) {
 	t.Parallel()
 	var posts atomic.Int64
-	var gets atomic.Int64
 	runtime := newLifecycleRuntime(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
-			// Group names share the virtual machine reservation table, so a
-			// duplicate arrives as a typed 409 that is safe to retry.
-			if posts.Add(1) == 1 {
-				w.WriteHeader(http.StatusConflict)
-				return
-			}
-			w.WriteHeader(http.StatusCreated)
+			posts.Add(1)
+			w.WriteHeader(http.StatusConflict)
 		case http.MethodGet:
-			switch gets.Add(1) {
-			case 1:
-				w.WriteHeader(http.StatusNotFound)
-			case 2:
-				_ = json.NewEncoder(w).Encode(map[string]any{"data": VMGroup{Name: "test-group", Status: "deleting"}})
-			default:
-				_ = json.NewEncoder(w).Encode(map[string]any{"data": VMGroup{Name: "test-group", Status: "active"}})
-			}
+			// The group is gone from the read model, which is exactly the
+			// shape the old retry mistook for a stale reservation.
+			w.WriteHeader(http.StatusNotFound)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
 
-	created, err := runtime.CreateVMGroup(context.Background(), vmGroupRequest())
-	if err != nil {
-		t.Fatalf("CreateVMGroup() error = %v", err)
+	_, err := runtime.CreateVMGroup(context.Background(), vmGroupRequest())
+	if err == nil || !errors.Is(err, ErrResourceConflict) {
+		t.Fatalf("CreateVMGroup() error = %v, want a conflict", err)
 	}
-	if created.Status != "active" {
-		t.Fatalf("CreateVMGroup() status = %q, want active", created.Status)
+	if !strings.Contains(err.Error(), "already in use") {
+		t.Fatalf("CreateVMGroup() error = %v, want it to name the cause", err)
 	}
-	if got := posts.Load(); got != 2 {
-		t.Fatalf("POST count = %d, want 2", got)
+	if got := posts.Load(); got != 1 {
+		t.Fatalf("POST count = %d, want 1: the conflict must not be retried", got)
 	}
 }
 

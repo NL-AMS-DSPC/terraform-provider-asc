@@ -2,6 +2,8 @@ package client
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"slices"
 )
 
@@ -62,16 +64,37 @@ func (g VMGroup) tags() []Tag { return g.Tags }
 
 // CreateVMGroup creates a virtual machine group and waits for it to appear.
 //
-// Group names are reserved in the same table as virtual machine names, so a
-// duplicate comes back as the typed ErrVMNameNotUnique, which the gateway maps
-// to a 409. That typed conflict is what makes the shared name reservation
-// helper safe to use here: a 409 can only mean the name is taken, never that
-// the create half succeeded.
+// createWithNameReservation is deliberately not used. That helper retries a 409
+// whose resource is absent from the read model, on the assumption the name is
+// held by a reservation the gateway is about to release. Group names are
+// reserved in the same vm_names_in_use table as virtual machine names, and a
+// group's row is only released once infra-gateway acknowledges its deletion, so
+// a 409 here is a name that is genuinely taken now: by a live group, by a
+// virtual machine sharing the table, or by a group whose deletion has not been
+// acknowledged yet. Retrying would poll until the lifecycle timeout and then
+// report a deadline instead of the reason, so the conflict is reported at once.
+//
+// A 409 on this route can mean nothing else: the gateway's CreateVMGroup
+// handler answers every other failure with a 400, and respondWithServiceError
+// maps only ErrVPCNameNotUnique, which this path cannot raise, and
+// ErrVMNameNotUnique to 409.
 func (c *Runtime) CreateVMGroup(ctx context.Context, request CreateVMGroupRequest) (VMGroup, error) {
-	return createWithNameReservation(ctx, c, "VM group", request.Name,
-		func(ctx context.Context) error { return c.post(ctx, vmGroupsPath, request) },
-		func(ctx context.Context) (VMGroup, error) { return c.GetVMGroup(ctx, request.Name) },
-	)
+	operationCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
+	defer cancel()
+
+	if err := c.post(operationCtx, vmGroupsPath, request); err != nil {
+		if errors.Is(err, ErrResourceConflict) {
+			return VMGroup{}, fmt.Errorf(
+				"create VM group %q: the name is already in use for this tenant. "+
+					"Virtual machines and virtual machine groups share one name reservation, "+
+					"and infra-gateway holds a group's name until it acknowledges the group's "+
+					"deletion, so a group Terraform destroyed moments ago may still hold it: %w",
+				request.Name, err)
+		}
+		return VMGroup{}, err
+	}
+	return waitForPresent(operationCtx, c, "VM group", request.Name,
+		func(ctx context.Context) (VMGroup, error) { return c.GetVMGroup(ctx, request.Name) })
 }
 
 // GetVMGroup reads one virtual machine group by name.
@@ -90,8 +113,8 @@ func (c *Runtime) GetVMGroup(ctx context.Context, name string) (VMGroup, error) 
 }
 
 // DeleteVMGroup deletes a virtual machine group and waits for it to be gone.
-// The wait matters because the name reservation is only released once the
-// deletion completes, and a replacement reuses that name.
+// The wait matters because infra-gateway releases the name reservation only
+// when it acknowledges the deletion, and a replacement reuses that name.
 func (c *Runtime) DeleteVMGroup(ctx context.Context, name string) error {
 	return deleteAndWait(ctx, c, "VM group", name,
 		func(ctx context.Context) error { return c.delete(ctx, vmGroupsPath+escapedPathSegment(name)) },

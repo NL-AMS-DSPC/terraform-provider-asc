@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/client"
 )
@@ -210,15 +211,19 @@ resource "asc_vm_group" "test" {
 	}}})
 }
 
-func TestVMGroupProvisioningReplacementWaitsForNameRelease(t *testing.T) {
+// TestVMGroupReplacementReusesTheReleasedName covers the whole reason
+// asc_vm_group has to work: every attribute forces replacement, so a change is
+// a delete followed by a create under the same name. infra-gateway releases the
+// name when it acknowledges the group's deletion, so the create that follows
+// succeeds and no conflict arises.
+func TestVMGroupReplacementReusesTheReleasedName(t *testing.T) {
 	var mu sync.Mutex
 	posts := 0
-	deleting := false
-	deletionReads := 0
+	present := false
 
 	currentGroup := func() client.VMGroup {
 		skuID := "gp-2"
-		if posts >= 3 {
+		if posts >= 2 {
 			skuID = "gp-4"
 		}
 		return client.VMGroup{
@@ -232,31 +237,20 @@ func TestVMGroupProvisioningReplacementWaitsForNameRelease(t *testing.T) {
 		"POST /api/infra-gateway/vm-groups/": func(w http.ResponseWriter, _ *http.Request) {
 			mu.Lock()
 			defer mu.Unlock()
-			posts++
-			// Group names live in the virtual machine reservation table, which
-			// is only released once the previous generation finishes deleting.
-			if posts == 2 {
+			// The name is free: the previous generation's deletion was
+			// acknowledged, which is what releases it in vm_names_in_use.
+			if present {
 				w.WriteHeader(http.StatusConflict)
 				return
 			}
+			posts++
+			present = true
 			writeData(w, http.StatusCreated, map[string]string{"created": "test-group"})
 		},
 		"GET /api/infra-gateway/vm-groups/test-group": func(w http.ResponseWriter, _ *http.Request) {
 			mu.Lock()
 			defer mu.Unlock()
-			if deleting {
-				deletionReads++
-				if deletionReads == 1 {
-					group := currentGroup()
-					group.Status = "deleting"
-					writeData(w, http.StatusOK, group)
-					return
-				}
-				deleting = false
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			if posts == 2 {
+			if !present {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
@@ -264,8 +258,7 @@ func TestVMGroupProvisioningReplacementWaitsForNameRelease(t *testing.T) {
 		},
 		"DELETE /api/infra-gateway/vm-groups/test-group": func(w http.ResponseWriter, _ *http.Request) {
 			mu.Lock()
-			deleting = true
-			deletionReads = 0
+			present = false
 			mu.Unlock()
 			writeData(w, http.StatusOK, map[string]string{"deleted": "test-group"})
 		},
@@ -282,12 +275,49 @@ resource "asc_vm_group" "test" {
 	}
 	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: providerFactories, Steps: []resource.TestStep{
 		{Config: config("gp-2"), Check: resource.TestCheckResourceAttr("asc_vm_group.test", "sku.id", "gp-2")},
-		{Config: config("gp-4"), Check: resource.TestCheckResourceAttr("asc_vm_group.test", "sku.id", "gp-4")},
+		{
+			Config: config("gp-4"),
+			ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+				plancheck.ExpectResourceAction("asc_vm_group.test", plancheck.ResourceActionDestroyBeforeCreate),
+			}},
+			Check: resource.TestCheckResourceAttr("asc_vm_group.test", "sku.id", "gp-4"),
+		},
 	}})
 
 	mu.Lock()
 	defer mu.Unlock()
-	if posts != 3 {
-		t.Fatalf("POST count = %d, want 3 (initial, stale conflict, retry)", posts)
+	if posts != 2 {
+		t.Fatalf("POST count = %d, want 2 (the original and its replacement, with no conflict retry)", posts)
+	}
+}
+
+// TestVMGroupReportsATakenNameAtOnce pins the fail-fast half. A 409 on this
+// route is always a name that is taken now, so the provider reports it straight
+// away instead of polling until the lifecycle timeout and reporting a deadline.
+func TestVMGroupReportsATakenNameAtOnce(t *testing.T) {
+	var posts atomic.Int32
+	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
+		"POST /api/infra-gateway/vm-groups/": func(w http.ResponseWriter, _ *http.Request) {
+			posts.Add(1)
+			w.WriteHeader(http.StatusConflict)
+		},
+		"GET /api/infra-gateway/vm-groups/test-group": func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+		},
+	})
+
+	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: providerFactories, Steps: []resource.TestStep{{
+		Config: environment.providerConfig() + `
+resource "asc_vm_group" "test" {
+  name = "test-group"
+  sku_id = "gp-2"
+  vpc_id = "00000000-0000-4000-8000-000000000001"
+  autoscaling = { min_replicas = 2, max_replicas = 6 }
+}`,
+		ExpectError: regexp.MustCompile("already in use for this tenant"),
+	}}})
+
+	if got := posts.Load(); got != 1 {
+		t.Fatalf("POST count = %d, want 1: the conflict must not be retried", got)
 	}
 }
