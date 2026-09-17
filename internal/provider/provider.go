@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/client"
+	skudatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/sku"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/subnet"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/virtualmachine"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/vpc"
@@ -168,7 +169,10 @@ func (p *ASCProvider) Resources(context.Context) []func() resource.Resource {
 	}
 }
 
-// DataSources intentionally exposes no legacy service data sources.
+// DataSources exposes only data sources implemented against the approved
+// UAM and infra-gateway boundary; no legacy service data sources are exposed.
 func (p *ASCProvider) DataSources(context.Context) []func() datasource.DataSource {
-	return nil
+	return []func() datasource.DataSource{
+		skudatasource.NewDataSource,
+	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 )
@@ -33,7 +34,13 @@ func TestProviderMetadataAndSchema(t *testing.T) {
 	if resources := implementation.Resources(context.Background()); len(resources) != 3 {
 		t.Fatalf("resources = %d, want exactly 3", len(resources))
 	}
-	if dataSources := implementation.DataSources(context.Background()); len(dataSources) != 0 {
-		t.Fatalf("data sources = %d, want 0", len(dataSources))
+	dataSources := implementation.DataSources(context.Background())
+	if len(dataSources) != 1 {
+		t.Fatalf("data sources = %d, want exactly 1", len(dataSources))
+	}
+	var dataSourceMetadata datasource.MetadataResponse
+	dataSources[0]().Metadata(context.Background(), datasource.MetadataRequest{ProviderTypeName: "asc"}, &dataSourceMetadata)
+	if dataSourceMetadata.TypeName != "asc_skus" {
+		t.Fatalf("data source type = %q, want asc_skus", dataSourceMetadata.TypeName)
 	}
 }
