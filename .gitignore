@@ -1,0 +1,5 @@
+.terraform/
+*.tfstate
+*.tfstate.*
+coverage.out
+terraform-provider-asc
