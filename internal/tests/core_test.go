@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"regexp"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -23,14 +24,116 @@ var providerFactories = map[string]func() (tfprotov6.ProviderServer, error){
 	"asc": providerserver.NewProtocol6WithError(ascprovider.New("test")()),
 }
 
-type testEnvironment struct {
-	api  *httptest.Server
-	auth *httptest.Server
+// allowedAPIPrefixes is the complete set of API surfaces this provider may
+// reach. /api/uam is listed before any resource uses it so the work that adds
+// it does not have to reopen the allowlist to ship.
+var allowedAPIPrefixes = []string{"/api/infra-gateway", "/api/uam"}
+
+var authTokenPath = regexp.MustCompile(`^/realms/[^/]+/protocol/openid-connect/token$`)
+
+// routeAllowed reports whether path is on an allowed API surface. A bare
+// prefix is allowed as well as the subtree under it: it is the collection root
+// of the same service, not a different one. A prefix that is merely a string
+// prefix of another segment (/api/uamservice) is not.
+func routeAllowed(path string) bool {
+	for _, prefix := range allowedAPIPrefixes {
+		if path == prefix || strings.HasPrefix(path, prefix+"/") {
+			return true
+		}
+	}
+	return false
 }
+
+// testingT is the slice of *testing.T the route assertion needs, so
+// boundary_test.go can run the very same assertion against a captured
+// reporter instead of a reimplementation of it.
+type testingT interface {
+	Helper()
+	Errorf(format string, args ...any)
+}
+
+// assertRoutesAllowed reports every observed route that falls outside the
+// allowlist. Routes arrive as "METHOD /path"; only the path is checked.
+func assertRoutesAllowed(t testingT, apiRoutes, authRoutes []string) {
+	t.Helper()
+	for _, route := range apiRoutes {
+		if !routeAllowed(routePath(route)) {
+			t.Errorf("provider reached disallowed api route %q", route)
+		}
+	}
+	for _, route := range authRoutes {
+		if !authTokenPath.MatchString(routePath(route)) {
+			t.Errorf("provider reached disallowed auth route %q", route)
+		}
+	}
+}
+
+func routePath(route string) string {
+	_, path, found := strings.Cut(route, " ")
+	if !found {
+		return route
+	}
+	return path
+}
+
+type routeRecorder struct {
+	mu     sync.Mutex
+	routes map[string]struct{}
+}
+
+func (r *routeRecorder) record(request *http.Request) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.routes == nil {
+		r.routes = map[string]struct{}{}
+	}
+	r.routes[request.Method+" "+request.URL.Path] = struct{}{}
+}
+
+func (r *routeRecorder) snapshot() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	routes := make([]string, 0, len(r.routes))
+	for route := range r.routes {
+		routes = append(routes, route)
+	}
+	sort.Strings(routes)
+	return routes
+}
+
+type testEnvironment struct {
+	api      *httptest.Server
+	auth     *httptest.Server
+	apiSeen  *routeRecorder
+	authSeen *routeRecorder
+}
+
+// recordedRoutes returns the unique "METHOD /path" routes the api server saw,
+// sorted. recordedAuthRoutes does the same for the auth server; the two stay
+// separate because they are held to different shapes.
+func (e testEnvironment) recordedRoutes() []string { return e.apiSeen.snapshot() }
+
+func (e testEnvironment) recordedAuthRoutes() []string { return e.authSeen.snapshot() }
 
 func newTestEnvironment(t *testing.T, handlers map[string]http.HandlerFunc) testEnvironment {
 	t.Helper()
+	environment := startTestEnvironment(handlers)
+	t.Cleanup(environment.auth.Close)
+	t.Cleanup(environment.api.Close)
+	// Registered last so it runs first: every test in the package is held to
+	// the allowlist, which is the only version of this guarantee that cannot
+	// quietly stop observing traffic.
+	t.Cleanup(func() {
+		assertRoutesAllowed(t, environment.recordedRoutes(), environment.recordedAuthRoutes())
+	})
+	return environment
+}
+
+func startTestEnvironment(handlers map[string]http.HandlerFunc) testEnvironment {
+	apiSeen := &routeRecorder{}
+	authSeen := &routeRecorder{}
 	auth := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authSeen.record(r)
 		if r.URL.Path != "/realms/test-realm/protocol/openid-connect/token" {
 			http.NotFound(w, r)
 			return
@@ -38,6 +141,9 @@ func newTestEnvironment(t *testing.T, handlers map[string]http.HandlerFunc) test
 		_ = json.NewEncoder(w).Encode(map[string]any{"access_token": "test-token", "expires_in": 3600})
 	}))
 	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Recorded ahead of both rejections so a route the harness refuses is
+		// still observed; a stray route is usually also an unrouted one.
+		apiSeen.record(r)
 		if r.Header.Get("Authorization") != "Bearer test-token" || r.Header.Get("X-Tenant") != "test-tenant" {
 			http.Error(w, "missing authentication or tenant", http.StatusUnauthorized)
 			return
@@ -50,9 +156,7 @@ func newTestEnvironment(t *testing.T, handlers map[string]http.HandlerFunc) test
 		w.Header().Set("Content-Type", "application/json")
 		handler(w, r)
 	}))
-	t.Cleanup(auth.Close)
-	t.Cleanup(api.Close)
-	return testEnvironment{api: api, auth: auth}
+	return testEnvironment{api: api, auth: auth, apiSeen: apiSeen, authSeen: authSeen}
 }
 
 func (e testEnvironment) providerConfig() string {

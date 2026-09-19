@@ -38,6 +38,11 @@ type Runtime struct {
 	auth             *tokenManager
 	lifecycleTimeout time.Duration
 	pollInterval     time.Duration
+
+	// tenantMu guards the lazily resolved tenant uuid, which UAM's role item
+	// route needs. See Runtime.tenantUUID.
+	tenantMu sync.Mutex
+	tenantID string
 }
 
 // NewRuntime creates the shared authenticated runtime without fetching a token.
