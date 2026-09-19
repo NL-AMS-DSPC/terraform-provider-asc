@@ -40,6 +40,7 @@ func TestProviderMetadataAndSchema(t *testing.T) {
 	wantResources := []string{
 		"asc_vpc", "asc_subnet", "asc_virtual_machine",
 		"asc_vm_group", "asc_volume", "asc_volume_attachment",
+		"asc_role", "asc_group",
 	}
 	var gotResources []string
 	for _, factory := range implementation.Resources(context.Background()) {
@@ -53,7 +54,7 @@ func TestProviderMetadataAndSchema(t *testing.T) {
 
 	wantDataSources := []string{
 		"asc_skus", "asc_vpc", "asc_subnet", "asc_virtual_machine",
-		"asc_vm_group", "asc_volume",
+		"asc_vm_group", "asc_volume", "asc_role", "asc_group",
 	}
 	var gotDataSources []string
 	for _, factory := range implementation.DataSources(context.Background()) {

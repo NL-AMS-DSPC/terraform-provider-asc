@@ -15,12 +15,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/client"
+	groupdatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/group"
+	roledatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/role"
 	skudatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/sku"
 	subnetdatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/subnet"
 	virtualmachinedatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/virtualmachine"
 	vmgroupdatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/vmgroup"
 	volumedatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/volume"
 	vpcdatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/vpc"
+	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/group"
+	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/role"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/subnet"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/virtualmachine"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/vmgroup"
@@ -172,7 +176,9 @@ func resolveTimeout(value types.Int64) (time.Duration, error) {
 // Resources exposes only resources implemented against the approved UAM and
 // infra-gateway boundary. Load balancers are absent on purpose: infra-gateway
 // registers no read route for them, so a resource could not refresh, detect
-// drift or import.
+// drift or import. Group membership and role assignment are absent for the
+// same reason on the UAM side: no route manages either, so the legacy
+// asc_group_member and asc_group_role are retired rather than reimplemented.
 func (p *ASCProvider) Resources(context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		vpc.NewResource,
@@ -181,6 +187,8 @@ func (p *ASCProvider) Resources(context.Context) []func() resource.Resource {
 		vmgroup.NewResource,
 		volume.NewResource,
 		volumeattachment.NewResource,
+		role.NewResource,
+		group.NewResource,
 	}
 }
 
@@ -194,5 +202,7 @@ func (p *ASCProvider) DataSources(context.Context) []func() datasource.DataSourc
 		virtualmachinedatasource.NewDataSource,
 		vmgroupdatasource.NewDataSource,
 		volumedatasource.NewDataSource,
+		roledatasource.NewDataSource,
+		groupdatasource.NewDataSource,
 	}
 }
