@@ -5,14 +5,16 @@ resource and data source. This page answers what they cannot: which attribute ca
 live resource, which one destroys and recreates it, how each resource is imported, and which gateway
 gaps those answers follow from.
 
-The provider registers six resources and six data sources:
+The provider registers eight resources and eight data sources, across two API boundaries:
 
-| Resources | Data sources |
-| --- | --- |
-| `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume`, `asc_volume_attachment` | `asc_skus`, `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume` |
+| Boundary | Resources | Data sources |
+| --- | --- | --- |
+| `/api/infra-gateway` | `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume`, `asc_volume_attachment` | `asc_skus`, `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume` |
+| `/api/uam` | `asc_role`, `asc_group` | `asc_role`, `asc_group` |
 
-There is no `asc_load_balancer`. Data sources are read-only throughout, so none of them appears in
-the change tables below.
+There is no `asc_load_balancer`, no `asc_group_member` and no `asc_group_role`. Data sources are
+read-only throughout, so none of them appears in the change tables below; the UAM data sources have
+their own section, because what a UAM read can report is narrower than what its resource holds.
 
 ## Change behaviour
 
@@ -106,9 +108,67 @@ of names is the whole identity and the two computed attributes are the volume st
 attachment landed. A volume that is gone, or that is now attached to another machine, removes the
 resource from state so the next plan recreates it.
 
+### asc_role
+
+Roles live on `/api/uam`, not on infra-gateway, and the differences below are all forced by the
+[UAM contract](uam-contract.md).
+
+| Attribute | Schema | Change | Why |
+| --- | --- | --- | --- |
+| `name` | Required, 1-50 characters | Replaces | The name is the role's whole Terraform identity. UAM's update addresses the role by the name in the request body and ignores the path segment, so a renamed role would be written nowhere. |
+| `actions` | Required, set of 1 to 50 strings | In place | `PUT /v1/tenants/{tenant}/roles/{name}`. |
+
+Read-only: `urn`.
+
+Where the values come from:
+
+- `name` is the configured value. The list route proves it exists; the provider never adopts a name
+  from a response.
+- `actions` are sent as `actions` on create and update, and read back from the single-item GET as
+  `composites`. The list route serves no composites at all, so actions cannot be refreshed from it.
+  The set is sorted provider-side because the order is not preserved.
+- `urn` comes from the single-item GET.
+
+There is no `id` attribute, on purpose. `RoleResponse` carries one, but the single-item GET sets it
+to the role's name while the list route sets it to a database uuid, so the two routes disagree about
+what it holds and no single value could be kept in state. The uuid is still required in an update
+body, and UAM's upsert conflicts on it rather than on the name, so the provider resolves it from the
+list route on every update; a request carrying an invented id inserts a duplicate row for the same
+role name.
+
+There is no `description` attribute either: no route accepts one on input, and the single-item read
+reports it empty.
+
+### asc_group
+
+| Attribute | Schema | Change | Why |
+| --- | --- | --- | --- |
+| `name` | Required, at least 3 characters | Replaces | UAM registers no update route for a group, and create accepts `groupName` and nothing else. |
+
+Read-only: `id`, `urn`, `description`, `members`, and the `name`, `enabled` and `type` of every
+element of `members`.
+
+Where the values come from:
+
+- `name` is the configured value and is how every route addresses the group, the delete included.
+- `id` and `description` come from the list route, which serves database rows. The id is stable
+  across reads, but it is not the addressing key.
+- `urn` and `members` come from the single-item GET, the only route that carries members, despite
+  the list route's doc comment. Members are sorted by name provider-side, because they are assembled
+  from a user lookup followed by an API client lookup and arrive in the upstream directories' order.
+- `description` and `members` are read-only because no route sets a description and no route adds or
+  removes a member. A configuration that sets either is rejected at plan time.
+
+The resource's `Update` is a no-op: the only configurable attribute forces replacement.
+
+A duplicate group name is reported by UAM as a plain error rather than its already-exists sentinel,
+so it arrives as HTTP 502 and is indistinguishable from a genuine upstream failure. The provider
+does not retry it; it consults the list route once afterwards so the diagnostic can name the taken
+name rather than repeat the status.
+
 ## Import
 
-All six resources are importable.
+All eight resources are importable.
 
 | Resource | Import ID | Example |
 | --- | --- | --- |
@@ -118,6 +178,8 @@ All six resources are importable.
 | `asc_vm_group` | `name` | `terraform import asc_vm_group.example web-pool` |
 | `asc_volume` | `name` | `terraform import asc_volume.example data-01` |
 | `asc_volume_attachment` | `volume-name:vm-name` | `terraform import asc_volume_attachment.example data-01:web-01` |
+| `asc_role` | `name` | `terraform import asc_role.example network-admin` |
+| `asc_group` | `name` | `terraform import asc_group.example platform-team` |
 
 The two pair-formed identifiers split on the first `:`; an identifier with no separator, or with
 nothing on either side of it, is rejected with a diagnostic naming the expected form.
@@ -147,5 +209,32 @@ invent them. They stay null after an import until the configuration supplies the
 | Attach and detach answer with an acknowledgement only | Completion is read from the volume's own `status` and `attachedToVM`. Deleting a volume that is still attached is refused and reported as is; detaching is not the provider's decision to make. |
 | `attachedToVM` holds the machine's instance id, not its name | `get_volume` records `VMAttachedToVolumeAcknowledgedEvent.InstanceID` and drops the `VMName` the same event carries, so the field named after a machine name holds a uuid. The provider resolves the machine through `GET /vms/{name}` and matches its urn's resource id, accepting either spelling so a gateway that starts serving the name keeps working. `asc_volume.attached_to_vm` and the `asc_volume` data source therefore expose the uuid; `asc_volume_attachment.vm_name` stays the configured name. |
 
-Only HTTP 404 removes a resource from state or makes a delete idempotent. Authentication,
-validation, transport and other server errors are propagated.
+On infra-gateway, only HTTP 404 removes a resource from state or makes a delete idempotent.
+Authentication, validation, transport and other server errors are propagated.
+
+## The UAM data sources
+
+Both UAM data sources take a `name` and are read-only. `asc_role` reports `urn` and `actions`;
+`asc_group` reports `id`, `urn`, `description` and `members`. Each value comes from the same route
+the resource reads it from, so a data source is subject to the same split: a role's actions and a
+group's members exist only on the single-item GET, while a group's id and description exist only on
+the list route.
+
+Neither data source exposes a role's UAM `id`, for the reason given under
+[`asc_role`](#asc_role).
+
+## What UAM does not serve
+
+| Gap | Consequence for the provider |
+| --- | --- |
+| A missing role or group answers HTTP 502, not 404 | UAM turns every non-2xx from the authorization service into an untyped error and maps only its own not-found sentinels to 404. Existence is therefore decided from a list route and never from a single-item GET; absence from the list is what removes the resource from state. A 502 from a single-item GET is reported as an error, never treated as "gone". |
+| A role's `id` means one thing on the single-item GET and another on the list | The Terraform identity is the name. See [`asc_role`](#asc_role). |
+| No group update route | Every configurable attribute of `asc_group` forces replacement. |
+| No route sets a group's description, and none adds or removes a member | `description` and `members` are computed. |
+| No route assigns a role to a user, a group or an API client, and no route manages group membership | There is no `asc_group_member` and no `asc_group_role`. Both legacy registrations are retired rather than deferred: the capability is absent from the approved boundary, not merely unimplemented here. See the [migration guide](guides/migration.md). |
+| Both delete routes spell their path parameter `{roleID}` and `{groupID}` | The services resolve either segment by name, so the segment sent is the name in both cases. |
+
+The provider reaches exactly two API prefixes, `/api/infra-gateway` and `/api/uam`, plus the
+Keycloak realm token path used to obtain a bearer token. The acceptance suite asserts that against
+an allowlist over every route the provider actually sends, so a request to any other prefix fails
+the build.
