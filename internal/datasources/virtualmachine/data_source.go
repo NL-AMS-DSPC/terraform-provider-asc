@@ -20,9 +20,6 @@ var (
 	_ datasource.DataSourceWithConfigure = &DataSource{}
 )
 
-// dataSourceClient is the one call this data source makes. Narrowing it the way
-// the resources narrow resourceClient keeps the read testable without a live
-// Runtime.
 type dataSourceClient interface {
 	GetVM(context.Context, string) (client.VM, error)
 }
@@ -32,10 +29,8 @@ type DataSource struct {
 	client dataSourceClient
 }
 
-// Model mirrors the readable half of the asc_virtual_machine resource. image,
-// sku_id and customization are deliberately absent: the first two repeat os.id
-// and sku.id, and customization is write-only, so infra-gateway never reports
-// it back and a data source could only ever show it as empty.
+// Model exposes readable VM fields. Image and SKU ID are available through os and sku;
+// customization is write-only.
 type Model struct {
 	URN             types.String `tfsdk:"urn"`
 	Name            types.String `tfsdk:"name"`
@@ -154,11 +149,7 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 
 	name := config.Name.ValueString()
 	current, err := d.client.GetVM(ctx, name)
-	// A managed resource treats a 404 as drift and drops the resource from
-	// state. A data source cannot: the configuration named something that has to
-	// exist, so an absent virtual machine is a configuration error and has to
-	// stop the run. Only the typed 404 means absent; anything else is a
-	// transport or gateway failure and is worded as one.
+	// Data sources require the named object to exist; a 404 is a configuration error.
 	if errors.Is(err, client.ErrResourceNotFound) {
 		resp.Diagnostics.AddError("Virtual machine not found", fmt.Sprintf("No virtual machine named %q exists in this tenant.", name))
 		return
@@ -168,11 +159,7 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 		return
 	}
 
-	// The read model assembles the attachments by ranging over a Go map
-	// (services/infra-gateway/cqrs/queries/get_vm/query.go), so the order differs
-	// between reads of an unchanged machine. The list is recorded positionally in
-	// state, so sort it; otherwise a reshuffle alone would show up as a diff on
-	// every plan.
+	// Sort a copy so map iteration order cannot change Terraform state.
 	volumes := slices.Clone(current.AttachedVolumes)
 	slices.Sort(volumes)
 

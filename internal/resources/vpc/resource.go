@@ -177,9 +177,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-// Update handles the one field infra-gateway can change on a live VPC. Every
-// other attribute forces replacement, so tags are the only thing that reaches
-// here.
+// Update patches tags; other configurable fields require replacement.
 func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan, state Model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -218,21 +216,11 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 	resource.ImportStatePassthroughID(ctx, path.Root("name"), req, resp)
 }
 
-// inlineSubnetsRequireReplacement fires only when a configured field of an
-// inline subnet changed.
-//
-// A blanket list RequiresReplace cannot be used here. The nested id, urn,
-// vpc_id, status and last_error attributes are computed, so the planned list
-// carries them as unknown whenever anything else on the VPC changes; comparing
-// the whole planned list against prior state would then report a difference and
-// replace the VPC for an unrelated tag edit. Only the fields the configuration
-// actually sets are compared, which is what "infra-gateway cannot change an
-// inline subnet in place" really means.
+// inlineSubnetsRequireReplacement compares configurable fields only. Computed fields can
+// be unknown during unrelated tag updates and must not trigger replacement.
 func inlineSubnetsRequireReplacement(ctx context.Context, req planmodifier.ListRequest, resp *listplanmodifier.RequiresReplaceIfFuncResponse) {
 	if req.ConfigValue.IsUnknown() {
-		// The inline subnets are not known until apply, so they cannot be
-		// proven unchanged and an inline subnet change is not appliable in
-		// place. Replacing is the honest answer.
+		// Unknown subnet configuration cannot be proven unchanged.
 		resp.RequiresReplace = true
 		return
 	}

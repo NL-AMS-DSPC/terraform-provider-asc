@@ -48,9 +48,7 @@ func TestCreateVMGroupSendsTheGatewayRequestShape(t *testing.T) {
 			t.Errorf("body[%q] = %v, want %v", key, body[key], want)
 		}
 	}
-	// The gateway accepts the policy under "autoscalers" on create and reports
-	// it under "autoscalingPolicy" on read; getting the request key wrong is
-	// silently accepted as an empty policy and fails validation instead.
+	// The create and read APIs use different keys for the scaling policy.
 	autoscalers, ok := body["autoscalers"].(map[string]any)
 	if !ok {
 		t.Fatalf("body[autoscalers] = %#v, want an object", body["autoscalers"])
@@ -127,12 +125,6 @@ func TestCreateVMGroupWaitsForTheGroupToAppear(t *testing.T) {
 	}
 }
 
-// TestCreateVMGroupReportsAConflictWithoutRetrying is the regression.
-// infra-gateway holds a group's name in vm_names_in_use until it acknowledges
-// the group's deletion, so a 409 whose group is absent from the read model is
-// not a reservation about to be released. Retrying it polled until the
-// lifecycle timeout and then reported a deadline instead of the reason, on
-// every asc_vm_group replacement.
 func TestCreateVMGroupReportsAConflictWithoutRetrying(t *testing.T) {
 	t.Parallel()
 	var posts atomic.Int64

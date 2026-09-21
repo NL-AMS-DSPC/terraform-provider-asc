@@ -111,11 +111,8 @@ func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, res
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	replaceString := []planmodifier.String{stringplanmodifier.RequiresReplace()}
-	// An attribute that is both Optional and Computed plans as unknown whenever
-	// the configuration leaves it out, which on its own would look like a change
-	// and make RequiresReplace destroy the machine on every update. Keeping the
-	// prior value first means replacement is only forced when the configuration
-	// really asks for a different one.
+	// Preserve omitted computed values before checking replacement, avoiding replacement
+	// during unrelated updates.
 	keepOrReplaceString := []planmodifier.String{stringplanmodifier.UseStateForUnknown(), stringplanmodifier.RequiresReplace()}
 	keepOrReplaceBool := []planmodifier.Bool{boolplanmodifier.UseStateForUnknown(), boolplanmodifier.RequiresReplace()}
 	computedSKU := map[string]schema.Attribute{
@@ -240,13 +237,8 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-// Update handles the one field infra-gateway can change on a live virtual
-// machine. sku_id is deliberately not in-place: the request_vm_resizing slice
-// latches isResizingRequested on the first resize and never clears it, so a
-// machine accepts exactly one resize for its whole lifetime and every later one
-// is refused. An in-place sku_id update would therefore work once and then fail
-// permanently, so it forces replacement instead and tags are the only thing
-// that reaches here.
+// Update patches tags. SKU changes require replacement because the gateway never clears
+// its VM resize latch after the first resize.
 func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan, state Model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)

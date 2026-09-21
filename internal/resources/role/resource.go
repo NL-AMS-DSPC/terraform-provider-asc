@@ -37,9 +37,7 @@ type Resource struct {
 	client resourceClient
 }
 
-// Model keys a role by its name. UAM's own "id" is deliberately not in state:
-// the single-item read reports the role's name there while the list route
-// reports a database uuid, so it is not one value Terraform could hold.
+// Model keys a role by name; UAM list and item routes disagree on ID.
 type Model struct {
 	Name    types.String `tfsdk:"name"`
 	URN     types.String `tfsdk:"urn"`
@@ -126,9 +124,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-// Update changes the role's actions. The name cannot reach this path: it
-// requires replacement, because UAM's update addresses the role by the name in
-// the body and a renamed role would be written nowhere.
+// Update changes actions; renaming requires replacement.
 func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan Model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -158,8 +154,7 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 	}
 }
 
-// ImportState recovers a role from its name, which is the whole of its
-// identity.
+// ImportState identifies the role by name.
 func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("name"), req, resp)
 }

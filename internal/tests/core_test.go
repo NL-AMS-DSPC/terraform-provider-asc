@@ -24,17 +24,13 @@ var providerFactories = map[string]func() (tfprotov6.ProviderServer, error){
 	"asc": providerserver.NewProtocol6WithError(ascprovider.New("test")()),
 }
 
-// allowedAPIPrefixes is the complete set of API surfaces this provider may
-// reach. /api/uam is listed before any resource uses it so the work that adds
-// it does not have to reopen the allowlist to ship.
+// Allowed API prefixes; authentication is checked separately.
 var allowedAPIPrefixes = []string{"/api/infra-gateway", "/api/uam"}
 
 var authTokenPath = regexp.MustCompile(`^/realms/[^/]+/protocol/openid-connect/token$`)
 
-// routeAllowed reports whether path is on an allowed API surface. A bare
-// prefix is allowed as well as the subtree under it: it is the collection root
-// of the same service, not a different one. A prefix that is merely a string
-// prefix of another segment (/api/uamservice) is not.
+// routeAllowed matches complete path segments, excluding near matches such as
+// /api/uamservice.
 func routeAllowed(path string) bool {
 	for _, prefix := range allowedAPIPrefixes {
 		if path == prefix || strings.HasPrefix(path, prefix+"/") {
@@ -44,9 +40,7 @@ func routeAllowed(path string) bool {
 	return false
 }
 
-// testingT is the slice of *testing.T the route assertion needs, so
-// boundary_test.go can run the very same assertion against a captured
-// reporter instead of a reimplementation of it.
+// testingT lets negative controls capture assertion failures.
 type testingT interface {
 	Helper()
 	Errorf(format string, args ...any)
@@ -108,9 +102,7 @@ type testEnvironment struct {
 	authSeen *routeRecorder
 }
 
-// recordedRoutes returns the unique "METHOD /path" routes the api server saw,
-// sorted. recordedAuthRoutes does the same for the auth server; the two stay
-// separate because they are held to different shapes.
+// Recordings contain sorted, unique METHOD /path entries.
 func (e testEnvironment) recordedRoutes() []string { return e.apiSeen.snapshot() }
 
 func (e testEnvironment) recordedAuthRoutes() []string { return e.authSeen.snapshot() }
@@ -120,9 +112,7 @@ func newTestEnvironment(t *testing.T, handlers map[string]http.HandlerFunc) test
 	environment := startTestEnvironment(handlers)
 	t.Cleanup(environment.auth.Close)
 	t.Cleanup(environment.api.Close)
-	// Registered last so it runs first: every test in the package is held to
-	// the allowlist, which is the only version of this guarantee that cannot
-	// quietly stop observing traffic.
+	// Check recorded routes before closing the servers.
 	t.Cleanup(func() {
 		assertRoutesAllowed(t, environment.recordedRoutes(), environment.recordedAuthRoutes())
 	})
@@ -141,8 +131,7 @@ func startTestEnvironment(handlers map[string]http.HandlerFunc) testEnvironment 
 		_ = json.NewEncoder(w).Encode(map[string]any{"access_token": "test-token", "expires_in": 3600})
 	}))
 	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Recorded ahead of both rejections so a route the harness refuses is
-		// still observed; a stray route is usually also an unrouted one.
+		// Record rejected requests too.
 		apiSeen.record(r)
 		if r.Header.Get("Authorization") != "Bearer test-token" || r.Header.Get("X-Tenant") != "test-tenant" {
 			http.Error(w, "missing authentication or tenant", http.StatusUnauthorized)
@@ -172,9 +161,7 @@ provider "asc" {
 `, e.api.URL, e.auth.URL)
 }
 
-// inPlace asserts the step updates the resource instead of replacing it. The
-// assertion is explicit because a replacement still reaches the same end state
-// and would pass every attribute check while silently destroying the resource.
+// inPlace rejects replacements, which can otherwise pass attribute checks.
 func inPlace(address string) resource.ConfigPlanChecks {
 	return resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
 		plancheck.ExpectResourceAction(address, plancheck.ResourceActionUpdate),

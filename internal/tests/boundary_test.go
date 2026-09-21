@@ -53,10 +53,6 @@ func (c *captureT) Errorf(format string, args ...any) {
 	c.failures = append(c.failures, fmt.Sprintf(format, args...))
 }
 
-// TestBoundaryAssertionIsLive drives a real request at a disallowed path
-// through the harness's own recording handler and then through the same
-// assertion the cleanup runs. An earlier version of this guard passed because
-// it observed nothing, so the proof has to come from observed traffic.
 func TestBoundaryAssertionIsLive(t *testing.T) {
 	environment := startTestEnvironment(nil)
 	t.Cleanup(environment.auth.Close)
@@ -87,8 +83,6 @@ func TestBoundaryAssertionIsLive(t *testing.T) {
 	}
 }
 
-// TestBoundaryAuthAssertionIsLive does the same for the auth server, whose
-// only permitted route is the realm token endpoint.
 func TestBoundaryAuthAssertionIsLive(t *testing.T) {
 	environment := startTestEnvironment(nil)
 	t.Cleanup(environment.auth.Close)
@@ -110,10 +104,6 @@ func TestBoundaryAuthAssertionIsLive(t *testing.T) {
 	}
 }
 
-// TestBoundaryProviderStaysOnAllowedRoutes runs an ordinary resource lifecycle
-// through the real transport and inspects what the servers actually saw. The
-// non-empty check is the load-bearing half: an empty recording set would
-// satisfy the allowlist while proving nothing.
 func TestBoundaryProviderStaysOnAllowedRoutes(t *testing.T) {
 	var deleted atomic.Bool
 	vpc := client.VPC{

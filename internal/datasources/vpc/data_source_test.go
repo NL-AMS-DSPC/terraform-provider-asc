@@ -134,8 +134,6 @@ func TestDataSourceReadMapsTheVPC(t *testing.T) {
 	}
 }
 
-// A data source cannot drop itself from state the way a managed resource does,
-// so an absent VPC has to stop the run with its own diagnostic.
 func TestDataSourceReadReportsAbsentVPC(t *testing.T) {
 	t.Parallel()
 
@@ -152,8 +150,6 @@ func TestDataSourceReadReportsAbsentVPC(t *testing.T) {
 	}
 }
 
-// A transport failure is not evidence of absence, so it must read differently
-// from the not-found case and keep the underlying error.
 func TestDataSourceReadReportsTransportFailure(t *testing.T) {
 	t.Parallel()
 

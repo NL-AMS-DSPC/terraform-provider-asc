@@ -94,9 +94,6 @@ func TestSameTagsIgnoresOrder(t *testing.T) {
 	}
 }
 
-// TestReconcileTagsIgnoresThePatchEchoAndReadsBack pins the behaviour the
-// virtual machine and volume handlers force: their PATCH response reports only
-// the patched keys, so state has to come from the authoritative read.
 func TestReconcileTagsIgnoresThePatchEchoAndReadsBack(t *testing.T) {
 	t.Parallel()
 	var mu sync.Mutex

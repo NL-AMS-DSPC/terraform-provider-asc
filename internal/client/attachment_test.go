@@ -11,10 +11,8 @@ import (
 	"time"
 )
 
-// attachmentServer serves the volume read model and records the attach and
-// detach calls. The attach and detach routes answer with an acknowledgement
-// only, exactly as infra-gateway does, so the tests prove the client waits on
-// the volume rather than on the 200.
+// attachmentServer delays the volume projection after acknowledging attach/detach
+// commands.
 type attachmentServer struct {
 	mu       sync.Mutex
 	volume   Volume
@@ -27,10 +25,7 @@ type attachmentServer struct {
 	settled     func(*Volume)
 }
 
-// appVMID is what infra-gateway actually reports in a volume's attachedToVM:
-// the machine's instance uuid, taken from the acknowledgement event's
-// InstanceID. appVMURN is the urn the VM read model carries it in, which is the
-// only place the provider can recover it from.
+// The volume reports the instance UUID; the VM read exposes it in its URN.
 const (
 	appVMID  = "20000000-0000-4000-8000-000000000001"
 	appVMURN = "asc:atos:compute:tenant:virtual_machine:" + appVMID
@@ -101,8 +96,6 @@ func TestAttachVolumeWaitsForTheVolumeToReportAttached(t *testing.T) {
 	}
 }
 
-// TestAttachVolumeDoesNotAcceptAnAttachmentToAnotherMachine guards the case the
-// status alone would wave through: the volume is attached, but not here.
 func TestAttachVolumeDoesNotAcceptAnAttachmentToAnotherMachine(t *testing.T) {
 	t.Parallel()
 	state := &attachmentServer{volume: Volume{Name: "data", Status: "attached", AttachedToVM: "other"}}
@@ -145,9 +138,6 @@ func TestDetachVolumeWaitsForTheAttachmentToClear(t *testing.T) {
 	}
 }
 
-// TestDetachVolumeAcceptsAVolumeThatIsAlreadyGone covers the destroy ordering
-// Terraform can produce: the volume was removed first, so there is nothing left
-// to detach and the wait must not sit until the deadline.
 func TestDetachVolumeAcceptsAVolumeThatIsAlreadyGone(t *testing.T) {
 	t.Parallel()
 	runtime := newLifecycleRuntime(t, func(w http.ResponseWriter, r *http.Request) {
@@ -197,10 +187,6 @@ func TestGetVolumeAttachmentReportsAReassignedVolumeAsAbsent(t *testing.T) {
 	}
 }
 
-// TestGetVolumeAttachmentMatchesTheInstanceID is the regression: infra-gateway
-// reports attachedToVM as the machine's uuid, so comparing it against the
-// configured name alone would drop a live attachment from state on every
-// refresh.
 func TestGetVolumeAttachmentMatchesTheInstanceID(t *testing.T) {
 	t.Parallel()
 	runtime := newVolumeReadRuntime(t, Volume{Name: "data", Status: "attached", AttachedToVM: appVMID})
@@ -214,9 +200,6 @@ func TestGetVolumeAttachmentMatchesTheInstanceID(t *testing.T) {
 	}
 }
 
-// TestGetVolumeAttachmentStillMatchesTheName keeps the other spelling working,
-// so a gateway that starts reporting the name the field is documented to hold
-// does not break the provider.
 func TestGetVolumeAttachmentStillMatchesTheName(t *testing.T) {
 	t.Parallel()
 	runtime := newVolumeReadRuntime(t, Volume{Name: "data", Status: "attached", AttachedToVM: "app"})
@@ -230,8 +213,6 @@ func TestGetVolumeAttachmentStillMatchesTheName(t *testing.T) {
 	}
 }
 
-// TestGetVolumeAttachmentReportsAMissingMachineAsAbsent covers the machine
-// being deleted out of band: the attachment cannot outlive it.
 func TestGetVolumeAttachmentReportsAMissingMachineAsAbsent(t *testing.T) {
 	t.Parallel()
 	runtime := newLifecycleRuntime(t, func(w http.ResponseWriter, r *http.Request) {

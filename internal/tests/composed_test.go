@@ -11,20 +11,13 @@ import (
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/client"
 )
 
-// The machine's instance uuid, and the urn it is recoverable from. A volume's
-// attachedToVM carries this uuid rather than the machine's name, so the fixture
-// serves what a live gateway serves.
+// The volume attachment references the instance UUID carried by this VM URN.
 const (
 	composedVMID  = "20000000-0000-4000-8000-000000000004"
 	composedVMURN = "asc:atos:compute:tenant:virtual_machine:" + composedVMID
 )
 
-// composedGateway is a small stateful stand-in for infra-gateway covering the
-// four resources a realistic configuration chains together. It exists to prove
-// the ordering Terraform derives from the references actually works against the
-// gateway's own rules, which single-resource tests cannot show: a volume cannot
-// be deleted while it is attached, and an attachment cannot be created before
-// both its volume and its machine exist.
+// composedGateway enforces creation dependencies and rejects deletion of attached volumes.
 type composedGateway struct {
 	mu sync.Mutex
 
@@ -33,8 +26,6 @@ type composedGateway struct {
 	volumePresent bool
 	attachedToVM  string
 
-	// order records the mutating calls in the order they arrived, which is what
-	// the dependency ordering assertions read.
 	order []string
 }
 
@@ -137,9 +128,7 @@ func (g *composedGateway) handlers() map[string]http.HandlerFunc {
 				Status: status, AttachedToVM: g.attachedToVM,
 			})
 		},
-		// The gateway refuses to delete a volume that is still attached. Keeping
-		// that rule here is the point of the test: it only passes if Terraform
-		// destroyed the attachment first.
+		// Deletion must follow detachment.
 		"DELETE /api/infra-gateway/volumes/composed-volume": func(w http.ResponseWriter, _ *http.Request) {
 			g.mu.Lock()
 			defer g.mu.Unlock()
@@ -202,10 +191,6 @@ resource "asc_volume_attachment" "test" {
 `
 }
 
-// TestComposedInfrastructureAppliesAndDestroysInOrder applies the whole chain
-// and then lets the framework destroy it, asserting the call order at both
-// ends. The gateway rules encoded above mean a wrong order fails the run
-// outright; the order assertions then say which rule was broken.
 func TestComposedInfrastructureAppliesAndDestroysInOrder(t *testing.T) {
 	gateway := &composedGateway{}
 	environment := newTestEnvironment(t, gateway.handlers())
@@ -223,9 +208,7 @@ func TestComposedInfrastructureAppliesAndDestroysInOrder(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrPair("asc_virtual_machine.test", "vpc_id", "asc_vpc.test", "id"),
 					resource.TestCheckResourceAttr("asc_volume_attachment.test", "status", "attached"),
-					// asc_volume and asc_virtual_machine were both created
-					// before the attachment existed, so neither records it yet.
-					// The next step shows the refresh picking it up.
+					// Both resources were created before the attachment; the next refresh records it.
 					resource.TestCheckResourceAttr("asc_volume.test", "attached_to_vm", ""),
 					resource.TestCheckResourceAttr("asc_virtual_machine.test", "attached_volumes.#", "0"),
 					func(*terraform.State) error {
@@ -237,10 +220,7 @@ func TestComposedInfrastructureAppliesAndDestroysInOrder(t *testing.T) {
 					},
 				),
 			},
-			// After a refresh both ends report the attachment, and the chain is
-			// still stable: the framework fails this step if the plan that
-			// follows it is not empty, which is what proves the two views of the
-			// same attachment do not fight each other.
+			// Refresh both ends and require the subsequent plan to stay empty.
 			{
 				Config: composedConfig(environment),
 				Check: resource.ComposeAggregateTestCheckFunc(

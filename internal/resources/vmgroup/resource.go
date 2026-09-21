@@ -141,9 +141,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 					"must be a UUID version 4",
 				)},
 			},
-			// The gateway never echoes the image back, so this attribute cannot
-			// be Computed: an unfilled computed value would stay unknown forever.
-			// It is configuration-only, and an empty one defaults server-side.
+			// The gateway never returns image, so it cannot be Computed.
 			"image": schema.StringAttribute{Optional: true, PlanModifiers: replaceString},
 			"autoscaling": schema.SingleNestedAttribute{
 				Description: "Scaling bounds of the group. infra-gateway has no update route for a " +
@@ -156,8 +154,6 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 						Required: true,
 						Validators: []validator.Int64{
 							int64validator.Between(1, 100),
-							// The gateway rejects an inverted range with a 400; catching
-							// it at plan time keeps the error next to the configuration.
 							int64validator.AtLeastSumOf(path.MatchRelative().AtParent().AtName("min_replicas")),
 						},
 					},
@@ -174,9 +170,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			},
 			"status":     schema.StringAttribute{Computed: true},
 			"last_error": schema.StringAttribute{Computed: true},
-			// infra-gateway exposes no patch route for a group, so tags cannot be
-			// reconciled in place the way a VPC's can; changing them replaces the
-			// group, exactly as on asc_virtual_machine.
+			// The gateway has no group tag-patch route; changes require replacement.
 			"tags": schema.MapAttribute{
 				Optional: true, ElementType: types.StringType,
 				PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplace()},
@@ -260,9 +254,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-// Update is a no-op: infra-gateway offers no patch, scale or resize route for a
-// virtual machine group, so every attribute of this resource forces a
-// replacement and Terraform never reaches an in-place update.
+// Update is unreachable because all configurable fields require replacement.
 func (r *Resource) Update(context.Context, resource.UpdateRequest, *resource.UpdateResponse) {}
 
 func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -276,11 +268,8 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 	}
 }
 
-// ImportState recovers a group from its name alone. The gateway serves no
-// vpcID, image or customization for an existing group, so an import cannot
-// restore those three: they stay null until the configuration supplies them,
-// and because each of them forces a replacement, importing a group whose
-// configuration differs plans a replacement rather than silently adopting it.
+// ImportState uses the group name. The API cannot recover VPC ID, image or customization;
+// configuring these after import can force replacement.
 func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("name"), req, resp)
 }
@@ -324,9 +313,7 @@ func customizationToClient(value *CustomizationModel) *client.Customization {
 	return result
 }
 
-// setFromVMGroup copies the authoritative read into state. It deliberately
-// leaves vpc_id, image and customization alone: the gateway's read model does
-// not carry them, so anything written here would be invented rather than read.
+// setFromVMGroup preserves write-only VPC ID, image and customization.
 func setFromVMGroup(ctx context.Context, model *Model, value client.VMGroup, diags *diag.Diagnostics) {
 	model.URN = types.StringValue(value.URN)
 	model.Name = types.StringValue(value.Name)

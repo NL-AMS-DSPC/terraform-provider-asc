@@ -14,19 +14,14 @@ const (
 	testTenantUUID = "00000000-0000-4000-8000-0000000000aa"
 	tenantItemPath = "/api/uam/v1/tenants/tenant"
 	roleListPath   = "/api/uam/v1/tenants/tenant/roles"
-	// roleWritePath addresses a role by the namespace, which is what create,
-	// update and delete resolve. roleReadPath addresses the same role by the
-	// tenant uuid, which is the only segment the item read resolves to what
-	// those writes stored.
+	// Role writes use the namespace; the item read requires the tenant UUID.
 	roleWritePath = "/api/uam/v1/tenants/tenant/roles/operator"
 	roleReadPath  = "/api/uam/v1/tenants/" + testTenantUUID + "/roles/operator"
 	groupListP    = "/api/uam/v1/tenants/groups"
 	groupItemP    = "/api/uam/v1/tenants/groups/platform"
 )
 
-// uamRuntime serves the routes it is given and fails the test on any other
-// path, so a request the provider should not make is reported where it is made
-// rather than as a decode error further on.
+// uamRuntime fails on unexpected paths instead of returning a misleading decode error.
 func uamRuntime(t *testing.T, routes map[string]http.HandlerFunc) *Runtime {
 	t.Helper()
 	return newLifecycleRuntime(t, func(w http.ResponseWriter, r *http.Request) {
@@ -48,9 +43,7 @@ func writeBare(w http.ResponseWriter, status int, payload any) {
 	_ = json.NewEncoder(w).Encode(payload)
 }
 
-// tenantRoute serves the tenant lookup that resolves the namespace to the uuid
-// the role item read is addressed by, counting the calls when a test wants to
-// prove the resolution is cached.
+// tenantRoute counts namespace-to-UUID lookups to verify caching.
 func tenantRoute(calls *atomic.Int64) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
 		if calls != nil {
@@ -84,9 +77,6 @@ func TestGetRoleTakesActionsFromTheItemRouteAndSortsThem(t *testing.T) {
 	}
 }
 
-// A role that no longer exists answers the item route with 502, so existence
-// has to come from the list. The item route is not registered here: reaching it
-// at all would fail the test.
 func TestGetRoleReportsNotFoundFromTheListWithoutReadingTheItemRoute(t *testing.T) {
 	t.Parallel()
 	runtime := uamRuntime(t, map[string]http.HandlerFunc{
@@ -100,8 +90,6 @@ func TestGetRoleReportsNotFoundFromTheListWithoutReadingTheItemRoute(t *testing.
 	}
 }
 
-// UAM's 502 must not be read as a missing resource: it also covers a genuine
-// upstream failure, so a role the list proves present must surface the error.
 func TestGetRoleDoesNotTreat502AsMissing(t *testing.T) {
 	t.Parallel()
 	runtime := uamRuntime(t, map[string]http.HandlerFunc{
@@ -164,9 +152,6 @@ func TestCreateRoleSendsActionsAndReadsBack(t *testing.T) {
 	}
 }
 
-// UAM upserts a role on the id in the update body, not on its name, so an
-// update carrying anything but the uuid the list records inserts a second row
-// for the same role.
 func TestUpdateRoleSendsTheUUIDTheListRecords(t *testing.T) {
 	t.Parallel()
 	const uuid = "00000000-0000-4000-8000-000000000001"
@@ -198,8 +183,6 @@ func TestUpdateRoleSendsTheUUIDTheListRecords(t *testing.T) {
 	}
 }
 
-// Deleting a role that is already gone must converge instead of surfacing the
-// untyped 502 the item route would answer with.
 func TestDeleteRoleSkipsTheRequestWhenTheRoleIsAbsent(t *testing.T) {
 	t.Parallel()
 	runtime := uamRuntime(t, map[string]http.HandlerFunc{
@@ -276,8 +259,6 @@ func TestGetGroupReportsNotFoundFromTheList(t *testing.T) {
 	}
 }
 
-// A duplicate group name is reported by UAM as an untyped 502, so the client
-// names the cause from the list rather than repeating the status.
 func TestCreateGroupNamesADuplicateBehindThe502(t *testing.T) {
 	t.Parallel()
 	runtime := uamRuntime(t, map[string]http.HandlerFunc{
@@ -344,8 +325,6 @@ func TestDeleteGroupSkipsTheRequestWhenTheGroupIsAbsent(t *testing.T) {
 	}
 }
 
-// Every UAM request carries the same bearer token and tenant header the
-// infra-gateway boundary uses, and no UAM body is wrapped in a data envelope.
 func TestUAMRequestsCarryTheTenantHeader(t *testing.T) {
 	t.Parallel()
 	var tenant, authorization atomic.Value
@@ -371,11 +350,6 @@ func TestUAMRequestsCarryTheTenantHeader(t *testing.T) {
 	}
 }
 
-// A role's actions live behind the one route whose {tenantId} segment UAM does
-// not translate, so the item read has to address the tenant's uuid. Only the
-// uuid-addressed route is registered here: reading the namespace-addressed one,
-// which is what the round-1 review found, fails the test rather than silently
-// returning a role with no actions.
 func TestGetRoleReadsTheItemRouteUnderTheTenantUUID(t *testing.T) {
 	t.Parallel()
 	var read atomic.Bool
@@ -402,8 +376,6 @@ func TestGetRoleReadsTheItemRouteUnderTheTenantUUID(t *testing.T) {
 	}
 }
 
-// The tenant uuid cannot change under its client id, so it is resolved once
-// however many roles are refreshed.
 func TestTenantLookupIsResolvedOnceAndReused(t *testing.T) {
 	t.Parallel()
 	var lookups atomic.Int64
@@ -427,9 +399,6 @@ func TestTenantLookupIsResolvedOnceAndReused(t *testing.T) {
 	}
 }
 
-// The lookup needs the uam:GetTenant action. A refusal has to name the tenant
-// it could not resolve rather than surface as a bare status from an unrelated
-// looking route.
 func TestGetRoleReportsARefusedTenantLookup(t *testing.T) {
 	t.Parallel()
 	runtime := uamRuntime(t, map[string]http.HandlerFunc{

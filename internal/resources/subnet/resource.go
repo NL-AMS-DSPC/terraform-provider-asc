@@ -142,9 +142,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-// Update handles the one field infra-gateway can change on a live subnet.
-// Every other attribute forces replacement, so tags are the only thing that
-// reaches here.
+// Update patches tags; other configurable fields require replacement.
 func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan, state Model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)

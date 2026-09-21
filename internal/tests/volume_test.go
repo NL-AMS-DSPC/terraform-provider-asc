@@ -12,9 +12,7 @@ import (
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/client"
 )
 
-// volumeGateway is a stand-in for the infra-gateway volume endpoints. It keeps
-// the read model the handlers serve so a test can move it out of band, the way
-// an operator or another controller would.
+// volumeGateway supports asynchronous operations and out-of-band state changes.
 type volumeGateway struct {
 	mu        sync.Mutex
 	current   client.Volume
@@ -174,7 +172,6 @@ func TestVolumeProvisioning(t *testing.T) {
 				resource.TestCheckResourceAttrSet("asc_volume.test", "urn"),
 			),
 		},
-		// A plan straight after the apply must be empty.
 		{Config: volumeConfig(environment, "10Gi", `{ env = "test" }`), PlanOnly: true},
 		// A resize and a tag change in the same apply, both in place.
 		{
@@ -252,8 +249,6 @@ func TestVolumeProvisioningDetectsOutOfBandDeletion(t *testing.T) {
 	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: providerFactories, Steps: []resource.TestStep{
 		{Config: volumeConfig(environment, "10Gi", `{ env = "test" }`)},
 		{
-			// The volume is gone, so the refresh must drop it from state and the
-			// plan must want to create it again.
 			PreConfig: func() { gateway.mutate(func(g *volumeGateway) { g.absent = true }) },
 			Config:    volumeConfig(environment, "10Gi", `{ env = "test" }`), PlanOnly: true, ExpectNonEmptyPlan: true,
 		},

@@ -21,9 +21,7 @@ type DataSource struct {
 	client *client.Runtime
 }
 
-// Model exposes what UAM serves for a role. Its "id" is absent on purpose: the
-// single-item read reports the role's name there and the list route reports a
-// database uuid, so the two never agree.
+// Model keys roles by name because UAM list and item routes disagree on ID.
 type Model struct {
 	Name    types.String `tfsdk:"name"`
 	URN     types.String `tfsdk:"urn"`

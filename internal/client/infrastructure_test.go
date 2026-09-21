@@ -96,10 +96,6 @@ func TestInfrastructureContract(t *testing.T) {
 	}
 }
 
-// TestGetVMSortsAttachedVolumes pins the provider-side fix for a gateway detail:
-// infra-gateway's get_vm projection appends the attachments while ranging over a
-// Go map, so two reads of an unchanged machine can return them in different
-// orders. The list is positional in Terraform state, so the client sorts it.
 func TestGetVMSortsAttachedVolumes(t *testing.T) {
 	t.Parallel()
 
@@ -129,9 +125,6 @@ func TestGetVMSortsAttachedVolumes(t *testing.T) {
 	}
 }
 
-// TestUpdateTagsPatchesEveryTaggableResource proves the three shipped resources
-// reach their own PATCH route with the computed patch and then take their state
-// from the authoritative read rather than the PATCH echo.
 func TestUpdateTagsPatchesEveryTaggableResource(t *testing.T) {
 	t.Parallel()
 
@@ -149,9 +142,7 @@ func TestUpdateTagsPatchesEveryTaggableResource(t *testing.T) {
 			var body tagPatchRequest
 			_ = json.NewDecoder(r.Body).Decode(&body)
 			patched[r.URL.Path] = body
-			// The virtual machine and volume handlers echo only the patch
-			// entries. Answering every PATCH that way here proves the client
-			// never takes state from this body.
+			// Mirror the gateway response, which echoes the patch rather than the full tag set.
 			_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"tags": body.Tags}})
 			return
 		}

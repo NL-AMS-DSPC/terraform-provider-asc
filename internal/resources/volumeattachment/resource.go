@@ -32,10 +32,7 @@ type Resource struct {
 	client resourceClient
 }
 
-// Model is the attachment itself. infra-gateway has no attachment object of its
-// own: the relationship lives on the volume, so the pair of names is the whole
-// identity and the remaining attributes are the volume state that proves the
-// attachment landed.
+// Model identifies an attachment by both endpoint names and records its volume state.
 type Model struct {
 	VolumeName types.String `tfsdk:"volume_name"`
 	VMName     types.String `tfsdk:"vm_name"`
@@ -99,10 +96,8 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-// Read refreshes from the volume, because that is where the relationship is
-// recorded. A volume that is gone, or that is now attached to some other
-// machine, means this attachment no longer exists and the resource leaves state
-// so the next plan recreates it.
+// Read removes the attachment from state if either endpoint is gone or the volume is
+// attached elsewhere.
 func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state Model
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -150,11 +145,8 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("vm_name"), req.ID[separator+1:])...)
 }
 
-// setFromVolume records the volume state that proves the attachment landed.
-// Neither name is taken from the response: volume_name and vm_name are the
-// configured identity, and the volume's attachedToVM holds the machine's
-// instance id rather than its name, so writing it back would replace the
-// configured name with a uuid.
+// setFromVolume preserves both configured names; attachedToVM may contain a UUID rather
+// than the VM name.
 func setFromVolume(model *Model, value client.Volume) {
 	model.Status = types.StringValue(value.Status)
 	model.LastError = types.StringValue(value.LastError)

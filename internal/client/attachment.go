@@ -11,20 +11,12 @@ const (
 	attachmentKind        = "volume attachment"
 	statusVolumeAttached  = "attached"
 	statusVolumeDetaching = "detaching"
-	// urnParts is the number of colon separated segments in an infra-gateway
-	// urn, asc:<org>:<domain>:<tenant>:<resource-type>:<resource-id>.
+	// An infra-gateway URN is asc:<org>:<domain>:<tenant>:<resource-type>:<resource-id>.
 	urnParts = 6
 )
 
-// vmIdentity is the set of spellings by which infra-gateway may name the
-// machine a volume is attached to.
-//
-// The volume read model reports attachedToVM from
-// VMAttachedToVolumeAcknowledgedEvent.InstanceID, a uuid, and drops the VMName
-// the same event carries (infra-gateway cqrs/queries/get_volume/query.go). The
-// field is nonetheless documented and named as if it held a machine name, so
-// the provider accepts either spelling rather than betting on one: the uuid is
-// what a live gateway sends today, and the name is what the field claims to be.
+// vmIdentity accepts the instance UUID reported by the volume projection and the VM name
+// documented by the API.
 type vmIdentity struct {
 	name string
 	id   string
@@ -49,9 +41,8 @@ func (c *Runtime) resolveVM(ctx context.Context, vmName string) (vmIdentity, err
 	return vmIdentity{name: vm.Name, id: urnResourceID(vm.URN)}, nil
 }
 
-// urnResourceID returns the resource id of a well formed infra-gateway urn and
-// an empty string for anything else, so a urn the gateway changes the shape of
-// degrades to a name-only match rather than a wrong one.
+// urnResourceID returns an empty string for unknown URN formats, leaving attachment
+// matching to the VM name.
 func urnResourceID(urn string) string {
 	parts := strings.Split(urn, ":")
 	if len(parts) != urnParts || parts[0] != "asc" {
@@ -60,13 +51,8 @@ func urnResourceID(urn string) string {
 	return parts[urnParts-1]
 }
 
-// AttachVolume attaches a volume to a virtual machine and waits for the
-// attachment to complete.
-//
-// The route answers with an acknowledgement only: the handler dispatches a
-// command and returns {volumeName, vmName} without waiting for anything. The
-// volume's own read model is the single place completion becomes visible, so
-// the wait watches its status and attachedToVM rather than trusting the 200.
+// AttachVolume waits for the volume projection to confirm the attachment; the POST
+// response only acknowledges the command.
 func (c *Runtime) AttachVolume(ctx context.Context, volumeName, vmName string) (Volume, error) {
 	operationCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
 	defer cancel()
@@ -85,14 +71,8 @@ func (c *Runtime) AttachVolume(ctx context.Context, volumeName, vmName string) (
 		}, "report the volume attached")
 }
 
-// DetachVolume detaches a volume from a virtual machine and waits for the
-// detachment to complete.
-//
-// A volume or machine that is already gone means the attachment cannot exist,
-// which is the desired end state for a destroy, so an authoritative 404 is not
-// an error. Completion is again read from the volume: the gateway clears
-// attachedToVM once the detachment lands, so this direction needs no identity
-// comparison.
+// DetachVolume waits for attachedToVM to clear. A missing volume or VM also means the
+// attachment is gone.
 func (c *Runtime) DetachVolume(ctx context.Context, volumeName, vmName string) error {
 	operationCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
 	defer cancel()
@@ -104,10 +84,7 @@ func (c *Runtime) DetachVolume(ctx context.Context, volumeName, vmName string) e
 		return fmt.Errorf("detach volume %q from VM %q: %w", volumeName, vmName, err)
 	}
 
-	// waitUntil treats absence as "not there yet", which is right when waiting
-	// for something to appear and wrong here: a volume that has been deleted
-	// out of band cannot be attached to anything, so the loop is written out
-	// rather than reusing it.
+	// Unlike waitUntil, detachment treats a missing volume as completion.
 	name := attachmentName(volumeName, vmName)
 	for {
 		current, err := c.GetVolume(operationCtx, volumeName)
@@ -129,10 +106,8 @@ func (c *Runtime) DetachVolume(ctx context.Context, volumeName, vmName string) e
 	}
 }
 
-// GetVolumeAttachment reports the attachment of one volume to one machine.
-// ErrResourceNotFound means the volume is absent, the machine is absent, or the
-// volume is attached elsewhere, which is the only thing that removes the
-// attachment from Terraform state.
+// GetVolumeAttachment returns ErrResourceNotFound if either endpoint is absent or the
+// volume is attached elsewhere.
 func (c *Runtime) GetVolumeAttachment(ctx context.Context, volumeName, vmName string) (Volume, error) {
 	machine, err := c.resolveVM(ctx, vmName)
 	if err != nil {

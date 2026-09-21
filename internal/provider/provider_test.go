@@ -33,10 +33,6 @@ func TestProviderMetadataAndSchema(t *testing.T) {
 	if !ok || !password.Sensitive {
 		t.Fatalf("password attribute = %#v, want sensitive string", response.Schema.Attributes["password"])
 	}
-	// The registered set is asserted by name, not just by count, so a resource
-	// can neither go missing nor appear without this test being updated. Load
-	// balancers are deliberately absent: infra-gateway serves no read route for
-	// them, so no truthful resource is possible.
 	wantResources := []string{
 		"asc_vpc", "asc_subnet", "asc_virtual_machine",
 		"asc_vm_group", "asc_volume", "asc_volume_attachment",

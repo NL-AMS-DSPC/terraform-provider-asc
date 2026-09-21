@@ -156,9 +156,6 @@ func TestDataSourceReadMapsTheVirtualMachine(t *testing.T) {
 	}
 }
 
-// infra-gateway builds attachedBlocks by ranging over a Go map, so an unchanged
-// machine can report the same volumes in a different order on every read. State
-// records the list positionally, so the sort has to happen before it lands.
 func TestDataSourceReadSortsAttachedVolumes(t *testing.T) {
 	t.Parallel()
 
@@ -184,8 +181,6 @@ func TestDataSourceReadSortsAttachedVolumes(t *testing.T) {
 	}
 }
 
-// A data source cannot drop itself from state the way a managed resource does,
-// so an absent machine has to stop the run with its own diagnostic.
 func TestDataSourceReadReportsAbsentVirtualMachine(t *testing.T) {
 	t.Parallel()
 
@@ -202,8 +197,6 @@ func TestDataSourceReadReportsAbsentVirtualMachine(t *testing.T) {
 	}
 }
 
-// A transport failure is not evidence of absence, so it must read differently
-// from the not-found case and keep the underlying error.
 func TestDataSourceReadReportsTransportFailure(t *testing.T) {
 	t.Parallel()
 

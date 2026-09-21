@@ -10,18 +10,12 @@ import (
 
 const (
 	volumeKind = "volume"
-	// statusVolumeCreating and statusVolumeResizing are the two transient
-	// statuses a volume passes through while a command of its own is still in
-	// flight. Both mean the read model does not yet describe what was asked for.
+	// These statuses mean the requested volume change has not settled.
 	statusVolumeCreating = "creating"
 	statusVolumeResizing = "resizing"
 )
 
-// Volume is the infra-gateway read model of a block volume.
-//
-// There is no id field: infra-gateway identifies a volume by name and carries
-// the uuid inside the urn, so the provider keys everything off the name the way
-// the virtual machine resource does.
+// Volume is keyed by name; the gateway carries its UUID in the URN.
 type Volume struct {
 	URN          string            `json:"urn"`
 	Name         string            `json:"name"`
@@ -51,22 +45,12 @@ type resizeVolumeRequest struct {
 	Size string `json:"size"`
 }
 
-// lifecycle and tags implement resourceView so the shared waiters in wait.go
-// and the tag reconciler in tags.go serve volumes too. They live here rather
-// than in models.go because the volume model itself is declared here.
-
 func (v Volume) lifecycle() (string, string) { return v.Status, v.LastError }
 
 func (v Volume) tags() []Tag { return v.Tags }
 
-// CreateVolume creates a volume and waits until the gateway reports it settled.
-//
-// createWithNameReservation is deliberately not used. infra-gateway's
-// respondWithServiceError has no branch for domain.ErrBlockVolumeNameNotUnique,
-// so a duplicate volume name arrives as an untyped HTTP 500 instead of the
-// typed 409 the shared helper retries on. An untyped 500 can equally mean the
-// create partially succeeded, which makes a retry unsafe, so the error is
-// reported verbatim and the operator decides what to do with it.
+// CreateVolume waits for provisioning. Duplicate names return an untyped 500, which cannot
+// safely be retried because the create may have partially succeeded.
 func (c *Runtime) CreateVolume(ctx context.Context, request CreateVolumeRequest) (Volume, error) {
 	operationCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
 	defer cancel()
@@ -86,14 +70,8 @@ func (c *Runtime) GetVolume(ctx context.Context, name string) (Volume, error) {
 	return result, err
 }
 
-// ResizeVolume grows a volume in place and waits for the read model to report
-// the new size.
-//
-// Unlike a virtual machine resize, the request_block_volume_resizing slice
-// clears its latch on both the acknowledged and the failed event, so a resize
-// is genuinely repeatable and can be modelled as an in-place update. The wait
-// compares byte counts rather than strings because the gateway may echo the
-// size back in a different but numerically equal spelling.
+// ResizeVolume waits for the requested byte count, allowing equivalent quantity spellings.
+// The gateway clears its resize latch after success or failure.
 func (c *Runtime) ResizeVolume(ctx context.Context, name, size string) (Volume, error) {
 	target, err := ParseQuantity(size)
 	if err != nil {
@@ -115,20 +93,14 @@ func (c *Runtime) ResizeVolume(ctx context.Context, name, size string) (Volume, 
 	}, "report its new size")
 }
 
-// UpdateVolumeTags moves a volume's tags from current to desired.
-//
-// The gateway applies a patch rather than a replacement, so removing a tag
-// needs an explicit empty-valued entry; reconcileTags computes that. Note that
-// PatchVolume omits the conflict check the VPC, subnet and virtual machine
-// patch handlers perform, so breaching the 25 tag limit surfaces as an untyped
-// HTTP 500 rather than a 409.
+// UpdateVolumeTags patches and reads back tags. The gateway reports a tag-limit violation
+// as an untyped 500.
 func (c *Runtime) UpdateVolumeTags(ctx context.Context, name string, current, desired []Tag) (Volume, error) {
 	return reconcileTags(ctx, c, volumeKind, name, volumePath(name), current, desired, c.volumeReader(name))
 }
 
-// DeleteVolume deletes a volume and waits for it to disappear. A volume still
-// attached to a virtual machine is refused with ErrResourceConflict, which is
-// reported as is: detaching is not the provider's decision to make.
+// DeleteVolume waits for deletion. Attached volumes return ErrResourceConflict and must be
+// detached separately.
 func (c *Runtime) DeleteVolume(ctx context.Context, name string) error {
 	return deleteAndWait(ctx, c, volumeKind, name, func(ctx context.Context) error {
 		return c.delete(ctx, volumePath(name))
@@ -143,10 +115,7 @@ func volumePath(name string) string {
 	return "/volumes/" + escapedPathSegment(name)
 }
 
-// quantityUnits are the suffixes infra-gateway forwards to Kubernetes, binary
-// first so the listing reads in the order an operator thinks about them. The
-// suffixes are unambiguous under a plain suffix match: no binary suffix ends in
-// a decimal one.
+// Supported whole-number quantity suffixes, with binary units before decimal units.
 var quantityUnits = []struct {
 	suffix     string
 	multiplier int64
@@ -157,14 +126,8 @@ var quantityUnits = []struct {
 	{"T", 1e12}, {"P", 1e15}, {"E", 1e18},
 }
 
-// ParseQuantity converts a Kubernetes quantity string such as "10Gi" or "500M"
-// into bytes.
-//
-// size is opaque to infra-gateway, which stores whatever spelling it was given
-// and may echo back a different but numerically equal one. Comparing byte
-// counts rather than strings is the only way the provider can tell a real
-// resize from a respelling, so the parser is kept here in the client rather
-// than pulling in a Kubernetes dependency for it.
+// ParseQuantity converts whole-number byte quantities such as 10Gi or 500M to int64.
+// Fractional quantities are unsupported.
 func ParseQuantity(value string) (int64, error) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {

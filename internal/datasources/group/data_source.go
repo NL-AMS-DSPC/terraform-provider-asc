@@ -22,8 +22,7 @@ type DataSource struct {
 	client *client.Runtime
 }
 
-// Model exposes what UAM serves for a group. The members come from the
-// single-item read, which is the only route that carries them.
+// Model exposes the group summary and members returned by UAM.
 type Model struct {
 	Name        types.String `tfsdk:"name"`
 	ID          types.String `tfsdk:"id"`

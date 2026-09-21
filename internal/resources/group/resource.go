@@ -36,9 +36,7 @@ type Resource struct {
 	client resourceClient
 }
 
-// Model is the Terraform representation of a group. The name is the only thing
-// a configuration can set: UAM's create accepts nothing else, and there is no
-// update route at all.
+// Model accepts only a group name; UAM has no group update route.
 type Model struct {
 	Name        types.String `tfsdk:"name"`
 	ID          types.String `tfsdk:"id"`
@@ -136,9 +134,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-// Update is a no-op: UAM exposes no update route for a group, so the name
-// forces a replacement and every other attribute is computed. Terraform never
-// reaches an in-place update.
+// Update is unreachable: name changes require replacement and other fields are computed.
 func (r *Resource) Update(context.Context, resource.UpdateRequest, *resource.UpdateResponse) {}
 
 func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

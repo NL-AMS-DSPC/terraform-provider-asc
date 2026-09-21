@@ -35,8 +35,7 @@ import (
 
 var _ provider.Provider = &ASCProvider{}
 
-// ASCProvider is the clean provider implementation for UAM authentication and
-// infrastructure managed through infra-gateway.
+// ASCProvider manages infrastructure and UAM resources through the ASC gateway.
 type ASCProvider struct {
 	version string
 }
@@ -173,12 +172,8 @@ func resolveTimeout(value types.Int64) (time.Duration, error) {
 	return time.Duration(seconds) * time.Second, nil
 }
 
-// Resources exposes only resources implemented against the approved UAM and
-// infra-gateway boundary. Load balancers are absent on purpose: infra-gateway
-// registers no read route for them, so a resource could not refresh, detect
-// drift or import. Group membership and role assignment are absent for the
-// same reason on the UAM side: no route manages either, so the legacy
-// asc_group_member and asc_group_role are retired rather than reimplemented.
+// Resources registers the supported infra-gateway and UAM resources. See docs/legacy-
+// registrations.md for omitted legacy capabilities.
 func (p *ASCProvider) Resources(context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		vpc.NewResource,
@@ -192,8 +187,7 @@ func (p *ASCProvider) Resources(context.Context) []func() resource.Resource {
 	}
 }
 
-// DataSources exposes only data sources implemented against the approved
-// UAM and infra-gateway boundary; no legacy service data sources are exposed.
+// DataSources registers lookups supported by infra-gateway and UAM.
 func (p *ASCProvider) DataSources(context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		skudatasource.NewDataSource,

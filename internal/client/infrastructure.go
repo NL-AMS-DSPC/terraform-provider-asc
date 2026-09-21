@@ -27,9 +27,7 @@ func (c *Runtime) GetVPC(ctx context.Context, name string) (VPC, error) {
 	return result, err
 }
 
-// UpdateVPCTags moves a VPC's tags from current to desired. The gateway applies
-// a patch rather than a replacement, so reconcileTags turns a removed key into
-// an explicit empty-valued entry and then reads the result back.
+// UpdateVPCTags patches tags and reads back the resulting set.
 func (c *Runtime) UpdateVPCTags(ctx context.Context, name string, current, desired []Tag) (VPC, error) {
 	return reconcileTags(ctx, c, vpcKind, name, vpcPath(name), current, desired, c.vpcReader(name))
 }
@@ -86,13 +84,7 @@ func (c *Runtime) CreateVM(ctx context.Context, request CreateVMRequest) (VM, er
 	)
 }
 
-// GetVM reads one virtual machine by name.
-//
-// The attached volumes are sorted before they leave the client. The read model
-// assembles that slice by ranging over a Go map
-// (infra-gateway cqrs/queries/get_vm/query.go), so the order differs between two
-// reads of an unchanged machine and an unsorted list would surface as a diff no
-// configuration change can settle.
+// GetVM sorts attached volumes because the gateway returns them in map iteration order.
 func (c *Runtime) GetVM(ctx context.Context, name string) (VM, error) {
 	var result VM
 	if err := c.get(ctx, vmPath(name), &result); err != nil {
@@ -102,9 +94,7 @@ func (c *Runtime) GetVM(ctx context.Context, name string) (VM, error) {
 	return result, nil
 }
 
-// UpdateVMTags moves a virtual machine's tags from current to desired. The
-// PATCH response echoes only the patched keys, so reconcileTags discards it and
-// takes state from the authoritative read instead.
+// UpdateVMTags patches tags and reads back the resulting set.
 func (c *Runtime) UpdateVMTags(ctx context.Context, name string, current, desired []Tag) (VM, error) {
 	return reconcileTags(ctx, c, vmKind, name, vmPath(name), current, desired, c.vmReader(name))
 }

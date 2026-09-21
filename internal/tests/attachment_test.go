@@ -10,9 +10,8 @@ import (
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/client"
 )
 
-// attachmentFixture serves the volume read model that infra-gateway exposes and
-// the acknowledgement-only attach and detach routes. The attachment itself has
-// no read model of its own, so the volume is where every assertion lands.
+// attachmentFixture delays the volume projection after acknowledging attach/detach
+// commands.
 type attachmentFixture struct {
 	mu           sync.Mutex
 	status       string
@@ -34,9 +33,7 @@ func (f *attachmentFixture) volume() client.Volume {
 	}
 }
 
-// appInstanceID is the value infra-gateway really puts in a volume's
-// attachedToVM: the machine's instance uuid, not its name. The fixture serves
-// it so the suite exercises the gateway's actual contract.
+// The volume projection reports the VM instance UUID, not its name.
 const (
 	appInstanceID = "20000000-0000-4000-8000-000000000001"
 	appVMURN      = "asc:atos:compute:tenant:virtual_machine:" + appInstanceID
@@ -117,9 +114,6 @@ func TestVolumeAttachmentLifecycle(t *testing.T) {
 	}})
 }
 
-// TestVolumeAttachmentDetectsReassignment covers the drift that matters for an
-// attachment: the volume still exists but now belongs to another machine, so
-// this attachment is gone and the next plan has to recreate it.
 func TestVolumeAttachmentDetectsReassignment(t *testing.T) {
 	fixture := &attachmentFixture{status: "detached", settleAfter: 1}
 	environment := newTestEnvironment(t, fixture.handlers(t))
@@ -139,8 +133,6 @@ func TestVolumeAttachmentDetectsReassignment(t *testing.T) {
 	}})
 }
 
-// TestVolumeAttachmentHandlesOutOfBandVolumeDeletion proves the attachment
-// leaves state when the volume it describes is gone, rather than erroring.
 func TestVolumeAttachmentHandlesOutOfBandVolumeDeletion(t *testing.T) {
 	fixture := &attachmentFixture{status: "detached", settleAfter: 1}
 	environment := newTestEnvironment(t, fixture.handlers(t))

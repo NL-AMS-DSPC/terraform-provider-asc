@@ -7,10 +7,7 @@ import (
 	"sort"
 )
 
-// TagPatch is one entry of an infra-gateway tag patch. The gateway applies a
-// patch, not a replacement: an entry sets or overwrites its key, and an entry
-// with an empty value deletes it. Keys the patch does not mention are left
-// untouched, so removing a tag requires an explicit empty-valued entry.
+// TagPatch sets a key, or deletes it when Value is empty. Omitted keys are unchanged.
 type TagPatch struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
@@ -20,12 +17,8 @@ type tagPatchRequest struct {
 	Tags []TagPatch `json:"tags"`
 }
 
-// tagPatchFor computes the patch that turns current into desired, ordered by
-// key so the same change always produces the same request body.
-//
-// An empty desired value is rejected rather than sent: infra-gateway reads it
-// as a deletion, so accepting one would silently drop the tag instead of
-// storing the empty string the configuration asked for.
+// tagPatchFor returns a deterministic patch. Empty desired values are rejected because the
+// gateway interprets them as deletions.
 func tagPatchFor(current, desired []Tag) ([]TagPatch, error) {
 	desiredByKey := make(map[string]string, len(desired))
 	for _, tag := range desired {
@@ -55,8 +48,7 @@ func tagPatchFor(current, desired []Tag) ([]TagPatch, error) {
 	return patch, nil
 }
 
-// sameTags reports whether two tag sets hold the same key/value pairs. Neither
-// infra-gateway nor the provider promises an order, so only the pairs matter.
+// sameTags compares key/value pairs regardless of order.
 func sameTags(left, right []Tag) bool {
 	if len(left) != len(right) {
 		return false
@@ -73,21 +65,12 @@ func sameTags(left, right []Tag) bool {
 	return true
 }
 
-// patchTags sends a tag patch to one resource path.
 func (c *Runtime) patchTags(ctx context.Context, path string, patch []TagPatch) error {
 	return c.request(ctx, http.MethodPatch, path, tagPatchRequest{Tags: patch}, nil)
 }
 
-// reconcileTags moves a resource's tags from current to desired and returns the
-// resource as the gateway reports it afterwards.
-//
-// The PATCH response body is deliberately discarded. The virtual machine and
-// volume handlers echo the request's own patch entries back as the resource's
-// tags, which for a deletion means an entry with an empty value and for any
-// patch means the untouched keys are missing; the VPC and subnet handlers do
-// re-read, but from a projection that need not have applied the command yet.
-// Reading back until the authoritative read reports the desired set is the only
-// way to end with state that matches the server.
+// reconcileTags polls until a read reports the desired tags. PATCH responses may echo only
+// the patch or return a stale projection.
 func reconcileTags[T resourceView](ctx context.Context, c *Runtime, kind, name, path string, current, desired []Tag, read readFunc[T]) (T, error) {
 	var zero T
 	operationCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)

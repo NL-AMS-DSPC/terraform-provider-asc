@@ -9,11 +9,8 @@ import (
 
 const vmGroupsPath = "/vm-groups/"
 
-// VMGroup is the infra-gateway read model of a virtual machine group.
-//
-// The projection carries no vpcID, no image and no customization: those reach
-// the gateway on the create command only and are never served back, so the
-// provider has to treat them as configuration-only.
+// VMGroup is the gateway read model. VPC ID, image and customization are write-only and
+// must be preserved from configuration.
 type VMGroup struct {
 	URN               string            `json:"urn"`
 	Name              string            `json:"name"`
@@ -34,9 +31,7 @@ type AutoscalingPolicy struct {
 	Cron        *CronRule `json:"cron,omitempty"`
 }
 
-// CronRule is the optional cron window of an autoscaling policy. It is a
-// pointer on the policy because the gateway requires all four fields as soon as
-// the object is present, so an absent rule has to be omitted entirely.
+// CronRule must be omitted when absent; an empty object fails gateway validation.
 type CronRule struct {
 	Timezone        string `json:"timezone"`
 	Start           string `json:"start"`
@@ -44,10 +39,8 @@ type CronRule struct {
 	DesiredReplicas int64  `json:"desiredReplicas"`
 }
 
-// CreateVMGroupRequest is the create body of a virtual machine group. The
-// gateway names the autoscaling policy "autoscalers" on the way in and
-// "autoscalingPolicy" on the way out, and the field is not optional, so it is
-// always sent.
+// CreateVMGroupRequest sends the required policy as autoscalers; reads call it
+// autoscalingPolicy.
 type CreateVMGroupRequest struct {
 	Name              string            `json:"name"`
 	SKUID             string            `json:"skuID"`
@@ -62,22 +55,8 @@ func (g VMGroup) lifecycle() (string, string) { return g.Status, g.LastError }
 
 func (g VMGroup) tags() []Tag { return g.Tags }
 
-// CreateVMGroup creates a virtual machine group and waits for it to appear.
-//
-// createWithNameReservation is deliberately not used. That helper retries a 409
-// whose resource is absent from the read model, on the assumption the name is
-// held by a reservation the gateway is about to release. Group names are
-// reserved in the same vm_names_in_use table as virtual machine names, and a
-// group's row is only released once infra-gateway acknowledges its deletion, so
-// a 409 here is a name that is genuinely taken now: by a live group, by a
-// virtual machine sharing the table, or by a group whose deletion has not been
-// acknowledged yet. Retrying would poll until the lifecycle timeout and then
-// report a deadline instead of the reason, so the conflict is reported at once.
-//
-// A 409 on this route can mean nothing else: the gateway's CreateVMGroup
-// handler answers every other failure with a 400, and respondWithServiceError
-// maps only ErrVPCNameNotUnique, which this path cannot raise, and
-// ErrVMNameNotUnique to 409.
+// CreateVMGroup reports name conflicts immediately. Group and VM names share a reservation
+// table, and group names are released only after deletion is acknowledged.
 func (c *Runtime) CreateVMGroup(ctx context.Context, request CreateVMGroupRequest) (VMGroup, error) {
 	operationCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
 	defer cancel()
@@ -97,12 +76,8 @@ func (c *Runtime) CreateVMGroup(ctx context.Context, request CreateVMGroupReques
 		func(ctx context.Context) (VMGroup, error) { return c.GetVMGroup(ctx, request.Name) })
 }
 
-// GetVMGroup reads one virtual machine group by name.
-//
-// The attached volumes are sorted before they leave the client. The gateway
-// builds that slice by ranging over a Go map, so its order differs between two
-// reads of an unchanged group and an unsorted list would surface as a diff that
-// no configuration change can settle.
+// GetVMGroup sorts attached volumes because the gateway returns them in map iteration
+// order.
 func (c *Runtime) GetVMGroup(ctx context.Context, name string) (VMGroup, error) {
 	var result VMGroup
 	if err := c.get(ctx, vmGroupsPath+escapedPathSegment(name), &result); err != nil {
@@ -112,9 +87,7 @@ func (c *Runtime) GetVMGroup(ctx context.Context, name string) (VMGroup, error) 
 	return result, nil
 }
 
-// DeleteVMGroup deletes a virtual machine group and waits for it to be gone.
-// The wait matters because infra-gateway releases the name reservation only
-// when it acknowledges the deletion, and a replacement reuses that name.
+// DeleteVMGroup waits for deletion so replacements can reuse the name.
 func (c *Runtime) DeleteVMGroup(ctx context.Context, name string) error {
 	return deleteAndWait(ctx, c, "VM group", name,
 		func(ctx context.Context) error { return c.delete(ctx, vmGroupsPath+escapedPathSegment(name)) },

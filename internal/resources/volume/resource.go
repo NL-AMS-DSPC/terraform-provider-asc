@@ -38,9 +38,7 @@ type Resource struct {
 	client resourceClient
 }
 
-// Model mirrors the infra-gateway read model. It carries no id because the
-// gateway's volume read model has none: the name identifies the volume and the
-// urn carries the uuid, exactly as for asc_virtual_machine.
+// Model identifies the volume by name and retains the gateway URN.
 type Model struct {
 	Name         types.String `tfsdk:"name"`
 	Size         types.String `tfsdk:"size"`
@@ -119,13 +117,8 @@ func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, r
 	r.client = runtime
 }
 
-// ModifyPlan rejects a shrink before anything is applied and drops the computed
-// values an in-place change invalidates.
-//
-// Terraform copies computed attributes forward from prior state when the
-// configuration does not set them, so without this a resize would plan
-// size_bytes and status at their old values and then fail the apply for
-// producing an inconsistent result.
+// ModifyPlan rejects shrinking and marks changed computed fields unknown. Otherwise a
+// resize would produce values inconsistent with the plan.
 func (r *Resource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	// Only an update can shrink a volume: a create has no prior size and a
 	// destroy has no plan.
@@ -249,8 +242,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		}
 	}
 
-	// Both changes settle asynchronously, so the authoritative read is what ends
-	// up in state whichever of them ran.
+	// Read the settled result after either asynchronous update.
 	current, err := r.client.GetVolume(ctx, name)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading volume", err.Error())
@@ -285,11 +277,7 @@ func setFromVolume(ctx context.Context, model *Model, value client.Volume, diags
 		return
 	}
 
-	// size is an opaque Kubernetes quantity and infra-gateway is free to echo a
-	// different but equal spelling than the one configured, for instance
-	// "10240Mi" for "10Gi". Adopting the gateway's spelling whenever it differs
-	// would leave a permanent diff, so it is only adopted when the magnitude
-	// really changed, which is what an out-of-band resize looks like.
+	// Preserve the configured spelling when byte counts match to avoid permanent diffs.
 	if !model.Size.IsNull() && !model.Size.IsUnknown() {
 		if prior, priorErr := client.ParseQuantity(model.Size.ValueString()); priorErr != nil || prior != actual {
 			model.Size = types.StringValue(value.Size)

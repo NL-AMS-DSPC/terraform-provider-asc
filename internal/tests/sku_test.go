@@ -24,9 +24,7 @@ func TestAccSKUsDataSource(t *testing.T) {
 		},
 	}
 
-	// infra-gateway walks a Go map and then sorts non-stably on cores*threads, so
-	// SKUs of equal weight change places between calls. reshuffled makes the
-	// fixture do the same thing once the first step has settled.
+	// Equal-weight SKUs can change order in the gateway response.
 	var (
 		mu         sync.Mutex
 		reshuffled atomic.Bool
@@ -45,9 +43,7 @@ func TestAccSKUsDataSource(t *testing.T) {
 		},
 	})
 
-	// The output consumes the data source, so a reshuffle that reached state
-	// would surface as a planned output change. Without a consumer an empty plan
-	// is guaranteed whatever the data source returns, and proves nothing.
+	// Consume the first entry so unstable ordering appears as an output change.
 	config := environment.providerConfig() + `
 data "asc_skus" "test" {}
 
@@ -79,9 +75,7 @@ output "first_sku" {
 			),
 		},
 		{
-			// Same catalogue, reversed on the wire. State is sorted by id, so it
-			// must not move, and neither the data source nor the output that reads
-			// skus[0] may plan a change.
+			// Reverse the response while preserving the expected state and output.
 			PreConfig: func() { reshuffled.Store(true) },
 			Config:    config,
 			ConfigPlanChecks: resource.ConfigPlanChecks{

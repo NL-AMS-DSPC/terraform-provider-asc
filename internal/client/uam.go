@@ -13,33 +13,15 @@ const (
 	tenantGroupsPath = "/v1/tenants/groups"
 )
 
-// tenantRolesPath addresses the configured tenant's roles.
-//
-// UAM resolves the path segment through getTenantIDByClientID on every write,
-// so the segment is the tenant's client id: the same value the provider already
-// sends as X-Tenant. Reads forward the segment to the authorization service
-// unchanged, so the two must agree or reads and writes address different
-// tenants.
+// Role writes and collection reads resolve the tenant client ID, which is the configured
+// namespace.
 func (c *Runtime) tenantRolesPath() string {
 	return tenantsPath + "/" + escapedPathSegment(c.config.Namespace) + "/roles"
 }
 
-// roleReadPath addresses a role on the single-item route, which is the only
-// one that serves its actions.
-//
-// That route is the one place where the namespace is the wrong segment. Every
-// other role route resolves its {tenantId} through getTenantIDByClientID and
-// calls the authorization service with the tenant's uuid, but GetTenantRole
-// forwards the segment unchanged as the tenant header, and the authorization
-// service keys a role as "<tenant>_<name>". A role created under the namespace
-// is therefore stored against the tenant's uuid, and reading it back by the
-// namespace looks up a key that was never written and answers 502. The item
-// read addresses the uuid; the writes keep the namespace, which is the only
-// value they accept.
-//
-// This mirrors a UAM defect rather than its intended contract. If UAM ever
-// translates the segment in GetTenantRole, this must go back to the namespace
-// on the same day, because the fixed service would then reject the uuid.
+// roleReadPath uses the tenant UUID because UAM GetTenantRole forwards that segment
+// unchanged to authorization. Other role routes translate the namespace to a UUID. Revisit
+// this workaround if GetTenantRole starts translating it too.
 func (c *Runtime) roleReadPath(ctx context.Context, name string) (string, error) {
 	tenant, err := c.tenantUUID(ctx)
 	if err != nil {
@@ -48,13 +30,8 @@ func (c *Runtime) roleReadPath(ctx context.Context, name string) (string, error)
 	return tenantsPath + "/" + escapedPathSegment(tenant) + "/roles/" + escapedPathSegment(name), nil
 }
 
-// tenantUUID returns the id UAM records for the configured namespace, which is
-// the tenant's Keycloak client uuid.
-//
-// It is resolved once and cached for the life of the provider: a tenant's uuid
-// cannot change under its client id, and every role refresh would otherwise
-// pay for the lookup again. Reading it needs the uam:GetTenant action on the
-// provider's credentials.
+// tenantUUID caches the namespace lookup for this provider instance. The credentials need
+// uam:GetTenant.
 func (c *Runtime) tenantUUID(ctx context.Context) (string, error) {
 	c.tenantMu.Lock()
 	defer c.tenantMu.Unlock()
@@ -74,12 +51,8 @@ func (c *Runtime) tenantUUID(ctx context.Context) (string, error) {
 	return c.tenantID, nil
 }
 
-// Role is a UAM tenant role as the provider models it.
-//
-// UAM's own "id" is deliberately absent. It is not one identity: the
-// single-item read sets it to the role's name while the list route sets it to a
-// database uuid, so a role is keyed by name and the uuid is resolved only for
-// the one request that needs it.
+// Role is keyed by name. UAM reports incompatible IDs on its list and item routes, so no
+// ID is exposed here.
 type Role struct {
 	URN     string
 	Name    string
@@ -104,15 +77,12 @@ type GroupMember struct {
 	Type    string
 }
 
-// tenantResponse is UAM's TenantResponse. Its "id" is the tenant's Keycloak
-// client uuid, which is the value the role item route has to be addressed by.
+// tenantResponse carries the Keycloak client UUID required by the role item route.
 type tenantResponse struct {
 	ID string `json:"id"`
 }
 
-// roleResponse is UAM's RoleResponse. A role's actions are sent on create as
-// "actions" and served back on the single-item read as "composites"; the list
-// route serves neither.
+// Role writes use actions; item reads use composites. List responses omit both.
 type roleResponse struct {
 	ID          string   `json:"id"`
 	URN         string   `json:"urn"`
@@ -158,15 +128,8 @@ type createGroupRequest struct {
 	GroupName string `json:"groupName"`
 }
 
-// GetRole reads one role by name.
-//
-// Existence is decided from the list route, never from the single-item read. A
-// role that no longer exists answers the single-item read with 502, because UAM
-// turns every non-2xx from the authorization service into an untyped error and
-// maps only its own not-found sentinels to 404. The single-item read is then
-// still needed, because it is the only route that serves the role's actions,
-// and it is addressed by the tenant's uuid rather than the namespace. See
-// roleReadPath.
+// GetRole checks existence through the list, then reads actions from the item route.
+// Missing item reads return an ambiguous 502.
 func (c *Runtime) GetRole(ctx context.Context, name string) (Role, error) {
 	if _, err := c.roleID(ctx, name); err != nil {
 		return Role{}, err
@@ -187,9 +150,7 @@ func (c *Runtime) GetRole(ctx context.Context, name string) (Role, error) {
 	return Role{URN: detail.URN, Name: name, Actions: actions}, nil
 }
 
-// CreateRole creates a role and reads it back. The create answers with a
-// message and no representation, so every attribute in state comes from the
-// read.
+// CreateRole reads back the role because creation returns only an acknowledgement.
 func (c *Runtime) CreateRole(ctx context.Context, name string, actions []string) (Role, error) {
 	if err := c.uamPost(ctx, c.tenantRolesPath(), createRoleRequest{Name: name, Actions: actions}, nil); err != nil {
 		return Role{}, fmt.Errorf("create role %q: %w", name, err)
@@ -197,17 +158,8 @@ func (c *Runtime) CreateRole(ctx context.Context, name string, actions []string)
 	return c.GetRole(ctx, name)
 }
 
-// UpdateRole replaces a role's actions.
-//
-// The body carries the role's database uuid, which only the list route serves,
-// and UAM's upsert conflicts on that uuid rather than on the name: a request
-// carrying an invented id inserts a second row for the same role. The uuid is
-// therefore resolved from the list on every update instead of being kept in
-// state, where it would go stale against a role recreated outside Terraform.
-//
-// The name cannot change here. UAM addresses the downstream update by the name
-// in the body, so a renamed role would be written nowhere; the resource
-// requires replacement for a new name.
+// UpdateRole resolves the current database UUID before replacing actions. UAM upserts by
+// UUID; inventing one would insert a duplicate. Renaming requires replacement.
 func (c *Runtime) UpdateRole(ctx context.Context, name string, actions []string) (Role, error) {
 	id, err := c.roleID(ctx, name)
 	if err != nil {
@@ -221,12 +173,8 @@ func (c *Runtime) UpdateRole(ctx context.Context, name string, actions []string)
 	return c.GetRole(ctx, name)
 }
 
-// DeleteRole deletes a role by name.
-//
-// The route spells its segment {roleID}, but the service resolves it with
-// repo.GetByName and forwards the same segment downstream, so the segment is
-// the name. The list is consulted first so that deleting an already absent role
-// succeeds instead of surfacing UAM's untyped 502.
+// DeleteRole addresses the role by name despite the route parameter being called roleID. A
+// list lookup avoids deleting an already absent role.
 func (c *Runtime) DeleteRole(ctx context.Context, name string) error {
 	switch _, err := c.roleID(ctx, name); {
 	case errors.Is(err, ErrResourceNotFound):
@@ -256,11 +204,7 @@ func (c *Runtime) roleID(ctx context.Context, name string) (string, error) {
 	return "", ErrResourceNotFound
 }
 
-// GetGroup reads one group by name.
-//
-// As with roles, the list route decides existence and carries the group's id
-// and description, while the single-item read is the only source of its
-// members.
+// GetGroup takes identity and description from the list, and members from the item read.
 func (c *Runtime) GetGroup(ctx context.Context, name string) (Group, error) {
 	summary, err := c.groupSummary(ctx, name)
 	if err != nil {
@@ -272,27 +216,18 @@ func (c *Runtime) GetGroup(ctx context.Context, name string) (Group, error) {
 		return Group{}, fmt.Errorf("read group %q: %w", name, err)
 	}
 
-	// groupMemberResponse and GroupMember carry the same fields; the two types
-	// exist so the wire tags stay out of the exported model.
 	members := make([]GroupMember, 0, len(detail.Members))
 	for _, member := range detail.Members {
 		members = append(members, GroupMember(member))
 	}
-	// The members are assembled from a user lookup followed by an API client
-	// lookup, so their order tracks the upstream directories rather than the
-	// group, and an unsorted list would surface as a diff no configuration can
-	// settle.
+	// UAM returns users and API clients in directory order; sort for stable Terraform state.
 	slices.SortFunc(members, func(a, b GroupMember) int { return strings.Compare(a.Name, b.Name) })
 
 	return Group{ID: summary.ID, URN: detail.URN, Name: name, Description: summary.Description, Members: members}, nil
 }
 
-// CreateGroup creates a group and reads it back.
-//
-// UAM reports a duplicate group name as a plain error rather than its
-// already-exists sentinel, so the conflict arrives as 502 with no way to tell
-// it from a genuine upstream failure. The list is consulted after a failure to
-// name the cause rather than repeat the status.
+// CreateGroup checks the list after a failure because UAM reports duplicate names as an
+// untyped 502.
 func (c *Runtime) CreateGroup(ctx context.Context, name string) (Group, error) {
 	if err := c.uamPost(ctx, tenantGroupsPath, createGroupRequest{GroupName: name}, nil); err != nil {
 		if _, lookupErr := c.groupSummary(ctx, name); lookupErr == nil {
@@ -303,9 +238,7 @@ func (c *Runtime) CreateGroup(ctx context.Context, name string) (Group, error) {
 	return c.GetGroup(ctx, name)
 }
 
-// DeleteGroup deletes a group by name. The route spells its segment {groupID},
-// but the service resolves it with GetGroupByNameAndTenant, so the segment is
-// the name.
+// DeleteGroup uses the group name despite the route parameter being called groupID.
 func (c *Runtime) DeleteGroup(ctx context.Context, name string) error {
 	switch _, err := c.groupSummary(ctx, name); {
 	case errors.Is(err, ErrResourceNotFound):
@@ -320,8 +253,7 @@ func (c *Runtime) DeleteGroup(ctx context.Context, name string) error {
 	return nil
 }
 
-// groupSummary returns the list route's record of a group, which is the only
-// reliable proof that it exists.
+// groupSummary resolves existence from the collection read.
 func (c *Runtime) groupSummary(ctx context.Context, name string) (groupResponse, error) {
 	var list groupListResponse
 	if err := c.uamGet(ctx, tenantGroupsPath, &list); err != nil {

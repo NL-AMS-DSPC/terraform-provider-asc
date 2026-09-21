@@ -11,9 +11,7 @@ import (
 )
 
 const (
-	// uamTenantUUID is the id UAM records for the namespace test-tenant. The
-	// role item route is the one route addressed by it rather than by the
-	// namespace, because UAM does not translate that segment.
+	// The role item route uses the tenant UUID; other routes use the namespace.
 	uamTenantUUID = "00000000-0000-4000-8000-0000000000aa"
 	uamTenant     = "/api/uam/v1/tenants/test-tenant"
 	uamRoleList   = "/api/uam/v1/tenants/test-tenant/roles"
@@ -23,19 +21,13 @@ const (
 	uamGroupItem  = "/api/uam/v1/tenants/groups/platform"
 )
 
-// writeBare encodes a payload the way UAM does, with no "data" envelope. The
-// infra-gateway helper writeData cannot stand in for it: a provider that
-// unwrapped an envelope here would decode nothing.
+// writeBare mirrors UAM responses without a data envelope.
 func writeBare(w http.ResponseWriter, status int, payload any) {
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
 }
 
-// roleStore is the smallest UAM a lifecycle needs: a name-keyed set of roles
-// whose list route reports a database uuid and no actions, and whose item route
-// reports the name as the id together with the actions under "composites".
-// Keeping both shapes honest is the point, because the provider has to take a
-// different field from each route.
+// roleStore returns UUIDs from the list and names plus composites from the item route.
 type roleStore struct {
 	mu      sync.Mutex
 	actions map[string][]string
@@ -52,10 +44,7 @@ func (s *roleStore) handlers(t *testing.T, updates *atomic.Int64) map[string]htt
 		"GET " + uamTenant: func(w http.ResponseWriter, _ *http.Request) {
 			writeBare(w, http.StatusOK, map[string]any{"id": uamTenantUUID, "name": "test-tenant"})
 		},
-		// UAM stores a created role against the tenant uuid, so the same read
-		// addressed by the namespace finds nothing and answers 502. Serving it
-		// that way here keeps the mock honest and fails the test loudly if the
-		// provider ever addresses the item read by the namespace again.
+		// Mirror the UAM defect: a namespace-addressed item read cannot find the role.
 		"GET " + uamRoleWrite: func(w http.ResponseWriter, _ *http.Request) {
 			t.Errorf("provider read the role item route under the namespace, which UAM answers with 502")
 			w.WriteHeader(http.StatusBadGateway)
@@ -109,9 +98,7 @@ func (s *roleStore) handlers(t *testing.T, updates *atomic.Int64) map[string]htt
 			}
 			s.mu.Lock()
 			defer s.mu.Unlock()
-			// UAM upserts on the id, so a request carrying anything but the
-			// uuid the list reported would create a second row rather than
-			// update this one.
+			// UAM upserts by UUID; a different ID would create a duplicate.
 			if body.ID != s.ids[body.Name] {
 				t.Errorf("update role id = %q, want the listed uuid %q", body.ID, s.ids[body.Name])
 			}
@@ -153,8 +140,6 @@ resource "asc_role" "test" {
 			),
 		},
 		{
-			// A changed action set must update the role rather than replace it,
-			// and the replacement would pass every attribute check on its own.
 			Config:           config(`["vm:read", "vm:write"]`),
 			ConfigPlanChecks: inPlace("asc_role.test"),
 			Check: resource.ComposeAggregateTestCheckFunc(
@@ -170,8 +155,6 @@ resource "asc_role" "test" {
 	}
 }
 
-// A role deleted outside Terraform must leave state, and the only signal that
-// says so is its absence from the list: the item route answers 502.
 func TestRoleRefreshDropsARoleDeletedOutsideTerraform(t *testing.T) {
 	var updates atomic.Int64
 	store := newRoleStore()
@@ -193,8 +176,6 @@ resource "asc_role" "test" {
 				delete(store.actions, "operator")
 				delete(store.ids, "operator")
 			},
-			// The refresh finds the role gone and plans a create, which is only
-			// possible if the read removed it from state instead of erroring.
 			ExpectNonEmptyPlan: false,
 			Check:              resource.TestCheckResourceAttr("asc_role.test", "name", "operator"),
 		},

@@ -23,9 +23,7 @@ type DataSource struct {
 	client *client.Runtime
 }
 
-// Model is the Terraform representation of a single SKU. The attribute names
-// match the nested sku object on asc_virtual_machine so both describe a SKU
-// identically.
+// Model uses the same attribute names as the VM resource's nested SKU.
 type Model struct {
 	ID          types.String `tfsdk:"id"`
 	Name        types.String `tfsdk:"name"`
@@ -100,10 +98,7 @@ func (d *DataSource) Read(ctx context.Context, _ datasource.ReadRequest, resp *d
 		return
 	}
 
-	// infra-gateway serves the catalogue in whatever order its store yields, and
-	// that order is not stable between calls. The list is recorded positionally
-	// in state, so sort it on the one field that identifies a SKU; otherwise a
-	// reshuffle alone would show up as a diff on every plan.
+	// Sort by ID to prevent catalogue ordering from producing state diffs.
 	slices.SortFunc(skus, func(a, b client.SKU) int { return cmp.Compare(a.ID, b.ID) })
 
 	state := DataSourceModel{SKUs: make([]Model, len(skus))}

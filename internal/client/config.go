@@ -9,8 +9,7 @@ import (
 
 const defaultTimeout = 30 * time.Second
 
-// Config contains only the endpoints and credentials used by the fresh
-// provider boundary.
+// Config contains provider endpoints, credentials and the request timeout.
 type Config struct {
 	Endpoint     *url.URL
 	Namespace    string

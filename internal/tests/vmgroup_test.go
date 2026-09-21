@@ -14,9 +14,7 @@ import (
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/client"
 )
 
-// testVMGroup is the group the gateway reports. Note what it does not carry:
-// no vpcID, no image and no customization, so the provider can only keep those
-// from the configuration.
+// The gateway omits VPC ID, image and customization from group reads.
 func testVMGroup() client.VMGroup {
 	return client.VMGroup{
 		URN: "asc:vm_group:test-group", Name: "test-group",
@@ -92,8 +90,7 @@ func TestVMGroupProvisioning(t *testing.T) {
 		{
 			ResourceName: "asc_vm_group.test", ImportState: true, ImportStateId: group.Name,
 			ImportStateVerify: true, ImportStateVerifyIdentifierAttribute: "name",
-			// An import reads the gateway, which reports neither the VPC, the
-			// image nor the customization, so these three cannot be recovered.
+			// The gateway cannot recover these write-only fields during import.
 			ImportStateVerifyIgnore: []string{"vpc_id", "image", "customization"},
 		},
 	}})
@@ -129,9 +126,7 @@ func TestVMGroupProvisioningRefreshesExternalDrift(t *testing.T) {
 		{Config: vmGroupConfig(environment), Check: resource.TestCheckResourceAttr("asc_vm_group.test", "status", "active")},
 		{
 			PreConfig: func() { drifted.Store(true) },
-			// A refresh has to record what the gateway reports. The tag moved
-			// out of band and tags force a replacement, so the follow-up plan is
-			// deliberately not empty.
+			// Drifted tags require replacement on groups.
 			RefreshState: true, ExpectNonEmptyPlan: true,
 			Check: resource.ComposeAggregateTestCheckFunc(
 				resource.TestCheckResourceAttr("asc_vm_group.test", "status", "pending"),
@@ -164,9 +159,7 @@ func TestVMGroupProvisioningRecoversFromOutOfBandDeletion(t *testing.T) {
 	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: providerFactories, Steps: []resource.TestStep{
 		{Config: vmGroupConfig(environment), Check: resource.TestCheckResourceAttr("asc_vm_group.test", "status", "active")},
 		{
-			PreConfig: func() { removed.Store(true) },
-			// A 404 is authoritative absence, so the refresh drops the group
-			// from state and the next plan recreates it.
+			PreConfig:    func() { removed.Store(true) },
 			RefreshState: true, ExpectNonEmptyPlan: true,
 			Check: func(state *terraform.State) error {
 				if _, exists := state.RootModule().Resources["asc_vm_group.test"]; exists {
@@ -211,11 +204,6 @@ resource "asc_vm_group" "test" {
 	}}})
 }
 
-// TestVMGroupReplacementReusesTheReleasedName covers the whole reason
-// asc_vm_group has to work: every attribute forces replacement, so a change is
-// a delete followed by a create under the same name. infra-gateway releases the
-// name when it acknowledges the group's deletion, so the create that follows
-// succeeds and no conflict arises.
 func TestVMGroupReplacementReusesTheReleasedName(t *testing.T) {
 	var mu sync.Mutex
 	posts := 0
@@ -237,8 +225,7 @@ func TestVMGroupReplacementReusesTheReleasedName(t *testing.T) {
 		"POST /api/infra-gateway/vm-groups/": func(w http.ResponseWriter, _ *http.Request) {
 			mu.Lock()
 			defer mu.Unlock()
-			// The name is free: the previous generation's deletion was
-			// acknowledged, which is what releases it in vm_names_in_use.
+			// The previous deletion acknowledged release of the name reservation.
 			if present {
 				w.WriteHeader(http.StatusConflict)
 				return
@@ -291,9 +278,6 @@ resource "asc_vm_group" "test" {
 	}
 }
 
-// TestVMGroupReportsATakenNameAtOnce pins the fail-fast half. A 409 on this
-// route is always a name that is taken now, so the provider reports it straight
-// away instead of polling until the lifecycle timeout and reporting a deadline.
 func TestVMGroupReportsATakenNameAtOnce(t *testing.T) {
 	var posts atomic.Int32
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{

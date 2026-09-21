@@ -49,9 +49,6 @@ data "asc_vpc" "test" {
 	}}})
 }
 
-// A data source that cannot find its target must stop the run: silently empty
-// state would let the rest of the configuration build on a VPC that is not
-// there.
 func TestAccVPCDataSourceRejectsUnknownVPC(t *testing.T) {
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
 		"GET /api/infra-gateway/vpcs/ghost": func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNotFound) },
@@ -106,8 +103,6 @@ data "asc_subnet" "test" {
 	}}})
 }
 
-// The listing route 404s for a VPC that does not exist, which reaches the data
-// source as the same typed not-found the missing-subnet case produces.
 func TestAccSubnetDataSourceRejectsUnknownVPC(t *testing.T) {
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
 		"GET /api/infra-gateway/vpcs/ghost/subnets/": func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNotFound) },
@@ -123,8 +118,6 @@ data "asc_subnet" "test" {
 	}}})
 }
 
-// The VPC exists but holds no subnet of that name: the listing succeeds and the
-// client turns the empty match into the same not-found diagnostic.
 func TestAccSubnetDataSourceRejectsUnknownSubnet(t *testing.T) {
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
 		"GET /api/infra-gateway/vpcs/test-vpc/subnets/": func(w http.ResponseWriter, _ *http.Request) {
@@ -197,8 +190,6 @@ data "asc_virtual_machine" "test" {
 	}}})
 }
 
-// A data source that cannot find its target must stop the run rather than hand
-// the rest of the configuration an empty machine.
 func TestAccVirtualMachineDataSourceRejectsUnknownVirtualMachine(t *testing.T) {
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
 		"GET /api/infra-gateway/vms/ghost": func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNotFound) },

@@ -20,9 +20,6 @@ var (
 	_ datasource.DataSourceWithConfigure = &DataSource{}
 )
 
-// dataSourceClient is the one call this data source makes. Narrowing it the way
-// the resources narrow resourceClient keeps the read testable without a live
-// Runtime.
 type dataSourceClient interface {
 	GetVPC(context.Context, string) (client.VPC, error)
 }
@@ -32,9 +29,7 @@ type DataSource struct {
 	client dataSourceClient
 }
 
-// Model mirrors the asc_vpc resource attribute for attribute, so a
-// configuration can move between the managed resource and this data source
-// without renaming anything.
+// Model mirrors the asc_vpc resource attributes.
 type Model struct {
 	ID        types.String `tfsdk:"id"`
 	URN       types.String `tfsdk:"urn"`
@@ -88,10 +83,7 @@ func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp 
 			"status":     schema.StringAttribute{Description: "Lifecycle status reported by infra-gateway.", Computed: true},
 			"last_error": schema.StringAttribute{Description: "Last error reported for the VPC, empty when healthy.", Computed: true},
 			"subnets": schema.ListNestedAttribute{
-				// infra-gateway rebuilds this list by replaying the VPC event
-				// stream in order, so it is already stable between reads and is
-				// recorded as served. It is not sorted here because the position
-				// carries the order the subnets were created in.
+				// The event stream preserves subnet creation order.
 				Description: "Subnets belonging to the VPC, in the order infra-gateway reports them.",
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
@@ -132,11 +124,7 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 
 	name := config.Name.ValueString()
 	current, err := d.client.GetVPC(ctx, name)
-	// A managed resource treats a 404 as drift and drops the resource from
-	// state. A data source cannot: the configuration named something that has to
-	// exist, so an absent VPC is a configuration error and has to stop the run
-	// rather than leave every attribute empty. Only the typed 404 means absent;
-	// anything else is a transport or gateway failure and is worded as one.
+	// Data sources require the named object to exist; a 404 is a configuration error.
 	if errors.Is(err, client.ErrResourceNotFound) {
 		resp.Diagnostics.AddError("VPC not found", fmt.Sprintf("No VPC named %q exists in this tenant.", name))
 		return

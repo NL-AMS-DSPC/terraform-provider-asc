@@ -22,10 +22,7 @@ type DataSource struct {
 	client *client.Runtime
 }
 
-// Model is the Terraform representation of a virtual machine group as the
-// gateway serves it. It exposes only what the read model carries: vpc_id, image
-// and customization reach the gateway on the create command and are never
-// reported back, so a data source attribute for them would be null forever.
+// Model omits VPC ID, image and customization because the gateway never returns them.
 type Model struct {
 	Name            types.String      `tfsdk:"name"`
 	URN             types.String      `tfsdk:"urn"`

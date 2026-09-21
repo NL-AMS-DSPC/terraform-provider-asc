@@ -24,8 +24,7 @@ type DataSource struct {
 	client *client.Runtime
 }
 
-// Model matches the asc_volume resource attribute for attribute so a volume
-// reads the same whether Terraform manages it or only looks it up.
+// Model mirrors the asc_volume resource attributes.
 type Model struct {
 	Name         types.String `tfsdk:"name"`
 	Size         types.String `tfsdk:"size"`
