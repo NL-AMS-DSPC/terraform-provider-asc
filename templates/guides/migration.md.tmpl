@@ -17,6 +17,21 @@ evidence for every disposition, is in
 [legacy registration disposition](https://github.com/NL-AMS-DSPC/terraform-provider-asc/blob/main/docs/legacy-registrations.md);
 this guide does not repeat its 41 rows.
 
+## Before you start
+
+Which state you hold decides what each instruction below means. There are two origins: the
+published `NL-AMS-DSPC/dspc` v0.0.1 release, which registers one resource,
+`dspc_virtual_machine`, at a different source address; and the unreleased legacy build at `main`,
+which registers the 22 resources this guide's dispositions describe, at *this* provider's own
+source address. Except where a section says otherwise, the dispositions below are about state
+written by the unreleased build at `main`, because it is the only origin that ever held these
+registrations.
+
+The identities, protocols and schema versions behind that split are in
+[the compatibility matrix](https://github.com/NL-AMS-DSPC/terraform-provider-asc/blob/main/docs/compatibility.md).
+The ordered procedure, with the stop conditions that abort it, is in
+[the upgrade runbook](https://github.com/NL-AMS-DSPC/terraform-provider-asc/blob/main/docs/guides/upgrade-runbook.md).
+
 ## What is preserved
 
 Provider type and resource names keep the `asc` / `asc_*` spelling, and the registry source stays
@@ -40,8 +55,32 @@ allowlist, so no legacy service prefix can be reintroduced by accident.
 ## Shipped, same address
 
 `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group` and the `asc_skus` data source keep
-their legacy names. The state entries are not portable between providers, so remove the old entry
-and import the live object; `asc_skus` is a data source and needs nothing.
+their legacy names. What to do with the existing state entries depends on which build wrote them,
+and the difference is forced rather than chosen.
+
+**State written by the unreleased legacy build at `main`.** It records this provider's own source
+address, `registry.terraform.io/nl-ams-dspc/asc`, the same `asc_*` type names and the same schema
+version 0, so Terraform does not treat it as a different provider: it hands the state over, the
+framework decodes it, and the first plan is a refresh. **Do not remove and re-import these
+entries.** `internal/tests/migration_test.go` seeds exactly this state for all four resources and
+asserts the first plan proposes nothing against a mock gateway. For VM groups, first rename
+`autoscaling_policy` to `autoscaling` in configuration while preserving its values; the old
+argument is rejected. The state fixture retains the old spelling until refresh. That safety depends on the refresh reaching the gateway, because `asc_vm_group`'s renamed
+`autoscaling` attribute starts null and forces replacement until `Read` refills it; the
+[upgrade runbook](https://github.com/NL-AMS-DSPC/terraform-provider-asc/blob/main/docs/guides/upgrade-runbook.md)
+treats a failed or skipped refresh as a stop for that reason.
+
+**State written by the published `NL-AMS-DSPC/dspc` v0.0.1 release.** It holds only
+`dspc_virtual_machine`, under a different source address and a different type name, so Terraform
+never offers it to this provider and no schema upgrader could reach it. Remove the entry and import
+the live machine:
+
+```shell
+terraform state rm dspc_virtual_machine.web
+terraform import asc_virtual_machine.web web-01
+```
+
+`asc_skus` is a data source either way and needs nothing.
 
 ## Shipped, renamed
 
@@ -49,6 +88,10 @@ and import the live object; `asc_skus` is a data source and needs nothing.
 | --- | --- |
 | `asc_block_storage` | `asc_volume` |
 | `asc_block_storage_attachment` | `asc_volume_attachment` |
+
+The type name changed, so unlike the four resources above these are not carried over by the
+refresh: this provider registers no `asc_block_storage`, and a state entry whose type the provider
+does not register fails every plan.
 
 ```shell
 terraform state rm asc_block_storage.data
@@ -80,7 +123,13 @@ terraform import asc_role.network_admin network-admin
 terraform import asc_group.platform platform-team
 ```
 
-State cannot be moved from the legacy entries. Three limits change what a configuration may say:
+State written by the unreleased legacy build at `main` carries over, because that build registered
+`asc_role` and `asc_group` under the same type names at the same source address. These two are not
+covered by the migration tests, so treat the first plan as the check: a proposed replacement of a
+role or group is a stop, not something to apply through. The published v0.0.1 release registered
+neither, so there is no legacy role or group state to move from it.
+
+Three limits change what a configuration may say:
 
 - A role's Terraform identity is its **name**. The legacy resource persisted UAM's `id`, but that
   field holds the role's name on one route and a database uuid on another, so this provider does

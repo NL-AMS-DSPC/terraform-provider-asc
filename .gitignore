@@ -2,6 +2,8 @@
 .terraform/
 *.tfstate
 *.tfstate.*
+# Track synthetic migration fixtures; keep working state ignored.
+!internal/tests/fixtures/*.tfstate
 coverage.out
 terraform-provider-asc
-
+dist/

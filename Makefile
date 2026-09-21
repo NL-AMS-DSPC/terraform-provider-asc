@@ -1,26 +1,36 @@
-.PHONY: build test vet lint generate check-generated check
+.PHONY: build test test-race vet lint check-format check-modules vulncheck generate check-generated check release-snapshot install-check
 
-GOLANGCI_LINT_VERSION := v2.8.0
+GOLANGCI_LINT_VERSION := v2.13.2
+GOVULNCHECK_VERSION := v1.8.0
+ACTIONLINT_VERSION := v1.7.12
 
 build:
 	go build -o terraform-provider-asc .
 
-# TF_ACC=1 is required: without it every resource.Test under internal/tests
-# silently t.Skip()s while still reporting PASS, so a green run would prove
-# nothing about the acceptance tier.
+# Use the same CLI for acceptance tests and migration fixtures.
 test:
-	TF_ACC=1 go test -count=1 ./...
+	TF_ACC=1 TF_ACC_TERRAFORM_PATH="$${TF_ACC_TERRAFORM_PATH:-$$(command -v terraform)}" go test -count=1 ./...
+
+test-race:
+	TF_ACC=1 TF_ACC_TERRAFORM_PATH="$${TF_ACC_TERRAFORM_PATH:-$$(command -v terraform)}" go test -race -count=1 ./...
 
 vet:
 	go vet ./...
 
-# CGO_ENABLED=0 applies to building the linter, not to the code under test.
-# golangci-lint needs no cgo, and linking it against the host toolchain fails on
-# a macOS nix shell whose clang wrapper cannot resolve -lresolv. Disabling cgo
-# for this one build makes the gate runnable everywhere without changing a
-# single analyzer.
+# Building the linter without cgo avoids the macOS Nix linker dependency.
 lint:
 	CGO_ENABLED=0 go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run ./...
+	go run github.com/rhysd/actionlint/cmd/actionlint@$(ACTIONLINT_VERSION)
+
+check-format:
+	CGO_ENABLED=0 go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) fmt --diff
+
+check-modules:
+	go mod tidy -diff
+	go mod verify
+
+vulncheck:
+	go run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ./...
 
 generate:
 	go generate ./...
@@ -28,4 +38,12 @@ generate:
 check-generated:
 	./scripts/check-generated.sh
 
-check: test vet lint check-generated
+check: test vet lint check-format check-modules check-generated vulncheck
+
+# Creates a temporary signing key and never publishes artifacts.
+release-snapshot:
+	./scripts/release-snapshot-check.sh
+
+# Requires the artifacts produced by release-snapshot.
+install-check:
+	./scripts/install-check.sh

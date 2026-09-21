@@ -10,7 +10,7 @@ import (
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/provider"
 )
 
-//go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@v0.24.0 generate --provider-name asc
+//go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@v0.25.0 generate --provider-name asc
 
 var version = "dev"
 
