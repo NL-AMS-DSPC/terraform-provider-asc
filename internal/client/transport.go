@@ -11,8 +11,7 @@ import (
 	"strings"
 )
 
-// The provider reaches exactly two API prefixes. Everything else it needs is
-// the realm token endpoint on the separate auth host.
+// API requests use these prefixes; authentication uses the separate realm token endpoint.
 const (
 	infraGatewayPrefix = "/api/infra-gateway"
 	uamPrefix          = "/api/uam"
@@ -78,10 +77,7 @@ func (c *Runtime) uamDelete(ctx context.Context, path string) error {
 	return c.uamRequest(ctx, http.MethodDelete, path, nil, nil)
 }
 
-// uamRequest talks to UAM, which encodes a successful body bare. It cannot
-// share infra-gateway's decode path: UAM responds through
-// RespondWithJSONObject, which writes the payload itself rather than wrapping
-// it in a "data" envelope.
+// uamRequest decodes bare JSON; UAM does not use the infra-gateway data envelope.
 func (c *Runtime) uamRequest(ctx context.Context, method, path string, input, output any) error {
 	resp, err := c.send(ctx, method, uamPrefix+path, input, "uam")
 	if err != nil {
@@ -102,9 +98,7 @@ func (c *Runtime) uamRequest(ctx context.Context, method, path string, input, ou
 	return nil
 }
 
-// send performs one authenticated request against an absolute API path. The
-// two boundaries frame a successful body differently, so the response is
-// handed back undecoded.
+// send performs an authenticated request; callers decode the service-specific response.
 func (c *Runtime) send(ctx context.Context, method, path string, input any, service string) (*http.Response, error) {
 	var body io.Reader
 	if input != nil {
@@ -116,7 +110,12 @@ func (c *Runtime) send(ctx context.Context, method, path string, input any, serv
 	}
 
 	target := *c.config.Endpoint
-	target.Path = strings.TrimRight(target.Path, "/") + path
+	target.RawPath = strings.TrimRight(target.EscapedPath(), "/") + path
+	decodedPath, err := url.PathUnescape(target.RawPath)
+	if err != nil {
+		return nil, fmt.Errorf("decode %s request path: %w", service, err)
+	}
+	target.Path = decodedPath
 	target.RawQuery = ""
 	target.Fragment = ""
 
@@ -142,10 +141,8 @@ func (c *Runtime) send(ctx context.Context, method, path string, input any, serv
 	return resp, nil
 }
 
-// statusError maps a response status to the provider's typed errors. Only an
-// authoritative 404 means the resource is gone; UAM's 502 deliberately does
-// not, even though UAM also answers a missing resource that way, because the
-// same status covers a genuine upstream failure.
+// Only 404 proves absence. UAM also returns 502 for upstream failures, so it must remain
+// an error.
 func statusError(resp *http.Response, service string) error {
 	switch {
 	case resp.StatusCode == http.StatusNotFound:

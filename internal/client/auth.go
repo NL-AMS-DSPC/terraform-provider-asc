@@ -49,7 +49,8 @@ type Runtime struct {
 func NewRuntime(config Config) *Runtime {
 	httpClient := &http.Client{Timeout: config.Timeout}
 	tokenURL := *config.AuthURL
-	tokenURL.Path = strings.TrimRight(tokenURL.Path, "/") + "/realms/" + url.PathEscape(config.Organization) + "/protocol/openid-connect/token"
+	tokenURL.RawPath = strings.TrimRight(tokenURL.EscapedPath(), "/") + "/realms/" + url.PathEscape(config.Organization) + "/protocol/openid-connect/token"
+	tokenURL.Path = strings.TrimRight(tokenURL.Path, "/") + "/realms/" + config.Organization + "/protocol/openid-connect/token"
 
 	return &Runtime{
 		config:     config,
