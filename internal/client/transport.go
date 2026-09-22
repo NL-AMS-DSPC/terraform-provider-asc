@@ -15,85 +15,139 @@ import (
 const (
 	infraGatewayPrefix = "/api/infra-gateway"
 	uamPrefix          = "/api/uam"
+	ipamPrefix         = "/api/ipam"
 )
 
-func (c *Runtime) get(ctx context.Context, path string, output any) error {
-	return c.request(ctx, http.MethodGet, path, nil, output)
+type svcType string
+
+const (
+	svcInfraGateway svcType = "infra-gateway"
+	svcUAM          svcType = "uam"
+	svcIPAM         svcType = "ipam"
+)
+
+type responseWrapper interface {
+	decode(body io.ReadCloser) error
+	validate() error
+	unmarshal(output any) error
 }
 
-func (c *Runtime) post(ctx context.Context, path string, input any) error {
-	return c.request(ctx, http.MethodPost, path, input, nil)
+type envelope struct {
+	Data json.RawMessage `json:"data"`
 }
 
-func (c *Runtime) delete(ctx context.Context, path string) error {
-	return c.request(ctx, http.MethodDelete, path, nil, nil)
-}
-
-// request talks to infra-gateway, whose successful bodies are wrapped in a
-// "data" envelope.
-func (c *Runtime) request(ctx context.Context, method, path string, input, output any) error {
-	resp, err := c.send(ctx, method, infraGatewayPrefix+path, input, "infra-gateway")
-	if err != nil {
-		return err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if err := statusError(resp, "infra-gateway"); err != nil {
-		return err
-	}
-	if output == nil {
-		_, _ = io.Copy(io.Discard, resp.Body)
-		return nil
-	}
-
-	var envelope struct {
-		Data json.RawMessage `json:"data"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
-		return fmt.Errorf("decode infra-gateway response envelope: %w", err)
-	}
-	if len(envelope.Data) == 0 || string(envelope.Data) == "null" {
-		return fmt.Errorf("decode infra-gateway response envelope: missing data")
-	}
-	if err := json.Unmarshal(envelope.Data, output); err != nil {
-		return fmt.Errorf("decode infra-gateway response data: %w", err)
+func (e *envelope) decode(body io.ReadCloser) error {
+	if err := json.NewDecoder(body).Decode(e); err != nil {
+		return fmt.Errorf("error decoding: %w", err)
 	}
 	return nil
 }
 
-func (c *Runtime) uamGet(ctx context.Context, path string, output any) error {
-	return c.uamRequest(ctx, http.MethodGet, path, nil, output)
+func (e *envelope) validate() error {
+	if len(e.Data) == 0 || string(e.Data) == "null" {
+		return fmt.Errorf("validation error: missing data")
+	}
+	return nil
 }
 
-func (c *Runtime) uamPost(ctx context.Context, path string, input, output any) error {
-	return c.uamRequest(ctx, http.MethodPost, path, input, output)
+func (e *envelope) unmarshal(output any) error {
+	if err := json.Unmarshal(e.Data, output); err != nil {
+		return fmt.Errorf("error unmarshalling: %w", err)
+	}
+	return nil
 }
 
-func (c *Runtime) uamPut(ctx context.Context, path string, input any) error {
-	return c.uamRequest(ctx, http.MethodPut, path, input, nil)
+type service struct {
+	name            string
+	prefix          string
+	responseWrapper responseWrapper
 }
 
-func (c *Runtime) uamDelete(ctx context.Context, path string) error {
-	return c.uamRequest(ctx, http.MethodDelete, path, nil, nil)
+func serviceForName(svc svcType) service {
+	switch svc {
+	case svcUAM:
+		return service{
+			name:   string(svcUAM),
+			prefix: uamPrefix,
+		}
+	case svcIPAM:
+		return service{
+			name:   string(svcIPAM),
+			prefix: ipamPrefix,
+		}
+	default:
+		return service{
+			name:            string(svcInfraGateway),
+			prefix:          infraGatewayPrefix,
+			responseWrapper: &envelope{},
+		}
+	}
 }
 
-// uamRequest decodes bare JSON; UAM does not use the infra-gateway data envelope.
-func (c *Runtime) uamRequest(ctx context.Context, method, path string, input, output any) error {
-	resp, err := c.send(ctx, method, uamPrefix+path, input, "uam")
+func (c *Runtime) get(ctx context.Context, path string, output any) error {
+	return c.request(ctx, svcInfraGateway, http.MethodGet, path, nil, output)
+}
+
+func (c *Runtime) post(ctx context.Context, path string, input any) error {
+	return c.request(ctx, svcInfraGateway, http.MethodPost, path, input, nil)
+}
+
+func (c *Runtime) patch(ctx context.Context, path string, input any) error {
+	return c.request(ctx, svcInfraGateway, http.MethodPatch, path, input, nil)
+}
+
+func (c *Runtime) delete(ctx context.Context, path string) error {
+	return c.request(ctx, svcInfraGateway, http.MethodDelete, path, nil, nil)
+}
+
+func (c *Runtime) getForSvc(ctx context.Context, svc svcType, path string, output any) error {
+	return c.request(ctx, svc, http.MethodGet, path, nil, output)
+}
+
+func (c *Runtime) postForSvc(ctx context.Context, svc svcType, path string, input any) error {
+	return c.request(ctx, svc, http.MethodPost, path, input, nil)
+}
+
+func (c *Runtime) putForSvc(ctx context.Context, svc svcType, path string, input any) error {
+	return c.request(ctx, svc, http.MethodPut, path, input, nil)
+}
+
+func (c *Runtime) deleteForSvc(ctx context.Context, svc svcType, path string) error {
+	return c.request(ctx, svc, http.MethodDelete, path, nil, nil)
+}
+
+// request talks to infra-gateway, whose successful bodies are wrapped in a
+// "data" envelope.
+func (c *Runtime) request(ctx context.Context, svcName svcType, method, path string, input, output any) error {
+	svc := serviceForName(svcName)
+	resp, err := c.send(ctx, method, svc.prefix+path, input, svc.name)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if err := statusError(resp, "uam"); err != nil {
+	if err := statusError(resp, svc.name); err != nil {
 		return err
 	}
 	if output == nil {
 		_, _ = io.Copy(io.Discard, resp.Body)
 		return nil
 	}
-	if err := json.NewDecoder(resp.Body).Decode(output); err != nil {
-		return fmt.Errorf("decode uam response: %w", err)
+
+	if svc.responseWrapper == nil {
+		if err := json.NewDecoder(resp.Body).Decode(output); err != nil {
+			return fmt.Errorf("decode %s response: %w", svc.name, err)
+		}
+		return nil
+	}
+	if err := svc.responseWrapper.decode(resp.Body); err != nil {
+		return fmt.Errorf("decode %s response wrapper: %w", svc.name, err)
+	}
+	if err := svc.responseWrapper.validate(); err != nil {
+		return fmt.Errorf("validate %s response wrapper: %w", svc.name, err)
+	}
+	if err := svc.responseWrapper.unmarshal(output); err != nil {
+		return fmt.Errorf("decode %s response data: %w", svc.name, err)
 	}
 	return nil
 }

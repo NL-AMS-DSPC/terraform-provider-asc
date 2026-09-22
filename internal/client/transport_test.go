@@ -46,7 +46,7 @@ func TestRequestEscapesPathSegmentsOnce(t *testing.T) {
 				t.Fatalf("get VPC: %v", err)
 			}
 			var roles []roleResponse
-			if err := runtime.uamGet(context.Background(), runtime.tenantRolesPath(), &roles); err != nil {
+			if err := runtime.getForSvc(context.Background(), svcUAM, runtime.tenantRolesPath(), &roles); err != nil {
 				t.Fatalf("list roles: %v", err)
 			}
 			for _, path := range []string{wantAuth, wantVPC, wantUAM} {

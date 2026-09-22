@@ -40,7 +40,7 @@ func (c *Runtime) tenantUUID(ctx context.Context) (string, error) {
 	}
 
 	var tenant tenantResponse
-	if err := c.uamGet(ctx, tenantsPath+"/"+escapedPathSegment(c.config.Namespace), &tenant); err != nil {
+	if err := c.getForSvc(ctx, svcUAM, tenantsPath+"/"+escapedPathSegment(c.config.Namespace), &tenant); err != nil {
 		return "", fmt.Errorf("resolve tenant %q: %w", c.config.Namespace, err)
 	}
 	if tenant.ID == "" {
@@ -141,7 +141,7 @@ func (c *Runtime) GetRole(ctx context.Context, name string) (Role, error) {
 	}
 
 	var detail roleResponse
-	if err := c.uamGet(ctx, path, &detail); err != nil {
+	if err := c.getForSvc(ctx, svcUAM, path, &detail); err != nil {
 		return Role{}, fmt.Errorf("read role %q: %w", name, err)
 	}
 
@@ -152,7 +152,7 @@ func (c *Runtime) GetRole(ctx context.Context, name string) (Role, error) {
 
 // CreateRole reads back the role because creation returns only an acknowledgement.
 func (c *Runtime) CreateRole(ctx context.Context, name string, actions []string) (Role, error) {
-	if err := c.uamPost(ctx, c.tenantRolesPath(), createRoleRequest{Name: name, Actions: actions}, nil); err != nil {
+	if err := c.postForSvc(ctx, svcUAM, c.tenantRolesPath(), createRoleRequest{Name: name, Actions: actions}); err != nil {
 		return Role{}, fmt.Errorf("create role %q: %w", name, err)
 	}
 	return c.GetRole(ctx, name)
@@ -167,7 +167,7 @@ func (c *Runtime) UpdateRole(ctx context.Context, name string, actions []string)
 	}
 
 	request := updateRoleRequest{ID: id, Name: name, Actions: actions}
-	if err := c.uamPut(ctx, c.tenantRolesPath()+"/"+escapedPathSegment(name), request); err != nil {
+	if err := c.putForSvc(ctx, svcUAM, c.tenantRolesPath()+"/"+escapedPathSegment(name), request); err != nil {
 		return Role{}, fmt.Errorf("update role %q: %w", name, err)
 	}
 	return c.GetRole(ctx, name)
@@ -183,7 +183,7 @@ func (c *Runtime) DeleteRole(ctx context.Context, name string) error {
 		return err
 	}
 
-	if err := c.uamDelete(ctx, c.tenantRolesPath()+"/"+escapedPathSegment(name)); err != nil {
+	if err := c.deleteForSvc(ctx, svcUAM, c.tenantRolesPath()+"/"+escapedPathSegment(name)); err != nil {
 		return fmt.Errorf("delete role %q: %w", name, err)
 	}
 	return nil
@@ -193,7 +193,7 @@ func (c *Runtime) DeleteRole(ctx context.Context, name string) error {
 // ErrResourceNotFound when the tenant has no such role.
 func (c *Runtime) roleID(ctx context.Context, name string) (string, error) {
 	var roles []roleResponse
-	if err := c.uamGet(ctx, c.tenantRolesPath(), &roles); err != nil {
+	if err := c.getForSvc(ctx, svcUAM, c.tenantRolesPath(), &roles); err != nil {
 		return "", fmt.Errorf("list roles: %w", err)
 	}
 	for _, role := range roles {
@@ -212,7 +212,7 @@ func (c *Runtime) GetGroup(ctx context.Context, name string) (Group, error) {
 	}
 
 	var detail groupResponse
-	if err := c.uamGet(ctx, tenantGroupsPath+"/"+escapedPathSegment(name), &detail); err != nil {
+	if err := c.getForSvc(ctx, svcUAM, tenantGroupsPath+"/"+escapedPathSegment(name), &detail); err != nil {
 		return Group{}, fmt.Errorf("read group %q: %w", name, err)
 	}
 
@@ -229,7 +229,7 @@ func (c *Runtime) GetGroup(ctx context.Context, name string) (Group, error) {
 // CreateGroup checks the list after a failure because UAM reports duplicate names as an
 // untyped 502.
 func (c *Runtime) CreateGroup(ctx context.Context, name string) (Group, error) {
-	if err := c.uamPost(ctx, tenantGroupsPath, createGroupRequest{GroupName: name}, nil); err != nil {
+	if err := c.postForSvc(ctx, svcUAM, tenantGroupsPath, createGroupRequest{GroupName: name}); err != nil {
 		if _, lookupErr := c.groupSummary(ctx, name); lookupErr == nil {
 			return Group{}, fmt.Errorf("create group %q: the name is already in use for this tenant: %w", name, err)
 		}
@@ -247,7 +247,7 @@ func (c *Runtime) DeleteGroup(ctx context.Context, name string) error {
 		return err
 	}
 
-	if err := c.uamDelete(ctx, tenantGroupsPath+"/"+escapedPathSegment(name)); err != nil {
+	if err := c.deleteForSvc(ctx, svcUAM, tenantGroupsPath+"/"+escapedPathSegment(name)); err != nil {
 		return fmt.Errorf("delete group %q: %w", name, err)
 	}
 	return nil
@@ -256,7 +256,7 @@ func (c *Runtime) DeleteGroup(ctx context.Context, name string) error {
 // groupSummary resolves existence from the collection read.
 func (c *Runtime) groupSummary(ctx context.Context, name string) (groupResponse, error) {
 	var list groupListResponse
-	if err := c.uamGet(ctx, tenantGroupsPath, &list); err != nil {
+	if err := c.getForSvc(ctx, svcUAM, tenantGroupsPath, &list); err != nil {
 		return groupResponse{}, fmt.Errorf("list groups: %w", err)
 	}
 	for _, group := range list.Groups {
