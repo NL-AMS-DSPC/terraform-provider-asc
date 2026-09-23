@@ -61,7 +61,7 @@ func (c *Runtime) CreateVMGroup(ctx context.Context, request CreateVMGroupReques
 	operationCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
 	defer cancel()
 
-	if err := c.post(operationCtx, vmGroupsPath, request); err != nil {
+	if err := c.post(operationCtx, svcInfraGateway, vmGroupsPath, request); err != nil {
 		if errors.Is(err, ErrResourceConflict) {
 			return VMGroup{}, fmt.Errorf(
 				"create VM group %q: the name is already in use for this tenant. "+
@@ -80,7 +80,7 @@ func (c *Runtime) CreateVMGroup(ctx context.Context, request CreateVMGroupReques
 // order.
 func (c *Runtime) GetVMGroup(ctx context.Context, name string) (VMGroup, error) {
 	var result VMGroup
-	if err := c.get(ctx, vmGroupsPath+escapedPathSegment(name), &result); err != nil {
+	if err := c.get(ctx, svcInfraGateway, vmGroupsPath+escapedPathSegment(name), &result); err != nil {
 		return VMGroup{}, err
 	}
 	slices.Sort(result.AttachedVolumes)
@@ -90,7 +90,9 @@ func (c *Runtime) GetVMGroup(ctx context.Context, name string) (VMGroup, error) 
 // DeleteVMGroup waits for deletion so replacements can reuse the name.
 func (c *Runtime) DeleteVMGroup(ctx context.Context, name string) error {
 	return deleteAndWait(ctx, c, "VM group", name,
-		func(ctx context.Context) error { return c.delete(ctx, vmGroupsPath+escapedPathSegment(name)) },
+		func(ctx context.Context) error {
+			return c.delete(ctx, svcInfraGateway, vmGroupsPath+escapedPathSegment(name))
+		},
 		func(ctx context.Context) (VMGroup, error) { return c.GetVMGroup(ctx, name) },
 	)
 }

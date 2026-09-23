@@ -63,63 +63,56 @@ type service struct {
 	responseWrapper responseWrapper
 }
 
-func serviceForName(svc svcType) service {
+func serviceForName(svc svcType) (service, error) {
 	switch svc {
-	case svcUAM:
-		return service{
-			name:   string(svcUAM),
-			prefix: uamPrefix,
-		}
-	case svcIPAM:
-		return service{
-			name:   string(svcIPAM),
-			prefix: ipamPrefix,
-		}
-	default:
+	case svcInfraGateway:
 		return service{
 			name:            string(svcInfraGateway),
 			prefix:          infraGatewayPrefix,
 			responseWrapper: &envelope{},
-		}
+		}, nil
+	case svcUAM:
+		return service{
+			name:   string(svcUAM),
+			prefix: uamPrefix,
+		}, nil
+	case svcIPAM:
+		return service{
+			name:   string(svcIPAM),
+			prefix: ipamPrefix,
+		}, nil
+	default:
+		return service{}, fmt.Errorf("unknown service type: %s", svc)
 	}
 }
 
-func (c *Runtime) get(ctx context.Context, path string, output any) error {
-	return c.request(ctx, svcInfraGateway, http.MethodGet, path, nil, output)
-}
-
-func (c *Runtime) post(ctx context.Context, path string, input any) error {
-	return c.request(ctx, svcInfraGateway, http.MethodPost, path, input, nil)
-}
-
-func (c *Runtime) patch(ctx context.Context, path string, input any) error {
-	return c.request(ctx, svcInfraGateway, http.MethodPatch, path, input, nil)
-}
-
-func (c *Runtime) delete(ctx context.Context, path string) error {
-	return c.request(ctx, svcInfraGateway, http.MethodDelete, path, nil, nil)
-}
-
-func (c *Runtime) getForSvc(ctx context.Context, svc svcType, path string, output any) error {
+func (c *Runtime) get(ctx context.Context, svc svcType, path string, output any) error {
 	return c.request(ctx, svc, http.MethodGet, path, nil, output)
 }
 
-func (c *Runtime) postForSvc(ctx context.Context, svc svcType, path string, input any) error {
+func (c *Runtime) post(ctx context.Context, svc svcType, path string, input any) error {
 	return c.request(ctx, svc, http.MethodPost, path, input, nil)
 }
 
-func (c *Runtime) putForSvc(ctx context.Context, svc svcType, path string, input any) error {
+func (c *Runtime) patch(ctx context.Context, svc svcType, path string, input any) error {
+	return c.request(ctx, svc, http.MethodPatch, path, input, nil)
+}
+
+func (c *Runtime) put(ctx context.Context, svc svcType, path string, input any) error {
 	return c.request(ctx, svc, http.MethodPut, path, input, nil)
 }
 
-func (c *Runtime) deleteForSvc(ctx context.Context, svc svcType, path string) error {
+func (c *Runtime) delete(ctx context.Context, svc svcType, path string) error {
 	return c.request(ctx, svc, http.MethodDelete, path, nil, nil)
 }
 
 // request talks to infra-gateway, whose successful bodies are wrapped in a
 // "data" envelope.
 func (c *Runtime) request(ctx context.Context, svcName svcType, method, path string, input, output any) error {
-	svc := serviceForName(svcName)
+	svc, err := serviceForName(svcName)
+	if err != nil {
+		return err
+	}
 	resp, err := c.send(ctx, method, svc.prefix+path, input, svc.name)
 	if err != nil {
 		return err

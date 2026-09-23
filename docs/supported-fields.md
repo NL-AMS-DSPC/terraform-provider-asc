@@ -5,12 +5,13 @@ resource and data source. This page answers what they cannot: which attribute ca
 live resource, which one destroys and recreates it, how each resource is imported, and which gateway
 gaps those answers follow from.
 
-The provider registers eight resources and eight data sources, across two API boundaries:
+The provider registers nine resources and nine data sources, across three API boundaries:
 
 | Boundary | Resources | Data sources |
 | --- | --- | --- |
 | `/api/infra-gateway` | `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume`, `asc_volume_attachment` | `asc_skus`, `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume` |
 | `/api/uam` | `asc_role`, `asc_group` | `asc_role`, `asc_group` |
+| `/api/ipam` | `asc_ip` | `asc_ips` |
 
 There is no `asc_load_balancer`, no `asc_group_member` and no `asc_group_role`. Data sources are
 read-only throughout, so none of them appears in the change tables below; the UAM data sources have
@@ -166,9 +167,27 @@ so it arrives as HTTP 502 and is indistinguishable from a genuine upstream failu
 does not retry it; it consults the list route once afterwards so the diagnostic can name the taken
 name rather than repeat the status.
 
+### asc_ip
+
+Reservations live on `/api/ipam`. There is no configurable attribute at all: `POST /reservations`
+takes no body and IPAM picks the address, so every attribute is read-only.
+
+| Attribute | Schema | Change | Why |
+| --- | --- | --- | --- |
+| `ip` | Computed | Forces recreation if lost | The address IPAM assigned. Kept from state once known, because nothing about it can be recomputed from configuration. |
+| `reserved_at` | Computed | Kept from state | Timestamp `POST /reservations` returns alongside the address. |
+
+`Read` and import both filter `GET /reservations` for the
+matching `ip`. A reservation missing from that list removes the resource from state, and the next
+plan reserves a new, different address; there is no way to ask IPAM for a specific one back.
+
+The resource's `Update` is unreachable: both attributes are computed, so no configuration change can
+produce a plan that reaches it. Deleting it sends `DELETE /reservations` with `{"ip": "..."}` in the
+body.
+
 ## Import
 
-All eight resources are importable.
+All nine resources are importable.
 
 | Resource | Import ID | Example |
 | --- | --- | --- |
@@ -180,6 +199,7 @@ All eight resources are importable.
 | `asc_volume_attachment` | `volume-name:vm-name` | `terraform import asc_volume_attachment.example data-01:web-01` |
 | `asc_role` | `name` | `terraform import asc_role.example network-admin` |
 | `asc_group` | `name` | `terraform import asc_group.example platform-team` |
+| `asc_ip` | `ip` | `terraform import asc_ip.example 10.0.0.1` |
 
 The two pair-formed identifiers split on the first `:`; an identifier with no separator, or with
 nothing on either side of it, is rejected with a diagnostic naming the expected form.
@@ -234,7 +254,14 @@ Neither data source exposes a role's UAM `id`, for the reason given under
 | No route assigns a role to a user, a group or an API client, and no route manages group membership | There is no `asc_group_member` and no `asc_group_role`. Both legacy registrations are retired rather than deferred: the capability is absent from the approved boundary, not merely unimplemented here. See the [migration guide](guides/migration.md). |
 | Both delete routes spell their path parameter `{roleID}` and `{groupID}` | The services resolve either segment by name, so the segment sent is the name in both cases. |
 
-The provider reaches exactly two API prefixes, `/api/infra-gateway` and `/api/uam`, plus the
-Keycloak realm token path used to obtain a bearer token. The acceptance suite asserts that against
-an allowlist over every route the provider actually sends, so a request to any other prefix fails
-the build.
+The provider reaches exactly three API prefixes, `/api/infra-gateway`, `/api/uam` and `/api/ipam`,
+plus the Keycloak realm token path used to obtain a bearer token. The acceptance suite asserts that
+against an allowlist over every route the provider actually sends, so a request to any other prefix
+fails the build.
+
+## IPAM
+
+`asc_ip` and `asc_ips` are the only resources on `/api/ipam`. Unlike
+infra-gateway, IPAM responses are never wrapped in a `data` envelope, and unlike UAM there is no
+tenant-scoped path segment to resolve first: `/reservations` is the entire route, for all three
+verbs.

@@ -62,7 +62,7 @@ func (c *Runtime) AttachVolume(ctx context.Context, volumeName, vmName string) (
 		return Volume{}, fmt.Errorf("attach volume %q to VM %q: %w", volumeName, vmName, err)
 	}
 
-	if err := c.post(operationCtx, attachmentPath(volumeName, vmName), nil); err != nil {
+	if err := c.post(operationCtx, svcInfraGateway, attachmentPath(volumeName, vmName), nil); err != nil {
 		return Volume{}, fmt.Errorf("attach volume %q to VM %q: %w", volumeName, vmName, err)
 	}
 	return waitUntil(operationCtx, c, attachmentKind, attachmentName(volumeName, vmName), c.volumeReader(volumeName),
@@ -77,7 +77,7 @@ func (c *Runtime) DetachVolume(ctx context.Context, volumeName, vmName string) e
 	operationCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
 	defer cancel()
 
-	if err := c.delete(operationCtx, attachmentPath(volumeName, vmName)); err != nil {
+	if err := c.delete(operationCtx, svcInfraGateway, attachmentPath(volumeName, vmName)); err != nil {
 		if errors.Is(err, ErrResourceNotFound) {
 			return nil
 		}

@@ -65,10 +65,14 @@ EOF
 echo "==> terraform $(terraform version -json | python3 -c 'import json,sys; print(json.load(sys.stdin)["terraform_version"])')"
 echo "==> initialising against the packaged mirror for version $VERSION"
 
+# A wrapped terraform binary (for example a Snap "snap run" shim) can drop its
+# output entirely when stdout is redirected straight to a regular file, while
+# still behaving normally when stdout is a pipe. Routing every capture through
+# "| tee" keeps terraform's stdout a pipe so the wrapper can't swallow it.
 INIT_LOG="$WORKDIR/init.log"
 if ! TF_CLI_CONFIG_FILE="$WORKDIR/terraformrc" \
   TF_IN_AUTOMATION=1 \
-  terraform -chdir="$CONFIG_DIR" init -input=false -no-color >"$INIT_LOG" 2>&1; then
+  terraform -chdir="$CONFIG_DIR" init -input=false -no-color 2>&1 | tee "$INIT_LOG" >/dev/null; then
   cat "$INIT_LOG" >&2
   fail "terraform init could not install $NAMESPACE/$TYPE $VERSION from the mirror"
 fi
@@ -98,11 +102,11 @@ PROVIDER_BINARY="terraform-provider-${TYPE}_v${VERSION}"
   fail "unpacked provider is not named $PROVIDER_BINARY under $INSTALLED"
 
 export TF_CLI_CONFIG_FILE="$WORKDIR/terraformrc" TF_IN_AUTOMATION=1
-terraform -chdir="$CONFIG_DIR" providers >"$WORKDIR/providers.txt"
+terraform -chdir="$CONFIG_DIR" providers | tee "$WORKDIR/providers.txt" >/dev/null
 grep -Fq "provider[$REGISTRY_HOST/$NAMESPACE/$TYPE] $VERSION" "$WORKDIR/providers.txt" ||
   fail "terraform providers did not resolve the expected address and version"
 
-terraform -chdir="$CONFIG_DIR" providers schema -json >"$WORKDIR/schema.json"
+terraform -chdir="$CONFIG_DIR" providers schema -json | tee "$WORKDIR/schema.json" >/dev/null
 python3 - "$WORKDIR/schema.json" "$REGISTRY_HOST/$NAMESPACE/$TYPE" <<'EOF'
 import json, sys
 
@@ -113,8 +117,9 @@ if set(schemas) != {address}:
     sys.exit(f"unexpected provider addresses: {list(schemas)}")
 schema = schemas[address]
 resources = {"asc_vpc", "asc_subnet", "asc_virtual_machine", "asc_vm_group",
-             "asc_volume", "asc_volume_attachment", "asc_role", "asc_group"}
-data_sources = resources - {"asc_volume_attachment"} | {"asc_skus"}
+             "asc_volume", "asc_volume_attachment", "asc_role", "asc_group",
+             "asc_ip"}
+data_sources = resources - {"asc_volume_attachment", "asc_ip"} | {"asc_skus", "asc_ips"}
 if set(schema.get("resource_schemas", {})) != resources:
     sys.exit("installed provider exposes an unexpected resource inventory")
 if set(schema.get("data_source_schemas", {})) != data_sources:
@@ -128,5 +133,5 @@ install-check: PASS (version $VERSION)
   - terraform init installed $NAMESPACE/$TYPE v$VERSION for ${GOOS}_${GOARCH}
   - .terraform.lock.hcl pins $REGISTRY_HOST/$NAMESPACE/$TYPE at $VERSION with an h1 hash
   - unpacked executable is $PROVIDER_BINARY
-  - terraform providers confirms the address and version; the installed binary serves all eight resources and eight data sources
+  - terraform providers confirms the address and version; the installed binary serves all nine resources and nine data sources
 EOF

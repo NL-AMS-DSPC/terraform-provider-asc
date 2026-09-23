@@ -55,7 +55,7 @@ func (c *Runtime) CreateVolume(ctx context.Context, request CreateVolumeRequest)
 	operationCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
 	defer cancel()
 
-	if err := c.post(operationCtx, "/volumes/", request); err != nil {
+	if err := c.post(operationCtx, svcInfraGateway, "/volumes/", request); err != nil {
 		return Volume{}, err
 	}
 	return waitUntil(operationCtx, c, volumeKind, request.Name, c.volumeReader(request.Name), func(current Volume) bool {
@@ -66,7 +66,7 @@ func (c *Runtime) CreateVolume(ctx context.Context, request CreateVolumeRequest)
 // GetVolume reads one volume by name.
 func (c *Runtime) GetVolume(ctx context.Context, name string) (Volume, error) {
 	var result Volume
-	err := c.get(ctx, volumePath(name), &result)
+	err := c.get(ctx, svcInfraGateway, volumePath(name), &result)
 	return result, err
 }
 
@@ -81,7 +81,7 @@ func (c *Runtime) ResizeVolume(ctx context.Context, name, size string) (Volume, 
 	operationCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
 	defer cancel()
 
-	if err := c.post(operationCtx, volumePath(name)+"/resize", resizeVolumeRequest{Size: size}); err != nil {
+	if err := c.post(operationCtx, svcInfraGateway, volumePath(name)+"/resize", resizeVolumeRequest{Size: size}); err != nil {
 		return Volume{}, fmt.Errorf("resize volume %q: %w", name, err)
 	}
 	return waitUntil(operationCtx, c, volumeKind, name, c.volumeReader(name), func(current Volume) bool {
@@ -103,7 +103,7 @@ func (c *Runtime) UpdateVolumeTags(ctx context.Context, name string, current, de
 // detached separately.
 func (c *Runtime) DeleteVolume(ctx context.Context, name string) error {
 	return deleteAndWait(ctx, c, volumeKind, name, func(ctx context.Context) error {
-		return c.delete(ctx, volumePath(name))
+		return c.delete(ctx, svcInfraGateway, volumePath(name))
 	}, c.volumeReader(name))
 }
 

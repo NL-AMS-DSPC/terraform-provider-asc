@@ -46,7 +46,7 @@ func TestRequestEscapesPathSegmentsOnce(t *testing.T) {
 				t.Fatalf("get VPC: %v", err)
 			}
 			var roles []roleResponse
-			if err := runtime.getForSvc(context.Background(), svcUAM, runtime.tenantRolesPath(), &roles); err != nil {
+			if err := runtime.get(context.Background(), svcUAM, runtime.tenantRolesPath(), &roles); err != nil {
 				t.Fatalf("list roles: %v", err)
 			}
 			for _, path := range []string{wantAuth, wantVPC, wantUAM} {
@@ -57,5 +57,27 @@ func TestRequestEscapesPathSegmentsOnce(t *testing.T) {
 				mu.Unlock()
 			}
 		})
+	}
+}
+
+func TestUnknownService(t *testing.T) {
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		http.NotFound(w, r)
+	}))
+	t.Cleanup(server.Close)
+	config, err := NewConfig(server.URL, "tenant", server.URL, "realm", "client", "secret", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var output any
+	err = NewRuntime(config).get(context.Background(), "foo", "/bar", &output)
+	if err == nil || err.Error() != "unknown service type: foo" {
+		t.Fatalf("error = %v, want unknown service type: foo", err)
+	}
+	if requests != 0 {
+		t.Errorf("requests sent = %d, want 0", requests)
 	}
 }
