@@ -7,3 +7,7 @@
 coverage.out
 terraform-provider-asc
 dist/
+
+# IDE
+.idea/
+.vscode/

@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/client"
 	groupdatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/group"
+	ipdatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/ip"
 	roledatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/role"
 	skudatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/sku"
 	subnetdatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/subnet"
@@ -24,6 +25,7 @@ import (
 	volumedatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/volume"
 	vpcdatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/vpc"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/group"
+	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/ip"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/role"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/subnet"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/virtualmachine"
@@ -184,6 +186,7 @@ func (p *ASCProvider) Resources(context.Context) []func() resource.Resource {
 		volumeattachment.NewResource,
 		role.NewResource,
 		group.NewResource,
+		ip.NewResource,
 	}
 }
 
@@ -198,5 +201,6 @@ func (p *ASCProvider) DataSources(context.Context) []func() datasource.DataSourc
 		volumedatasource.NewDataSource,
 		roledatasource.NewDataSource,
 		groupdatasource.NewDataSource,
+		ipdatasource.NewDataSource,
 	}
 }

@@ -16,14 +16,14 @@ const (
 
 func (c *Runtime) CreateVPC(ctx context.Context, request CreateVPCRequest) (VPC, error) {
 	return createWithNameReservation(ctx, c, vpcKind, request.Name,
-		func(ctx context.Context) error { return c.post(ctx, "/vpcs/", request) },
+		func(ctx context.Context) error { return c.post(ctx, svcInfraGateway, "/vpcs/", request) },
 		c.vpcReader(request.Name),
 	)
 }
 
 func (c *Runtime) GetVPC(ctx context.Context, name string) (VPC, error) {
 	var result VPC
-	err := c.get(ctx, vpcPath(name), &result)
+	err := c.get(ctx, svcInfraGateway, vpcPath(name), &result)
 	return result, err
 }
 
@@ -34,13 +34,13 @@ func (c *Runtime) UpdateVPCTags(ctx context.Context, name string, current, desir
 
 func (c *Runtime) DeleteVPC(ctx context.Context, name string) error {
 	return deleteAndWait(ctx, c, vpcKind, name,
-		func(ctx context.Context) error { return c.delete(ctx, vpcPath(name)) },
+		func(ctx context.Context) error { return c.delete(ctx, svcInfraGateway, vpcPath(name)) },
 		c.vpcReader(name),
 	)
 }
 
 func (c *Runtime) CreateSubnet(ctx context.Context, vpcName string, request CreateSubnetRequest) (Subnet, error) {
-	if err := c.post(ctx, subnetsPath(vpcName), request); err != nil {
+	if err := c.post(ctx, svcInfraGateway, subnetsPath(vpcName), request); err != nil {
 		return Subnet{}, err
 	}
 	return c.GetSubnet(ctx, vpcName, request.Name)
@@ -48,7 +48,7 @@ func (c *Runtime) CreateSubnet(ctx context.Context, vpcName string, request Crea
 
 func (c *Runtime) ListSubnets(ctx context.Context, vpcName string) ([]Subnet, error) {
 	var result []Subnet
-	err := c.get(ctx, subnetsPath(vpcName), &result)
+	err := c.get(ctx, svcInfraGateway, subnetsPath(vpcName), &result)
 	return result, err
 }
 
@@ -74,12 +74,12 @@ func (c *Runtime) UpdateSubnetTags(ctx context.Context, vpcName, subnetName stri
 }
 
 func (c *Runtime) DeleteSubnet(ctx context.Context, vpcName, subnetName string) error {
-	return c.delete(ctx, subnetPath(vpcName, subnetName))
+	return c.delete(ctx, svcInfraGateway, subnetPath(vpcName, subnetName))
 }
 
 func (c *Runtime) CreateVM(ctx context.Context, request CreateVMRequest) (VM, error) {
 	return createWithNameReservation(ctx, c, vmKind, request.Name,
-		func(ctx context.Context) error { return c.post(ctx, "/vms/", request) },
+		func(ctx context.Context) error { return c.post(ctx, svcInfraGateway, "/vms/", request) },
 		c.vmReader(request.Name),
 	)
 }
@@ -87,7 +87,7 @@ func (c *Runtime) CreateVM(ctx context.Context, request CreateVMRequest) (VM, er
 // GetVM sorts attached volumes because the gateway returns them in map iteration order.
 func (c *Runtime) GetVM(ctx context.Context, name string) (VM, error) {
 	var result VM
-	if err := c.get(ctx, vmPath(name), &result); err != nil {
+	if err := c.get(ctx, svcInfraGateway, vmPath(name), &result); err != nil {
 		return VM{}, err
 	}
 	slices.Sort(result.AttachedVolumes)
@@ -101,7 +101,7 @@ func (c *Runtime) UpdateVMTags(ctx context.Context, name string, current, desire
 
 func (c *Runtime) DeleteVM(ctx context.Context, name string) error {
 	return deleteAndWait(ctx, c, vmKind, name,
-		func(ctx context.Context) error { return c.delete(ctx, vmPath(name)) },
+		func(ctx context.Context) error { return c.delete(ctx, svcInfraGateway, vmPath(name)) },
 		c.vmReader(name),
 	)
 }

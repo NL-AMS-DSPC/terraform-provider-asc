@@ -25,7 +25,7 @@ var providerFactories = map[string]func() (tfprotov6.ProviderServer, error){
 }
 
 // Allowed API prefixes; authentication is checked separately.
-var allowedAPIPrefixes = []string{"/api/infra-gateway", "/api/uam"}
+var allowedAPIPrefixes = []string{"/api/infra-gateway", "/api/uam", "/api/ipam"}
 
 var authTokenPath = regexp.MustCompile(`^/realms/[^/]+/protocol/openid-connect/token$`)
 

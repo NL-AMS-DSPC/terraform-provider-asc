@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"sort"
 )
 
@@ -66,7 +65,7 @@ func sameTags(left, right []Tag) bool {
 }
 
 func (c *Runtime) patchTags(ctx context.Context, path string, patch []TagPatch) error {
-	return c.request(ctx, http.MethodPatch, path, tagPatchRequest{Tags: patch}, nil)
+	return c.patch(ctx, svcInfraGateway, path, tagPatchRequest{Tags: patch})
 }
 
 // reconcileTags polls until a read reports the desired tags. PATCH responses may echo only

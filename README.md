@@ -7,8 +7,9 @@ Its intentionally small boundary is:
 - OAuth client-credentials authentication against the configured authentication endpoint.
 - Infrastructure operations exclusively through `/api/infra-gateway`.
 - Roles and groups exclusively through `/api/uam`.
+- IP Reservations exclusively through `/api/ipam`.
 
-Those two API prefixes, plus the realm token path used to obtain a bearer token,
+Those three API prefixes, plus the realm token path used to obtain a bearer token,
 are the whole of the provider's egress. The acceptance suite records every route
 the provider sends and fails on anything outside that allowlist, so a legacy
 service prefix cannot be reintroduced by accident.
@@ -17,7 +18,7 @@ service prefix cannot be reintroduced by accident.
 
 | Resources | Data sources |
 | --- | --- |
-| `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume`, `asc_volume_attachment`, `asc_role`, `asc_group` | `asc_skus`, `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume`, `asc_role`, `asc_group` |
+| `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume`, `asc_volume_attachment`, `asc_role`, `asc_group`, `asc_ip` | `asc_skus`, `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume`, `asc_role`, `asc_group`, `asc_ips` |
 
 Per-attribute change, import and read behaviour is in
 [docs/supported-fields.md](docs/supported-fields.md). The UAM route contract and
