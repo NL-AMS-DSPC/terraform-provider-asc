@@ -1,0 +1,9 @@
+# oapi-codegen v2.8.0, pinned by the tool directive in go.mod.
+package: uam
+output: client.gen.go
+generate:
+  models: true
+  client: true
+output-options:
+  response-type-suffix: HTTPResponse
+  name-normalizer: ToCamelCaseWithInitialisms

@@ -1,0 +1,2800 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "description": "API for managing virtual machines",
+    "title": "Infra Gateway API",
+    "contact": {},
+    "version": "1.0"
+  },
+  "paths": {
+    "/skus": {
+      "get": {
+        "description": "Retrieves a list of all available server SKUs.",
+        "tags": [
+          "skus"
+        ],
+        "summary": "List all available SKUs",
+        "operationId": "ListSKUs",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseBodyArraySKUResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vm-groups": {
+      "post": {
+        "description": "Creates a virtual machine group with the specified name in the given tenant id.",
+        "tags": [
+          "virtualmachinegroup"
+        ],
+        "summary": "Create a new virtual machine group",
+        "operationId": "CreateVMGroup",
+        "parameters": [
+          {
+            "description": "Tenant identifier",
+            "name": "X-Tenant",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVMGroupRequest"
+              }
+            }
+          },
+          "description": "Virtual machine group to create (image optional - defaults to ubuntu-24.04-lts)",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseBodyCreateVMGroupResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vm-groups/{vmGroupName}": {
+      "get": {
+        "description": "Retrieves a specific virtual machine group by name from the specified tenant id.",
+        "tags": [
+          "virtualmachinegroup"
+        ],
+        "summary": "Get a virtual machine group",
+        "operationId": "GetVMGroup",
+        "parameters": [
+          {
+            "description": "Tenant identifier",
+            "name": "X-Tenant",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Virtual machine group ID",
+            "name": "vmGroupName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseBodyVMGroupResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "description": "Deletes a virtual machine group by name from the specified tenant id.",
+        "tags": [
+          "virtualmachinegroup"
+        ],
+        "summary": "Delete a virtual machine group",
+        "operationId": "DeleteVMGroup",
+        "parameters": [
+          {
+            "description": "Tenant identifier",
+            "name": "X-Tenant",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Virtual machine group ID",
+            "name": "vmGroupName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseBodyDeleteVMGroupResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vms": {
+      "post": {
+        "description": "Creates a virtual machine with the specified name in the given tenant id.",
+        "tags": [
+          "virtualmachine"
+        ],
+        "summary": "Create a new virtual machine",
+        "operationId": "CreateVM",
+        "parameters": [
+          {
+            "description": "Tenant identifier",
+            "name": "X-Tenant",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVMRequest"
+              }
+            }
+          },
+          "description": "Virtual machine to create (image optional - defaults to ubuntu-24.04-lts)",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseBodyCreateVMResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vms/{vmName}": {
+      "get": {
+        "description": "Retrieves a specific virtual machine by name from the specified tenant id.",
+        "tags": [
+          "virtualmachine"
+        ],
+        "summary": "Get a virtual machine",
+        "operationId": "GetVM",
+        "parameters": [
+          {
+            "description": "Tenant identifier",
+            "name": "X-Tenant",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Virtual machine name",
+            "name": "vmName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseBodyVMResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "description": "Deletes a virtual machine by name from the specified tenant id.",
+        "tags": [
+          "virtualmachine"
+        ],
+        "summary": "Delete a virtual machine",
+        "operationId": "DeleteVM",
+        "parameters": [
+          {
+            "description": "Tenant identifier",
+            "name": "X-Tenant",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Virtual machine name",
+            "name": "vmName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseBodyDeleteVMResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "description": "Applies tag mutations to a specific virtual machine by name.",
+        "tags": [
+          "virtualmachine"
+        ],
+        "summary": "Patch a virtual machine",
+        "operationId": "PatchVM",
+        "parameters": [
+          {
+            "description": "Tenant identifier",
+            "name": "X-Tenant",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Virtual machine name",
+            "name": "vmName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchTagsRequest"
+              }
+            }
+          },
+          "description": "Virtual machine patch",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseBodyVMResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/volumes": {
+      "post": {
+        "description": "Creates a block volume with the specified parameters.",
+        "tags": [
+          "volumes"
+        ],
+        "summary": "Create a new block volume",
+        "operationId": "CreateVolume",
+        "parameters": [
+          {
+            "description": "Tenant identifier",
+            "name": "X-Tenant",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVolumeRequest"
+              }
+            }
+          },
+          "description": "Block volume to create",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseBodyCreateVolumeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/volumes/{volumeName}": {
+      "get": {
+        "description": "Retrieves a specific block volume by name.",
+        "tags": [
+          "volumes"
+        ],
+        "summary": "Get a block volume",
+        "operationId": "GetVolume",
+        "parameters": [
+          {
+            "description": "Tenant identifier",
+            "name": "X-Tenant",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Block volume name",
+            "name": "volumeName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseBodyVolumeResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "description": "Requests deletion of a block volume by name.",
+        "tags": [
+          "volumes"
+        ],
+        "summary": "Delete a block volume",
+        "operationId": "DeleteVolume",
+        "parameters": [
+          {
+            "description": "Tenant identifier",
+            "name": "X-Tenant",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Block volume name",
+            "name": "volumeName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseBodyDeleteVolumeResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "description": "Replaces the tags on a block volume.",
+        "tags": [
+          "volumes"
+        ],
+        "summary": "Update block volume tags",
+        "operationId": "PatchVolume",
+        "parameters": [
+          {
+            "description": "Tenant identifier",
+            "name": "X-Tenant",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Block volume name",
+            "name": "volumeName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchTagsRequest"
+              }
+            }
+          },
+          "description": "Tags to set",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseBodyVolumeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/volumes/{volumeName}/attach/{vmName}": {
+      "post": {
+        "description": "Attaches a volume to a virtual machine.",
+        "tags": [
+          "volumes"
+        ],
+        "summary": "Attach a volume to a virtual machine",
+        "operationId": "AttachVolume",
+        "parameters": [
+          {
+            "description": "Tenant identifier",
+            "name": "X-Tenant",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Volume name",
+            "name": "volumeName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Virtual machine name",
+            "name": "vmName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseBodyAttachVolumeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "description": "Detaches a volume from a virtual machine.",
+        "tags": [
+          "volumes"
+        ],
+        "summary": "Detach a volume from a virtual machine",
+        "operationId": "DetachVolume",
+        "parameters": [
+          {
+            "description": "Tenant identifier",
+            "name": "X-Tenant",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Volume name",
+            "name": "volumeName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Virtual machine name",
+            "name": "vmName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseBodyDetachVolumeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/volumes/{volumeName}/resize": {
+      "post": {
+        "description": "Requests a resize of a block volume to the given size.",
+        "tags": [
+          "volumes"
+        ],
+        "summary": "Resize a block volume",
+        "operationId": "ResizeVolume",
+        "parameters": [
+          {
+            "description": "Tenant identifier",
+            "name": "X-Tenant",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Block volume name",
+            "name": "volumeName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResizeVolumeRequest"
+              }
+            }
+          },
+          "description": "New size",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseBodyResizeVolumeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vpcs": {
+      "post": {
+        "description": "Creates a VPC with the specified name and CIDR in the given tenant id.",
+        "tags": [
+          "vpc"
+        ],
+        "summary": "Create a new VPC",
+        "operationId": "CreateVPC",
+        "parameters": [
+          {
+            "description": "Tenant identifier",
+            "name": "X-Tenant",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVPCRequest"
+              }
+            }
+          },
+          "description": "VPC to create",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseBodyCreateVPCResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vpcs/{vpcName}": {
+      "get": {
+        "description": "Retrieves a specific VPC by name from the specified tenant id.",
+        "tags": [
+          "vpc"
+        ],
+        "summary": "Get a VPC",
+        "operationId": "GetVPC",
+        "parameters": [
+          {
+            "description": "Tenant identifier",
+            "name": "X-Tenant",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "VPC name",
+            "name": "vpcName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseBodyVPCResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "description": "Deletes a VPC by name from the specified tenant id.",
+        "tags": [
+          "vpc"
+        ],
+        "summary": "Delete a VPC",
+        "operationId": "DeleteVPC",
+        "parameters": [
+          {
+            "description": "Tenant identifier",
+            "name": "X-Tenant",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "VPC name",
+            "name": "vpcName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseBodyDeleteVPCResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "description": "Applies tag mutations to a specific VPC by name.",
+        "tags": [
+          "vpc"
+        ],
+        "summary": "Patch a VPC",
+        "operationId": "PatchVPC",
+        "parameters": [
+          {
+            "description": "Tenant identifier",
+            "name": "X-Tenant",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "VPC name",
+            "name": "vpcName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchTagsRequest"
+              }
+            }
+          },
+          "description": "VPC patch",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseBodyVPCResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vpcs/{vpcName}/subnets": {
+      "get": {
+        "description": "Retrieves a list of all subnets belonging to the specified VPC.",
+        "tags": [
+          "subnet"
+        ],
+        "summary": "List subnets for a VPC",
+        "operationId": "ListSubnets",
+        "parameters": [
+          {
+            "description": "Tenant identifier",
+            "name": "X-Tenant",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "VPC name",
+            "name": "vpcName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResponseBodySubnet"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Creates a new subnet in the specified VPC with CIDR and type validation.",
+        "tags": [
+          "subnet"
+        ],
+        "summary": "Create a subnet in a VPC",
+        "operationId": "CreateSubnet",
+        "parameters": [
+          {
+            "description": "Tenant identifier",
+            "name": "X-Tenant",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "VPC name",
+            "name": "vpcName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSubnetRequest"
+              }
+            }
+          },
+          "description": "Subnet to create",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseBodySubnet"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vpcs/{vpcName}/subnets/{subnetName}": {
+      "delete": {
+        "description": "Deletes a subnet by name from the specified VPC.",
+        "tags": [
+          "subnet"
+        ],
+        "summary": "Delete a subnet from a VPC",
+        "operationId": "DeleteSubnet",
+        "parameters": [
+          {
+            "description": "Tenant identifier",
+            "name": "X-Tenant",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "VPC name",
+            "name": "vpcName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Subnet name",
+            "name": "subnetName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseBodyDeleteSubnetResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "description": "Applies a partial update to a subnet. Tag entries add new tags, update existing ones, and delete tags when value is null.",
+        "tags": [
+          "subnet"
+        ],
+        "summary": "Patch a subnet",
+        "operationId": "PatchSubnet",
+        "parameters": [
+          {
+            "description": "Tenant identifier",
+            "name": "X-Tenant",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "VPC name",
+            "name": "vpcName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Subnet name",
+            "name": "subnetName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchVPCRequest"
+              }
+            }
+          },
+          "description": "Partial subnet patch",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseBodySubnet"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "CloudInitCustomization": {
+        "type": "object",
+        "properties": {
+          "metaData": {
+            "type": "string"
+          },
+          "userData": {
+            "type": "string"
+          }
+        }
+      },
+      "Customization": {
+        "type": "object",
+        "properties": {
+          "cloudInit": {
+            "$ref": "#/components/schemas/CloudInitCustomization"
+          },
+          "ignition": {
+            "$ref": "#/components/schemas/IgnitionCustomization"
+          }
+        }
+      },
+      "IgnitionCustomization": {
+        "type": "object",
+        "properties": {
+          "config": {
+            "type": "string"
+          },
+          "format": {
+            "$ref": "#/components/schemas/IgnitionFormat"
+          }
+        }
+      },
+      "IgnitionFormat": {
+        "type": "string",
+        "enum": [
+          "butane",
+          "ignition"
+        ],
+        "x-enum-varnames": [
+          "IgnitionFormatButane",
+          "IgnitionFormatIgnition"
+        ]
+      },
+      "PatchTag": {
+        "type": "object",
+        "required": [
+          "key"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "example": "env"
+          },
+          "value": {
+            "type": "string",
+            "example": "local"
+          }
+        }
+      },
+      "PatchTagsRequest": {
+        "type": "object",
+        "properties": {
+          "tags": {
+            "type": "array",
+            "maxItems": 25,
+            "items": {
+              "$ref": "#/components/schemas/PatchTag"
+            }
+          }
+        }
+      },
+      "PatchVPCRequest": {
+        "type": "object",
+        "properties": {
+          "tags": {
+            "type": "array",
+            "maxItems": 25,
+            "items": {
+              "$ref": "#/components/schemas/PatchTag"
+            }
+          }
+        }
+      },
+      "Subnet": {
+        "type": "object",
+        "required": [
+          "cidr",
+          "name",
+          "type"
+        ],
+        "properties": {
+          "cidr": {
+            "description": "CIDR is the IP address range for the subnet in CIDR notation",
+            "type": "string",
+            "example": "10.0.0.0/25"
+          },
+          "id": {
+            "type": "string",
+            "example": "123e4567-e89b-12d3-a456-426655440000"
+          },
+          "lastError": {
+            "description": "LastError holds the most recent error message, if the subnet is in the error state",
+            "type": "string",
+            "example": "cidr overlaps with existing subnet"
+          },
+          "name": {
+            "description": "Name is the unique identifier for the subnet",
+            "type": "string",
+            "maxLength": 253,
+            "minLength": 1,
+            "example": "my-vpc-public"
+          },
+          "status": {
+            "description": "Status indicates the current state of the subnet",
+            "type": "string",
+            "example": "active"
+          },
+          "tags": {
+            "description": "Tags are optional customer tags stored as Kubernetes annotations.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            }
+          },
+          "tenantID": {
+            "description": "TenantID is the unique identifier for the tenant",
+            "type": "string",
+            "example": "default"
+          },
+          "type": {
+            "description": "Type indicates whether this is a public or private subnet",
+            "enum": [
+              "public",
+              "private"
+            ],
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SubnetType"
+              }
+            ],
+            "example": "public"
+          },
+          "vpcID": {
+            "description": "VPCID is the ID of the parent VPC",
+            "type": "string",
+            "example": "123e4567-e89b-12d3-a456-426655440000"
+          }
+        }
+      },
+      "SubnetType": {
+        "type": "string",
+        "enum": [
+          "public",
+          "private"
+        ],
+        "x-enum-varnames": [
+          "SubnetTypePublic",
+          "SubnetTypePrivate"
+        ]
+      },
+      "Tag": {
+        "type": "object",
+        "required": [
+          "key",
+          "value"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "example": "env"
+          },
+          "value": {
+            "type": "string",
+            "example": "local"
+          }
+        }
+      },
+      "AttachVolumeResponse": {
+        "type": "object",
+        "properties": {
+          "vmName": {
+            "type": "string"
+          },
+          "volumeName": {
+            "type": "string"
+          }
+        }
+      },
+      "AutoscalingPolicy": {
+        "type": "object",
+        "required": [
+          "max_replicas",
+          "min_replicas"
+        ],
+        "properties": {
+          "cron": {
+            "$ref": "#/components/schemas/CronRule"
+          },
+          "max_replicas": {
+            "type": "integer",
+            "maximum": 100,
+            "minimum": 1,
+            "example": 10
+          },
+          "min_replicas": {
+            "type": "integer",
+            "maximum": 100,
+            "minimum": 1,
+            "example": 1
+          }
+        }
+      },
+      "CreateVMGroupRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "skuID",
+          "vpcID"
+        ],
+        "properties": {
+          "autoscalers": {
+            "$ref": "#/components/schemas/AutoscalingPolicy"
+          },
+          "customization": {
+            "$ref": "#/components/schemas/Customization"
+          },
+          "image": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "skuID": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "maxItems": 25,
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            }
+          },
+          "vpcID": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateVMGroupResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "urn": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateVMRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "skuID",
+          "vpcID"
+        ],
+        "properties": {
+          "customization": {
+            "$ref": "#/components/schemas/Customization"
+          },
+          "enableLogging": {
+            "type": "boolean"
+          },
+          "image": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "skuID": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "maxItems": 25,
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            }
+          },
+          "vpcID": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateVMResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "urn": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateVPCRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "subnets"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "subnets": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/Subnet"
+            }
+          },
+          "tags": {
+            "type": "array",
+            "maxItems": 25,
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            }
+          }
+        }
+      },
+      "CreateVPCResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "urn": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateVolumeRequest": {
+        "type": "object",
+        "required": [
+          "accessMode",
+          "name",
+          "size",
+          "storageClass"
+        ],
+        "properties": {
+          "accessMode": {
+            "type": "string",
+            "enum": [
+              "ReadWriteOnce",
+              "ReadWriteMany",
+              "ReadOnlyMany"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "size": {
+            "type": "string"
+          },
+          "storageClass": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "maxItems": 25,
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            }
+          }
+        }
+      },
+      "CreateVolumeResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "urn": {
+            "type": "string"
+          }
+        }
+      },
+      "CronRule": {
+        "type": "object",
+        "required": [
+          "desiredReplicas",
+          "end",
+          "start",
+          "timezone"
+        ],
+        "properties": {
+          "desiredReplicas": {
+            "type": "integer",
+            "maximum": 100,
+            "minimum": 0,
+            "example": 5
+          },
+          "end": {
+            "type": "string",
+            "example": "0 18 * * 1-5"
+          },
+          "start": {
+            "type": "string",
+            "example": "0 8 * * 1-5"
+          },
+          "timezone": {
+            "type": "string",
+            "example": "Europe/Amsterdam"
+          }
+        }
+      },
+      "DeleteSubnetResponse": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "string"
+          }
+        }
+      },
+      "DeleteVMGroupResponse": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "string"
+          }
+        }
+      },
+      "DeleteVMResponse": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "string"
+          }
+        }
+      },
+      "DeleteVPCResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "DeleteVolumeResponse": {
+        "type": "object",
+        "properties": {
+          "deletedId": {
+            "type": "string"
+          }
+        }
+      },
+      "DetachVolumeResponse": {
+        "type": "object",
+        "properties": {
+          "vmName": {
+            "type": "string"
+          },
+          "volumeName": {
+            "type": "string"
+          }
+        }
+      },
+      "OSDetails": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string"
+          },
+          "distribution": {
+            "type": "string"
+          },
+          "family": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "release": {
+            "type": "string"
+          }
+        }
+      },
+      "ResizeVolumeRequest": {
+        "type": "object",
+        "required": [
+          "size"
+        ],
+        "properties": {
+          "size": {
+            "type": "string"
+          }
+        }
+      },
+      "ResizeVolumeResponse": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          }
+        }
+      },
+      "SKUResponse": {
+        "type": "object",
+        "properties": {
+          "GPUCount": {
+            "type": "integer"
+          },
+          "GPUType": {
+            "type": "string"
+          },
+          "cores": {
+            "type": "integer"
+          },
+          "family": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "memoryInMB": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "storageInGB": {
+            "type": "integer"
+          },
+          "storageType": {
+            "type": "string"
+          },
+          "threads": {
+            "type": "integer"
+          }
+        }
+      },
+      "SubnetResponse": {
+        "type": "object",
+        "properties": {
+          "cidr": {
+            "type": "string",
+            "example": "10.0.0.0/25"
+          },
+          "id": {
+            "type": "string",
+            "example": "123e4567-e89b-12d3-a456-426655440000"
+          },
+          "lastError": {
+            "type": "string",
+            "example": "cidr overlaps with existing subnet"
+          },
+          "name": {
+            "type": "string",
+            "example": "my-vpc-public"
+          },
+          "status": {
+            "type": "string",
+            "example": "active"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            }
+          },
+          "type": {
+            "type": "string",
+            "example": "public"
+          },
+          "urn": {
+            "type": "string",
+            "example": "asc:atos:network:my-tenant:subnet:123e4567-e89b-12d3-a456-426655440000"
+          },
+          "vpcID": {
+            "type": "string",
+            "example": "my-vpc"
+          }
+        }
+      },
+      "VMGroupResponse": {
+        "type": "object",
+        "properties": {
+          "attachedVolumes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "autoscalingPolicy": {
+            "$ref": "#/components/schemas/AutoscalingPolicy"
+          },
+          "lastError": {
+            "type": "string",
+            "example": "scale up failed"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sku": {
+            "$ref": "#/components/schemas/SKUResponse"
+          },
+          "status": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            }
+          },
+          "urn": {
+            "type": "string",
+            "example": "asc:atos:compute:my-tenant:vm_group:123e4567-e89b-12d3-a456-426655440000"
+          }
+        }
+      },
+      "VMResponse": {
+        "type": "object",
+        "properties": {
+          "attachedVolumes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "[\"vol1\"",
+              "\"vol2\"]"
+            ]
+          },
+          "enableLogging": {
+            "type": "boolean"
+          },
+          "internalIP": {
+            "type": "string"
+          },
+          "lastError": {
+            "type": "string",
+            "example": "no agent available"
+          },
+          "name": {
+            "type": "string",
+            "example": "my-vm"
+          },
+          "os": {
+            "$ref": "#/components/schemas/OSDetails"
+          },
+          "sku": {
+            "$ref": "#/components/schemas/SKUResponse"
+          },
+          "status": {
+            "type": "string",
+            "example": "pending"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            }
+          },
+          "urn": {
+            "type": "string",
+            "example": "asc:atos:compute:my-tenant:virtual_machine:123e4567-e89b-12d3-a456-426655440000"
+          },
+          "vpcID": {
+            "type": "string",
+            "example": "123e4567-e89b-12d3-a456-426655440000"
+          }
+        }
+      },
+      "VPCResponse": {
+        "type": "object",
+        "properties": {
+          "cidr": {
+            "type": "string",
+            "example": "10.0.0.0/24"
+          },
+          "id": {
+            "type": "string",
+            "example": "123e4567-e89b-12d3-a456-426655440000"
+          },
+          "lastError": {
+            "type": "string",
+            "example": "cidr range exhausted"
+          },
+          "name": {
+            "type": "string",
+            "example": "my-vpc"
+          },
+          "status": {
+            "type": "string",
+            "example": "pending"
+          },
+          "subnets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubnetResponse"
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            }
+          },
+          "urn": {
+            "type": "string",
+            "example": "asc:atos:network:my-tenant:vpc:123e4567-e89b-12d3-a456-426655440000"
+          }
+        }
+      },
+      "VolumeResponse": {
+        "type": "object",
+        "properties": {
+          "accessMode": {
+            "type": "string",
+            "example": "ReadWriteOnce"
+          },
+          "annotations": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "attachedToVM": {
+            "type": "string",
+            "example": "my-vm"
+          },
+          "labels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "lastError": {
+            "type": "string",
+            "example": "no space available"
+          },
+          "name": {
+            "type": "string",
+            "example": "my-block"
+          },
+          "size": {
+            "type": "string",
+            "example": "10Gi"
+          },
+          "status": {
+            "type": "string",
+            "example": "creating"
+          },
+          "storageClass": {
+            "type": "string",
+            "example": "standard"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            }
+          },
+          "tenantId": {
+            "type": "string",
+            "example": "default"
+          },
+          "urn": {
+            "type": "string",
+            "example": "asc:atos:storage:development:block_volume:123e4567-e89b-12d3-a456-426614174000"
+          },
+          "volumeMode": {
+            "type": "string",
+            "example": "Filesystem"
+          }
+        }
+      },
+      "CreateSubnetRequest": {
+        "type": "object",
+        "required": [
+          "cidr",
+          "name",
+          "type",
+          "vpcID"
+        ],
+        "properties": {
+          "cidr": {
+            "type": "string",
+            "example": "10.0.0.0/25"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 253,
+            "minLength": 1,
+            "example": "my-vpc-public"
+          },
+          "tags": {
+            "type": "array",
+            "maxItems": 25,
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            }
+          },
+          "type": {
+            "enum": [
+              "public",
+              "private"
+            ],
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SubnetType"
+              }
+            ],
+            "example": "public"
+          },
+          "vpcID": {
+            "type": "string"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        }
+      },
+      "PageInfo": {
+        "type": "object",
+        "properties": {
+          "after": {
+            "type": "string"
+          }
+        }
+      },
+      "ResponseBodyArraySKUResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SKUResponse"
+            }
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "pageInfo": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        }
+      },
+      "ResponseBodySubnet": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Subnet"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "pageInfo": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        }
+      },
+      "ResponseBodyAttachVolumeResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AttachVolumeResponse"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "pageInfo": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        }
+      },
+      "ResponseBodyCreateVMGroupResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CreateVMGroupResponse"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "pageInfo": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        }
+      },
+      "ResponseBodyCreateVMResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CreateVMResponse"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "pageInfo": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        }
+      },
+      "ResponseBodyCreateVPCResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CreateVPCResponse"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "pageInfo": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        }
+      },
+      "ResponseBodyCreateVolumeResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CreateVolumeResponse"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "pageInfo": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        }
+      },
+      "ResponseBodyDeleteSubnetResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DeleteSubnetResponse"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "pageInfo": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        }
+      },
+      "ResponseBodyDeleteVMGroupResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DeleteVMGroupResponse"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "pageInfo": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        }
+      },
+      "ResponseBodyDeleteVMResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DeleteVMResponse"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "pageInfo": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        }
+      },
+      "ResponseBodyDeleteVPCResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DeleteVPCResponse"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "pageInfo": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        }
+      },
+      "ResponseBodyDeleteVolumeResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DeleteVolumeResponse"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "pageInfo": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        }
+      },
+      "ResponseBodyDetachVolumeResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DetachVolumeResponse"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "pageInfo": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        }
+      },
+      "ResponseBodyResizeVolumeResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ResizeVolumeResponse"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "pageInfo": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        }
+      },
+      "ResponseBodyVMGroupResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/VMGroupResponse"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "pageInfo": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        }
+      },
+      "ResponseBodyVMResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/VMResponse"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "pageInfo": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        }
+      },
+      "ResponseBodyVPCResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/VPCResponse"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "pageInfo": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        }
+      },
+      "ResponseBodyVolumeResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/VolumeResponse"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "pageInfo": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        }
+      }
+    }
+  }
+}
