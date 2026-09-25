@@ -34,7 +34,7 @@ const (
 // writeVM serves the machine read model the attachment code resolves the
 // instance id from.
 func writeVM(w http.ResponseWriter, name string) {
-	writeEnvelope(w, VM{Name: name, URN: appVMURN, Status: "active"})
+	writeEnvelope(w, vmData(VM{Name: name, URN: appVMURN, Status: "active"}))
 }
 
 func newAttachmentRuntime(t *testing.T, state *attachmentServer) *Runtime {
@@ -66,6 +66,9 @@ func newAttachmentRuntime(t *testing.T, state *attachmentServer) *Runtime {
 }
 
 func writeEnvelope(w http.ResponseWriter, value any) {
+	if volume, ok := value.(Volume); ok {
+		value = volumeData(volume)
+	}
 	_ = json.NewEncoder(w).Encode(map[string]any{"data": value})
 }
 
@@ -243,7 +246,20 @@ func TestURNResourceIDRejectsAMalformedURN(t *testing.T) {
 
 func TestAttachmentPathEscapesBothNames(t *testing.T) {
 	t.Parallel()
-	if got, want := attachmentPath("data vol", "app/vm"), "/volumes/data%20vol/attach/app%2Fvm"; got != want {
-		t.Fatalf("attachmentPath() = %q, want %q", got, want)
+	var mu sync.Mutex
+	var paths []string
+	runtime := newLifecycleRuntime(t, func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		paths = append(paths, r.Method+" "+r.URL.EscapedPath())
+		mu.Unlock()
+		writeEnvelope(w, map[string]string{"volumeName": "data vol", "vmName": "app/vm"})
+	})
+	if err := runtime.DetachVolume(context.Background(), "data vol", "app/vm"); err != nil {
+		t.Fatalf("DetachVolume() error = %v", err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if want := "DELETE /api/infra-gateway/volumes/data%20vol/attach/app%2Fvm"; len(paths) == 0 || paths[0] != want {
+		t.Fatalf("requests = %q, want the first to be %q", paths, want)
 	}
 }

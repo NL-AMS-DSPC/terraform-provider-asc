@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/nl-ams-dspc/terraform-provider-asc/internal/asc/infra"
 )
 
 const (
@@ -17,32 +20,28 @@ const (
 
 // Volume is keyed by name; the gateway carries its UUID in the URN.
 type Volume struct {
-	URN          string            `json:"urn"`
-	Name         string            `json:"name"`
-	Size         string            `json:"size"`
-	StorageClass string            `json:"storageClass"`
-	AccessMode   string            `json:"accessMode"`
-	VolumeMode   string            `json:"volumeMode"`
-	Status       string            `json:"status"`
-	LastError    string            `json:"lastError"`
-	TenantID     string            `json:"tenantId"`
-	AttachedToVM string            `json:"attachedToVM"`
-	Tags         []Tag             `json:"tags"`
-	Labels       map[string]string `json:"labels"`
-	Annotations  map[string]string `json:"annotations"`
+	URN          string
+	Name         string
+	Size         string
+	StorageClass string
+	AccessMode   string
+	VolumeMode   string
+	Status       string
+	LastError    string
+	TenantID     string
+	AttachedToVM string
+	Tags         []Tag
+	Labels       map[string]string
+	Annotations  map[string]string
 }
 
-// CreateVolumeRequest is the body infra-gateway accepts on POST /volumes/.
+// CreateVolumeRequest describes a volume to create with POST /volumes.
 type CreateVolumeRequest struct {
-	Name         string `json:"name"`
-	Size         string `json:"size"`
-	StorageClass string `json:"storageClass"`
-	AccessMode   string `json:"accessMode"`
-	Tags         []Tag  `json:"tags,omitempty"`
-}
-
-type resizeVolumeRequest struct {
-	Size string `json:"size"`
+	Name         string
+	Size         string
+	StorageClass string
+	AccessMode   string
+	Tags         []Tag
 }
 
 func (v Volume) lifecycle() (string, string) { return v.Status, v.LastError }
@@ -55,7 +54,17 @@ func (c *Runtime) CreateVolume(ctx context.Context, request CreateVolumeRequest)
 	operationCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
 	defer cancel()
 
-	if err := c.post(operationCtx, svcInfraGateway, "/volumes/", request); err != nil {
+	body := infra.CreateVolumeJSONRequestBody{
+		Name:         request.Name,
+		Size:         request.Size,
+		StorageClass: request.StorageClass,
+		AccessMode:   infra.CreateVolumeRequestAccessMode(request.AccessMode),
+		Tags:         infraTags(request.Tags),
+	}
+	err := callInfra[infra.CreateVolumeResponse](operationCtx, func(ctx context.Context) (*http.Response, error) {
+		return c.infraAPI().CreateVolume(ctx, &infra.CreateVolumeParams{XTenant: c.tenant()}, body, c.infraEditor())
+	}, nil)
+	if err != nil {
 		return Volume{}, err
 	}
 	return waitUntil(operationCtx, c, volumeKind, request.Name, c.volumeReader(request.Name), func(current Volume) bool {
@@ -65,9 +74,31 @@ func (c *Runtime) CreateVolume(ctx context.Context, request CreateVolumeRequest)
 
 // GetVolume reads one volume by name.
 func (c *Runtime) GetVolume(ctx context.Context, name string) (Volume, error) {
-	var result Volume
-	err := c.get(ctx, svcInfraGateway, volumePath(name), &result)
-	return result, err
+	var wire infra.VolumeResponse
+	err := callInfra(ctx, func(ctx context.Context) (*http.Response, error) {
+		if err := checkSegments(name); err != nil {
+			return nil, err
+		}
+		return c.infraAPI().GetVolume(ctx, name, &infra.GetVolumeParams{XTenant: c.tenant()}, c.infraEditor())
+	}, &wire)
+	if err != nil {
+		return Volume{}, err
+	}
+	return Volume{
+		URN:          value(wire.Urn),
+		Name:         value(wire.Name),
+		Size:         value(wire.Size),
+		StorageClass: value(wire.StorageClass),
+		AccessMode:   value(wire.AccessMode),
+		VolumeMode:   value(wire.VolumeMode),
+		Status:       value(wire.Status),
+		LastError:    value(wire.LastError),
+		TenantID:     value(wire.TenantID),
+		AttachedToVM: value(wire.AttachedToVM),
+		Tags:         tagsFromInfra(wire.Tags),
+		Labels:       stringMap(wire.Labels),
+		Annotations:  stringMap(wire.Annotations),
+	}, nil
 }
 
 // ResizeVolume waits for the requested byte count, allowing equivalent quantity spellings.
@@ -81,7 +112,14 @@ func (c *Runtime) ResizeVolume(ctx context.Context, name, size string) (Volume, 
 	operationCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
 	defer cancel()
 
-	if err := c.post(operationCtx, svcInfraGateway, volumePath(name)+"/resize", resizeVolumeRequest{Size: size}); err != nil {
+	err = callInfra[infra.ResizeVolumeResponse](operationCtx, func(ctx context.Context) (*http.Response, error) {
+		if err := checkSegments(name); err != nil {
+			return nil, err
+		}
+		return c.infraAPI().ResizeVolume(ctx, name, &infra.ResizeVolumeParams{XTenant: c.tenant()},
+			infra.ResizeVolumeJSONRequestBody{Size: size}, c.infraEditor())
+	}, nil)
+	if err != nil {
 		return Volume{}, fmt.Errorf("resize volume %q: %w", name, err)
 	}
 	return waitUntil(operationCtx, c, volumeKind, name, c.volumeReader(name), func(current Volume) bool {
@@ -96,23 +134,32 @@ func (c *Runtime) ResizeVolume(ctx context.Context, name, size string) (Volume, 
 // UpdateVolumeTags patches and reads back tags. The gateway reports a tag-limit violation
 // as an untyped 500.
 func (c *Runtime) UpdateVolumeTags(ctx context.Context, name string, current, desired []Tag) (Volume, error) {
-	return reconcileTags(ctx, c, volumeKind, name, volumePath(name), current, desired, c.volumeReader(name))
+	patch := func(ctx context.Context, body infra.PatchTagsRequest) error {
+		return callInfra[infra.VolumeResponse](ctx, func(ctx context.Context) (*http.Response, error) {
+			if err := checkSegments(name); err != nil {
+				return nil, err
+			}
+			return c.infraAPI().PatchVolume(ctx, name, &infra.PatchVolumeParams{XTenant: c.tenant()}, body, c.infraEditor())
+		}, nil)
+	}
+	return reconcileTags(ctx, c, volumeKind, name, patch, current, desired, c.volumeReader(name))
 }
 
 // DeleteVolume waits for deletion. Attached volumes return ErrResourceConflict and must be
 // detached separately.
 func (c *Runtime) DeleteVolume(ctx context.Context, name string) error {
 	return deleteAndWait(ctx, c, volumeKind, name, func(ctx context.Context) error {
-		return c.delete(ctx, svcInfraGateway, volumePath(name))
+		return callInfra[infra.DeleteVolumeResponse](ctx, func(ctx context.Context) (*http.Response, error) {
+			if err := checkSegments(name); err != nil {
+				return nil, err
+			}
+			return c.infraAPI().DeleteVolume(ctx, name, &infra.DeleteVolumeParams{XTenant: c.tenant()}, c.infraEditor())
+		}, nil)
 	}, c.volumeReader(name))
 }
 
 func (c *Runtime) volumeReader(name string) readFunc[Volume] {
 	return func(ctx context.Context) (Volume, error) { return c.GetVolume(ctx, name) }
-}
-
-func volumePath(name string) string {
-	return "/volumes/" + escapedPathSegment(name)
 }
 
 // Supported whole-number quantity suffixes, with binary units before decimal units.

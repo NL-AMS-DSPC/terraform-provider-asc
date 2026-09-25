@@ -47,7 +47,7 @@ func TestCreateVPCRetriesTypedStaleReservation(t *testing.T) {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
-			_ = json.NewEncoder(w).Encode(map[string]any{"data": VPC{Name: "test-vpc", Status: "active"}})
+			_ = json.NewEncoder(w).Encode(map[string]any{"data": vpcData(VPC{Name: "test-vpc", Status: "active"})})
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
@@ -78,9 +78,9 @@ func TestCreateVMRetriesTypedStaleReservationAndIgnoresDeletingProjection(t *tes
 			case 1:
 				w.WriteHeader(http.StatusNotFound)
 			case 2:
-				_ = json.NewEncoder(w).Encode(map[string]any{"data": VM{Name: "test-vm", Status: "deleting"}})
+				_ = json.NewEncoder(w).Encode(map[string]any{"data": vmData(VM{Name: "test-vm", Status: "deleting"})})
 			default:
-				_ = json.NewEncoder(w).Encode(map[string]any{"data": VM{Name: "test-vm", Status: "active"}})
+				_ = json.NewEncoder(w).Encode(map[string]any{"data": vmData(VM{Name: "test-vm", Status: "active"})})
 			}
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -108,7 +108,7 @@ func TestDeleteVMWaitsForAuthoritativeAbsence(t *testing.T) {
 			return
 		}
 		if gets.Add(1) == 1 {
-			_ = json.NewEncoder(w).Encode(map[string]any{"data": VM{Name: "test-vm", Status: "deleting"}})
+			_ = json.NewEncoder(w).Encode(map[string]any{"data": vmData(VM{Name: "test-vm", Status: "deleting"})})
 			return
 		}
 		w.WriteHeader(http.StatusNotFound)
@@ -131,7 +131,7 @@ func TestDeleteVPCWaitsForAuthoritativeAbsence(t *testing.T) {
 			return
 		}
 		if gets.Add(1) == 1 {
-			_ = json.NewEncoder(w).Encode(map[string]any{"data": VPC{Name: "test-vpc", Status: "deleting"}})
+			_ = json.NewEncoder(w).Encode(map[string]any{"data": vpcData(VPC{Name: "test-vpc", Status: "deleting"})})
 			return
 		}
 		w.WriteHeader(http.StatusNotFound)
@@ -152,7 +152,7 @@ func TestDeleteVPCStopsOnTerminalError(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"data": VPC{Name: "test-vpc", Status: "error", LastError: "delete failed"}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": vpcData(VPC{Name: "test-vpc", Status: "error", LastError: "delete failed"})})
 	})
 
 	err := runtime.DeleteVPC(context.Background(), "test-vpc")
@@ -168,7 +168,7 @@ func TestDeleteVMHonorsContextDeadline(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"data": VM{Name: "test-vm", Status: "deleting"}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": vmData(VM{Name: "test-vm", Status: "deleting"})})
 	})
 	runtime.pollInterval = time.Second
 
