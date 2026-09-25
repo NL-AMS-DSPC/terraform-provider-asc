@@ -220,7 +220,7 @@ func migrationCases() map[string]map[string]http.HandlerFunc {
 			"GET /api/infra-gateway/vpcs/test-vpc": func(w http.ResponseWriter, _ *http.Request) { writeData(w, http.StatusOK, vpc) },
 		},
 		"subnet": {
-			"GET /api/infra-gateway/vpcs/test-vpc/subnets/": func(w http.ResponseWriter, _ *http.Request) {
+			"GET /api/infra-gateway/vpcs/test-vpc/subnets": func(w http.ResponseWriter, _ *http.Request) {
 				writeData(w, http.StatusOK, []client.Subnet{subnet})
 			},
 		},

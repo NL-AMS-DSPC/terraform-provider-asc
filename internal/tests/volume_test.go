@@ -29,7 +29,7 @@ func newVolumeGateway() *volumeGateway {
 
 func (g *volumeGateway) handlers() map[string]http.HandlerFunc {
 	return map[string]http.HandlerFunc{
-		"POST /api/infra-gateway/volumes/": func(w http.ResponseWriter, r *http.Request) {
+		"POST /api/infra-gateway/volumes": func(w http.ResponseWriter, r *http.Request) {
 			var request client.CreateVolumeRequest
 			if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)

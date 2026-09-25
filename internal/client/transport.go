@@ -26,121 +26,32 @@ const (
 	svcIPAM         svcType = "ipam"
 )
 
-type responseWrapper interface {
-	decode(body io.ReadCloser) error
-	validate() error
-	unmarshal(output any) error
-}
-
-type envelope struct {
-	Data json.RawMessage `json:"data"`
-}
-
-func (e *envelope) decode(body io.ReadCloser) error {
-	if err := json.NewDecoder(body).Decode(e); err != nil {
-		return fmt.Errorf("error decoding: %w", err)
-	}
-	return nil
-}
-
-func (e *envelope) validate() error {
-	if len(e.Data) == 0 || string(e.Data) == "null" {
-		return fmt.Errorf("validation error: missing data")
-	}
-	return nil
-}
-
-func (e *envelope) unmarshal(output any) error {
-	if err := json.Unmarshal(e.Data, output); err != nil {
-		return fmt.Errorf("error unmarshalling: %w", err)
-	}
-	return nil
-}
-
-type service struct {
-	name            string
-	prefix          string
-	responseWrapper responseWrapper
-}
-
-func serviceForName(svc svcType) (service, error) {
-	switch svc {
-	case svcInfraGateway:
-		return service{
-			name:            string(svcInfraGateway),
-			prefix:          infraGatewayPrefix,
-			responseWrapper: &envelope{},
-		}, nil
-	case svcUAM:
-		return service{
-			name:   string(svcUAM),
-			prefix: uamPrefix,
-		}, nil
-	case svcIPAM:
-		return service{
-			name:   string(svcIPAM),
-			prefix: ipamPrefix,
-		}, nil
-	default:
-		return service{}, fmt.Errorf("unknown service type: %s", svc)
-	}
-}
+// infra-gateway and UAM are reached through the generated clients (see generated.go).
+// IPAM has no Terraform-facing ASC spec yet, so its bare JSON routes keep this helper.
 
 func (c *Runtime) get(ctx context.Context, svc svcType, path string, output any) error {
 	return c.request(ctx, svc, http.MethodGet, path, nil, output)
 }
 
-func (c *Runtime) post(ctx context.Context, svc svcType, path string, input any) error {
-	return c.request(ctx, svc, http.MethodPost, path, input, nil)
-}
-
-func (c *Runtime) patch(ctx context.Context, svc svcType, path string, input any) error {
-	return c.request(ctx, svc, http.MethodPatch, path, input, nil)
-}
-
-func (c *Runtime) put(ctx context.Context, svc svcType, path string, input any) error {
-	return c.request(ctx, svc, http.MethodPut, path, input, nil)
-}
-
-func (c *Runtime) delete(ctx context.Context, svc svcType, path string) error {
-	return c.request(ctx, svc, http.MethodDelete, path, nil, nil)
-}
-
-// request talks to infra-gateway, whose successful bodies are wrapped in a
-// "data" envelope.
-func (c *Runtime) request(ctx context.Context, svcName svcType, method, path string, input, output any) error {
-	svc, err := serviceForName(svcName)
-	if err != nil {
-		return err
+func (c *Runtime) request(ctx context.Context, svc svcType, method, path string, input, output any) error {
+	if svc != svcIPAM {
+		return fmt.Errorf("unknown service type: %s", svc)
 	}
-	resp, err := c.send(ctx, method, svc.prefix+path, input, svc.name)
+	resp, err := c.send(ctx, method, ipamPrefix+path, input, string(svc))
 	if err != nil {
 		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if err := statusError(resp, svc.name); err != nil {
+	if err := statusError(resp, string(svc)); err != nil {
 		return err
 	}
 	if output == nil {
 		_, _ = io.Copy(io.Discard, resp.Body)
 		return nil
 	}
-
-	if svc.responseWrapper == nil {
-		if err := json.NewDecoder(resp.Body).Decode(output); err != nil {
-			return fmt.Errorf("decode %s response: %w", svc.name, err)
-		}
-		return nil
-	}
-	if err := svc.responseWrapper.decode(resp.Body); err != nil {
-		return fmt.Errorf("decode %s response wrapper: %w", svc.name, err)
-	}
-	if err := svc.responseWrapper.validate(); err != nil {
-		return fmt.Errorf("validate %s response wrapper: %w", svc.name, err)
-	}
-	if err := svc.responseWrapper.unmarshal(output); err != nil {
-		return fmt.Errorf("decode %s response data: %w", svc.name, err)
+	if err := json.NewDecoder(resp.Body).Decode(output); err != nil {
+		return fmt.Errorf("decode %s response: %w", svc, err)
 	}
 	return nil
 }
@@ -186,25 +97,4 @@ func (c *Runtime) send(ctx context.Context, method, path string, input any, serv
 		return nil, fmt.Errorf("send %s request: %w", service, err)
 	}
 	return resp, nil
-}
-
-// Only 404 proves absence. UAM also returns 502 for upstream failures, so it must remain
-// an error.
-func statusError(resp *http.Response, service string) error {
-	switch {
-	case resp.StatusCode == http.StatusNotFound:
-		_, _ = io.Copy(io.Discard, resp.Body)
-		return ErrResourceNotFound
-	case resp.StatusCode == http.StatusConflict:
-		_, _ = io.Copy(io.Discard, resp.Body)
-		return ErrResourceConflict
-	case resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices:
-		_, _ = io.Copy(io.Discard, resp.Body)
-		return fmt.Errorf("%s returned HTTP %d", service, resp.StatusCode)
-	}
-	return nil
-}
-
-func escapedPathSegment(value string) string {
-	return url.PathEscape(value)
 }

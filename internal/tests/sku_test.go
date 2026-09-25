@@ -31,7 +31,7 @@ func TestAccSKUsDataSource(t *testing.T) {
 		requests   = map[string]int{}
 	)
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
-		"GET /api/infra-gateway/skus/": func(w http.ResponseWriter, r *http.Request) {
+		"GET /api/infra-gateway/skus": func(w http.ResponseWriter, r *http.Request) {
 			mu.Lock()
 			requests[r.Method+" "+r.URL.Path]++
 			mu.Unlock()
@@ -98,11 +98,11 @@ output "first_sku" {
 
 	mu.Lock()
 	defer mu.Unlock()
-	if requests["GET /api/infra-gateway/skus/"] == 0 {
-		t.Fatal("the data source never called GET /api/infra-gateway/skus/")
+	if requests["GET /api/infra-gateway/skus"] == 0 {
+		t.Fatal("the data source never called GET /api/infra-gateway/skus")
 	}
 	for route := range requests {
-		if route != "GET /api/infra-gateway/skus/" {
+		if route != "GET /api/infra-gateway/skus" {
 			t.Errorf("unexpected outbound route %q", route)
 		}
 	}

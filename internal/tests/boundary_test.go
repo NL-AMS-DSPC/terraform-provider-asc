@@ -115,7 +115,7 @@ func TestBoundaryProviderStaysOnAllowedRoutes(t *testing.T) {
 		}},
 	}
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
-		"POST /api/infra-gateway/vpcs/": func(w http.ResponseWriter, _ *http.Request) {
+		"POST /api/infra-gateway/vpcs": func(w http.ResponseWriter, _ *http.Request) {
 			writeData(w, http.StatusCreated, map[string]string{"created": vpc.Name})
 		},
 		"GET /api/infra-gateway/vpcs/test-vpc": func(w http.ResponseWriter, _ *http.Request) {

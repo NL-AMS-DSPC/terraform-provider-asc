@@ -48,7 +48,7 @@ func (f *attachmentFixture) handlers(t *testing.T) map[string]http.HandlerFunc {
 				SKU: client.SKU{ID: "gp-2", Name: "general-purpose"}, Status: "active",
 			})
 		},
-		"POST /api/infra-gateway/volumes/": func(w http.ResponseWriter, _ *http.Request) {
+		"POST /api/infra-gateway/volumes": func(w http.ResponseWriter, _ *http.Request) {
 			writeData(w, http.StatusCreated, map[string]string{"created": "data"})
 		},
 		"GET /api/infra-gateway/volumes/data": func(w http.ResponseWriter, _ *http.Request) {

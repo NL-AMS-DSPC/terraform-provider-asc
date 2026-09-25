@@ -50,7 +50,7 @@ func TestVMGroupProvisioning(t *testing.T) {
 	var deleted atomic.Bool
 	group := testVMGroup()
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
-		"POST /api/infra-gateway/vm-groups/": func(w http.ResponseWriter, _ *http.Request) {
+		"POST /api/infra-gateway/vm-groups": func(w http.ResponseWriter, _ *http.Request) {
 			writeData(w, http.StatusCreated, map[string]string{"id": "00000000-0000-4000-8000-000000000009", "urn": group.URN, "name": group.Name})
 		},
 		"GET /api/infra-gateway/vm-groups/test-group": func(w http.ResponseWriter, _ *http.Request) {
@@ -100,7 +100,7 @@ func TestVMGroupProvisioningRefreshesExternalDrift(t *testing.T) {
 	var drifted, deleted atomic.Bool
 	group := testVMGroup()
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
-		"POST /api/infra-gateway/vm-groups/": func(w http.ResponseWriter, _ *http.Request) {
+		"POST /api/infra-gateway/vm-groups": func(w http.ResponseWriter, _ *http.Request) {
 			writeData(w, http.StatusCreated, map[string]string{"name": group.Name})
 		},
 		"GET /api/infra-gateway/vm-groups/test-group": func(w http.ResponseWriter, _ *http.Request) {
@@ -141,7 +141,7 @@ func TestVMGroupProvisioningRecoversFromOutOfBandDeletion(t *testing.T) {
 	var removed atomic.Bool
 	group := testVMGroup()
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
-		"POST /api/infra-gateway/vm-groups/": func(w http.ResponseWriter, _ *http.Request) {
+		"POST /api/infra-gateway/vm-groups": func(w http.ResponseWriter, _ *http.Request) {
 			writeData(w, http.StatusCreated, map[string]string{"name": group.Name})
 		},
 		"GET /api/infra-gateway/vm-groups/test-group": func(w http.ResponseWriter, _ *http.Request) {
@@ -173,7 +173,7 @@ func TestVMGroupProvisioningRecoversFromOutOfBandDeletion(t *testing.T) {
 
 func TestVMGroupProvisioningSurfacesTerminalError(t *testing.T) {
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
-		"POST /api/infra-gateway/vm-groups/": func(w http.ResponseWriter, _ *http.Request) {
+		"POST /api/infra-gateway/vm-groups": func(w http.ResponseWriter, _ *http.Request) {
 			writeData(w, http.StatusCreated, map[string]string{"name": "test-group"})
 		},
 		"GET /api/infra-gateway/vm-groups/test-group": func(w http.ResponseWriter, _ *http.Request) {
@@ -222,7 +222,7 @@ func TestVMGroupReplacementReusesTheReleasedName(t *testing.T) {
 	}
 
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
-		"POST /api/infra-gateway/vm-groups/": func(w http.ResponseWriter, _ *http.Request) {
+		"POST /api/infra-gateway/vm-groups": func(w http.ResponseWriter, _ *http.Request) {
 			mu.Lock()
 			defer mu.Unlock()
 			// The previous deletion acknowledged release of the name reservation.
@@ -281,7 +281,7 @@ resource "asc_vm_group" "test" {
 func TestVMGroupReportsATakenNameAtOnce(t *testing.T) {
 	var posts atomic.Int32
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
-		"POST /api/infra-gateway/vm-groups/": func(w http.ResponseWriter, _ *http.Request) {
+		"POST /api/infra-gateway/vm-groups": func(w http.ResponseWriter, _ *http.Request) {
 			posts.Add(1)
 			w.WriteHeader(http.StatusConflict)
 		},
