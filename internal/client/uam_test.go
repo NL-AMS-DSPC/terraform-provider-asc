@@ -4,10 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
+	"net/http/httptest"
+	"reflect"
+	"slices"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
+
+	"github.com/nl-ams-dspc/terraform-provider-asc/internal/asc/uam"
 )
 
 const (
@@ -49,7 +56,7 @@ func tenantRoute(calls *atomic.Int64) http.HandlerFunc {
 		if calls != nil {
 			calls.Add(1)
 		}
-		writeBare(w, http.StatusOK, tenantResponse{ID: testTenantUUID})
+		writeBare(w, http.StatusOK, map[string]any{"id": testTenantUUID})
 	}
 }
 
@@ -57,11 +64,11 @@ func TestGetRoleTakesActionsFromTheItemRouteAndSortsThem(t *testing.T) {
 	t.Parallel()
 	runtime := uamRuntime(t, map[string]http.HandlerFunc{
 		"GET " + roleListPath: func(w http.ResponseWriter, _ *http.Request) {
-			writeBare(w, http.StatusOK, []roleResponse{{ID: "00000000-0000-4000-8000-000000000001", Name: "operator"}})
+			writeBare(w, http.StatusOK, []map[string]any{{"id": "00000000-0000-4000-8000-000000000001", "name": "operator"}})
 		},
 		"GET " + tenantItemPath: tenantRoute(nil),
 		"GET " + roleReadPath: func(w http.ResponseWriter, _ *http.Request) {
-			writeBare(w, http.StatusOK, roleResponse{ID: "operator", Name: "operator", Composites: []string{"vm:write", "vm:read"}})
+			writeBare(w, http.StatusOK, map[string]any{"id": "operator", "name": "operator", "composites": []string{"vm:write", "vm:read"}})
 		},
 	})
 
@@ -81,7 +88,7 @@ func TestGetRoleReportsNotFoundFromTheListWithoutReadingTheItemRoute(t *testing.
 	t.Parallel()
 	runtime := uamRuntime(t, map[string]http.HandlerFunc{
 		"GET " + roleListPath: func(w http.ResponseWriter, _ *http.Request) {
-			writeBare(w, http.StatusOK, []roleResponse{{ID: "00000000-0000-4000-8000-000000000002", Name: "auditor"}})
+			writeBare(w, http.StatusOK, []map[string]any{{"id": "00000000-0000-4000-8000-000000000002", "name": "auditor"}})
 		},
 	})
 
@@ -94,7 +101,7 @@ func TestGetRoleDoesNotTreat502AsMissing(t *testing.T) {
 	t.Parallel()
 	runtime := uamRuntime(t, map[string]http.HandlerFunc{
 		"GET " + roleListPath: func(w http.ResponseWriter, _ *http.Request) {
-			writeBare(w, http.StatusOK, []roleResponse{{ID: "00000000-0000-4000-8000-000000000001", Name: "operator"}})
+			writeBare(w, http.StatusOK, []map[string]any{{"id": "00000000-0000-4000-8000-000000000001", "name": "operator"}})
 		},
 		"GET " + tenantItemPath: tenantRoute(nil),
 		"GET " + roleReadPath: func(w http.ResponseWriter, _ *http.Request) {
@@ -125,14 +132,14 @@ func TestCreateRoleSendsActionsAndReadsBack(t *testing.T) {
 		},
 		"GET " + roleListPath: func(w http.ResponseWriter, _ *http.Request) {
 			if !created.Load() {
-				writeBare(w, http.StatusOK, []roleResponse{})
+				writeBare(w, http.StatusOK, []any{})
 				return
 			}
-			writeBare(w, http.StatusOK, []roleResponse{{ID: "00000000-0000-4000-8000-000000000001", Name: "operator"}})
+			writeBare(w, http.StatusOK, []map[string]any{{"id": "00000000-0000-4000-8000-000000000001", "name": "operator"}})
 		},
 		"GET " + tenantItemPath: tenantRoute(nil),
 		"GET " + roleReadPath: func(w http.ResponseWriter, _ *http.Request) {
-			writeBare(w, http.StatusOK, roleResponse{ID: "operator", Name: "operator", Composites: []string{"vm:read"}})
+			writeBare(w, http.StatusOK, map[string]any{"id": "operator", "name": "operator", "composites": []string{"vm:read"}})
 		},
 	})
 
@@ -158,7 +165,7 @@ func TestUpdateRoleSendsTheUUIDTheListRecords(t *testing.T) {
 	var body map[string]any
 	runtime := uamRuntime(t, map[string]http.HandlerFunc{
 		"GET " + roleListPath: func(w http.ResponseWriter, _ *http.Request) {
-			writeBare(w, http.StatusOK, []roleResponse{{ID: uuid, Name: "operator"}})
+			writeBare(w, http.StatusOK, []map[string]any{{"id": uuid, "name": "operator"}})
 		},
 		"PUT " + roleWritePath: func(w http.ResponseWriter, r *http.Request) {
 			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -168,7 +175,7 @@ func TestUpdateRoleSendsTheUUIDTheListRecords(t *testing.T) {
 		},
 		"GET " + tenantItemPath: tenantRoute(nil),
 		"GET " + roleReadPath: func(w http.ResponseWriter, _ *http.Request) {
-			writeBare(w, http.StatusOK, roleResponse{ID: "operator", Name: "operator", Composites: []string{"vm:write"}})
+			writeBare(w, http.StatusOK, map[string]any{"id": "operator", "name": "operator", "composites": []string{"vm:write"}})
 		},
 	})
 
@@ -187,7 +194,7 @@ func TestDeleteRoleSkipsTheRequestWhenTheRoleIsAbsent(t *testing.T) {
 	t.Parallel()
 	runtime := uamRuntime(t, map[string]http.HandlerFunc{
 		"GET " + roleListPath: func(w http.ResponseWriter, _ *http.Request) {
-			writeBare(w, http.StatusOK, []roleResponse{})
+			writeBare(w, http.StatusOK, []any{})
 		},
 	})
 
@@ -201,7 +208,7 @@ func TestDeleteRoleAddressesTheRoleByName(t *testing.T) {
 	var deleted atomic.Bool
 	runtime := uamRuntime(t, map[string]http.HandlerFunc{
 		"GET " + roleListPath: func(w http.ResponseWriter, _ *http.Request) {
-			writeBare(w, http.StatusOK, []roleResponse{{ID: "00000000-0000-4000-8000-000000000001", Name: "operator"}})
+			writeBare(w, http.StatusOK, []map[string]any{{"id": "00000000-0000-4000-8000-000000000001", "name": "operator"}})
 		},
 		"DELETE " + roleWritePath: func(w http.ResponseWriter, _ *http.Request) {
 			deleted.Store(true)
@@ -222,14 +229,14 @@ func TestGetGroupTakesIdFromTheListAndMembersFromTheItemRoute(t *testing.T) {
 	const uuid = "00000000-0000-4000-8000-000000000003"
 	runtime := uamRuntime(t, map[string]http.HandlerFunc{
 		"GET " + groupListP: func(w http.ResponseWriter, _ *http.Request) {
-			writeBare(w, http.StatusOK, groupListResponse{Groups: []groupResponse{{ID: uuid, Name: "platform", Description: "platform team"}}})
+			writeBare(w, http.StatusOK, map[string]any{"groups": []map[string]any{{"id": uuid, "name": "platform", "description": "platform team"}}})
 		},
 		"GET " + groupItemP: func(w http.ResponseWriter, _ *http.Request) {
 			// The item route never carries the description and mints no id the
 			// list agrees with, so only the members are taken from it.
-			writeBare(w, http.StatusOK, groupResponse{ID: uuid, Name: "platform", Members: []groupMemberResponse{
-				{Name: "zoe", Enabled: true, Type: "user"},
-				{Name: "ci", Enabled: true, Type: "api_client"},
+			writeBare(w, http.StatusOK, map[string]any{"id": uuid, "name": "platform", "members": []map[string]any{
+				{"name": "zoe", "enabled": true, "type": "user"},
+				{"name": "ci", "enabled": true, "type": "api_client"},
 			}})
 		},
 	})
@@ -250,7 +257,7 @@ func TestGetGroupReportsNotFoundFromTheList(t *testing.T) {
 	t.Parallel()
 	runtime := uamRuntime(t, map[string]http.HandlerFunc{
 		"GET " + groupListP: func(w http.ResponseWriter, _ *http.Request) {
-			writeBare(w, http.StatusOK, groupListResponse{Groups: []groupResponse{}})
+			writeBare(w, http.StatusOK, map[string]any{"groups": []any{}})
 		},
 	})
 
@@ -266,7 +273,7 @@ func TestCreateGroupNamesADuplicateBehindThe502(t *testing.T) {
 			w.WriteHeader(http.StatusBadGateway)
 		},
 		"GET " + groupListP: func(w http.ResponseWriter, _ *http.Request) {
-			writeBare(w, http.StatusOK, groupListResponse{Groups: []groupResponse{{ID: "00000000-0000-4000-8000-000000000003", Name: "platform"}}})
+			writeBare(w, http.StatusOK, map[string]any{"groups": []map[string]any{{"id": "00000000-0000-4000-8000-000000000003", "name": "platform"}}})
 		},
 	})
 
@@ -286,17 +293,17 @@ func TestCreateGroupSendsOnlyTheNameAndReadsBack(t *testing.T) {
 				t.Errorf("decode create body: %v", err)
 			}
 			created.Store(true)
-			writeBare(w, http.StatusCreated, groupResponse{ID: "00000000-0000-4000-8000-000000000003", Name: "platform"})
+			writeBare(w, http.StatusCreated, map[string]any{"id": "00000000-0000-4000-8000-000000000003", "name": "platform"})
 		},
 		"GET " + groupListP: func(w http.ResponseWriter, _ *http.Request) {
 			if !created.Load() {
-				writeBare(w, http.StatusOK, groupListResponse{Groups: []groupResponse{}})
+				writeBare(w, http.StatusOK, map[string]any{"groups": []any{}})
 				return
 			}
-			writeBare(w, http.StatusOK, groupListResponse{Groups: []groupResponse{{ID: "00000000-0000-4000-8000-000000000003", Name: "platform"}}})
+			writeBare(w, http.StatusOK, map[string]any{"groups": []map[string]any{{"id": "00000000-0000-4000-8000-000000000003", "name": "platform"}}})
 		},
 		"GET " + groupItemP: func(w http.ResponseWriter, _ *http.Request) {
-			writeBare(w, http.StatusOK, groupResponse{ID: "00000000-0000-4000-8000-000000000003", Name: "platform"})
+			writeBare(w, http.StatusOK, map[string]any{"id": "00000000-0000-4000-8000-000000000003", "name": "platform"})
 		},
 	})
 
@@ -316,7 +323,7 @@ func TestDeleteGroupSkipsTheRequestWhenTheGroupIsAbsent(t *testing.T) {
 	t.Parallel()
 	runtime := uamRuntime(t, map[string]http.HandlerFunc{
 		"GET " + groupListP: func(w http.ResponseWriter, _ *http.Request) {
-			writeBare(w, http.StatusOK, groupListResponse{Groups: []groupResponse{}})
+			writeBare(w, http.StatusOK, map[string]any{"groups": []any{}})
 		},
 	})
 
@@ -332,10 +339,10 @@ func TestUAMRequestsCarryTheTenantHeader(t *testing.T) {
 		"GET " + groupListP: func(w http.ResponseWriter, r *http.Request) {
 			tenant.Store(r.Header.Get("X-Tenant"))
 			authorization.Store(r.Header.Get("Authorization"))
-			writeBare(w, http.StatusOK, groupListResponse{Groups: []groupResponse{{ID: "id", Name: "platform"}}})
+			writeBare(w, http.StatusOK, map[string]any{"groups": []map[string]any{{"id": "id", "name": "platform"}}})
 		},
 		"GET " + groupItemP: func(w http.ResponseWriter, _ *http.Request) {
-			writeBare(w, http.StatusOK, groupResponse{ID: "id", Name: "platform"})
+			writeBare(w, http.StatusOK, map[string]any{"id": "id", "name": "platform"})
 		},
 	})
 
@@ -356,11 +363,11 @@ func TestGetRoleReadsTheItemRouteUnderTheTenantUUID(t *testing.T) {
 	runtime := uamRuntime(t, map[string]http.HandlerFunc{
 		"GET " + tenantItemPath: tenantRoute(nil),
 		"GET " + roleListPath: func(w http.ResponseWriter, _ *http.Request) {
-			writeBare(w, http.StatusOK, []roleResponse{{ID: "00000000-0000-4000-8000-000000000001", Name: "operator"}})
+			writeBare(w, http.StatusOK, []map[string]any{{"id": "00000000-0000-4000-8000-000000000001", "name": "operator"}})
 		},
 		"GET " + roleReadPath: func(w http.ResponseWriter, _ *http.Request) {
 			read.Store(true)
-			writeBare(w, http.StatusOK, roleResponse{ID: "operator", Name: "operator", Composites: []string{"vm:read"}})
+			writeBare(w, http.StatusOK, map[string]any{"id": "operator", "name": "operator", "composites": []string{"vm:read"}})
 		},
 	})
 
@@ -382,10 +389,10 @@ func TestTenantLookupIsResolvedOnceAndReused(t *testing.T) {
 	runtime := uamRuntime(t, map[string]http.HandlerFunc{
 		"GET " + tenantItemPath: tenantRoute(&lookups),
 		"GET " + roleListPath: func(w http.ResponseWriter, _ *http.Request) {
-			writeBare(w, http.StatusOK, []roleResponse{{ID: "00000000-0000-4000-8000-000000000001", Name: "operator"}})
+			writeBare(w, http.StatusOK, []map[string]any{{"id": "00000000-0000-4000-8000-000000000001", "name": "operator"}})
 		},
 		"GET " + roleReadPath: func(w http.ResponseWriter, _ *http.Request) {
-			writeBare(w, http.StatusOK, roleResponse{ID: "operator", Name: "operator", Composites: []string{"vm:read"}})
+			writeBare(w, http.StatusOK, map[string]any{"id": "operator", "name": "operator", "composites": []string{"vm:read"}})
 		},
 	})
 
@@ -406,7 +413,7 @@ func TestGetRoleReportsARefusedTenantLookup(t *testing.T) {
 			w.WriteHeader(http.StatusForbidden)
 		},
 		"GET " + roleListPath: func(w http.ResponseWriter, _ *http.Request) {
-			writeBare(w, http.StatusOK, []roleResponse{{ID: "00000000-0000-4000-8000-000000000001", Name: "operator"}})
+			writeBare(w, http.StatusOK, []map[string]any{{"id": "00000000-0000-4000-8000-000000000001", "name": "operator"}})
 		},
 	})
 
@@ -416,5 +423,304 @@ func TestGetRoleReportsARefusedTenantLookup(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "resolve tenant") || !strings.Contains(err.Error(), "403") {
 		t.Errorf("GetRole() error = %v, want it to name the tenant lookup and its status", err)
+	}
+}
+
+// recordBody keeps the raw request body so the exact wire JSON can be compared.
+func recordBody(t *testing.T, r *http.Request, into *atomic.Value) {
+	t.Helper()
+	raw, err := io.ReadAll(r.Body)
+	if err != nil {
+		t.Errorf("read body: %v", err)
+	}
+	into.Store(string(raw))
+}
+
+// assertJSON compares a wire body with the expected JSON by content, including which keys
+// are present and whether a value is null or empty.
+func assertJSON(t *testing.T, label string, got any, want string) {
+	t.Helper()
+	raw, _ := got.(string)
+	var gotValue, wantValue any
+	if err := json.Unmarshal([]byte(raw), &gotValue); err != nil {
+		t.Fatalf("%s body %q: %v", label, raw, err)
+	}
+	if err := json.Unmarshal([]byte(want), &wantValue); err != nil {
+		t.Fatalf("%s want %q: %v", label, want, err)
+	}
+	if !reflect.DeepEqual(gotValue, wantValue) {
+		t.Errorf("%s body = %s, want %s", label, raw, want)
+	}
+}
+
+func roleReadBackRoutes(routes map[string]http.HandlerFunc) map[string]http.HandlerFunc {
+	routes["GET "+roleListPath] = func(w http.ResponseWriter, r *http.Request) {
+		writeBare(w, http.StatusOK, []map[string]any{{"id": "00000000-0000-4000-8000-000000000001", "name": "operator"}})
+	}
+	routes["GET "+tenantItemPath] = tenantRoute(nil)
+	routes["GET "+roleReadPath] = func(w http.ResponseWriter, _ *http.Request) {
+		writeBare(w, http.StatusOK, map[string]any{"name": "operator", "composites": []string{}})
+	}
+	return routes
+}
+
+// The create body is exactly {"name","actions"}; nil actions stay an explicit null and an
+// empty list stays [] as they did with the handwritten request struct.
+func TestCreateRoleSendsTheExactBody(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		actions []string
+		want    string
+	}{
+		{[]string{"vm:read", "vm:write"}, `{"name":"operator","actions":["vm:read","vm:write"]}`},
+		{[]string{}, `{"name":"operator","actions":[]}`},
+		{nil, `{"name":"operator","actions":null}`},
+	} {
+		var body, contentType atomic.Value
+		runtime := uamRuntime(t, roleReadBackRoutes(map[string]http.HandlerFunc{
+			"POST " + roleListPath: func(w http.ResponseWriter, r *http.Request) {
+				contentType.Store(r.Header.Get("Content-Type"))
+				recordBody(t, r, &body)
+				writeBare(w, http.StatusCreated, map[string]string{"message": "role created successfully"})
+			},
+		}))
+		if _, err := runtime.CreateRole(context.Background(), "operator", tc.actions); err != nil {
+			t.Fatalf("CreateRole(%v) error = %v", tc.actions, err)
+		}
+		assertJSON(t, "create role", body.Load(), tc.want)
+		if contentType.Load() != "application/json" {
+			t.Errorf("Content-Type = %v", contentType.Load())
+		}
+	}
+}
+
+// The update body is exactly {"id","name","actions"}; the generated group_id is never sent.
+func TestUpdateRoleSendsTheExactBody(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		actions []string
+		want    string
+	}{
+		{[]string{"vm:write"}, `{"id":"00000000-0000-4000-8000-000000000001","name":"operator","actions":["vm:write"]}`},
+		{[]string{}, `{"id":"00000000-0000-4000-8000-000000000001","name":"operator","actions":[]}`},
+		{nil, `{"id":"00000000-0000-4000-8000-000000000001","name":"operator","actions":null}`},
+	} {
+		var body atomic.Value
+		runtime := uamRuntime(t, roleReadBackRoutes(map[string]http.HandlerFunc{
+			"PUT " + roleWritePath: func(w http.ResponseWriter, r *http.Request) {
+				recordBody(t, r, &body)
+				writeBare(w, http.StatusOK, map[string]string{"message": "role updated successfully"})
+			},
+		}))
+		if _, err := runtime.UpdateRole(context.Background(), "operator", tc.actions); err != nil {
+			t.Fatalf("UpdateRole(%v) error = %v", tc.actions, err)
+		}
+		assertJSON(t, "update role", body.Load(), tc.want)
+	}
+}
+
+func TestCreateGroupSendsTheExactBody(t *testing.T) {
+	t.Parallel()
+	var body atomic.Value
+	var created atomic.Bool
+	runtime := uamRuntime(t, map[string]http.HandlerFunc{
+		"POST " + groupListP: func(w http.ResponseWriter, r *http.Request) {
+			recordBody(t, r, &body)
+			created.Store(true)
+			writeBare(w, http.StatusCreated, map[string]any{"id": "id", "name": "platform"})
+		},
+		"GET " + groupListP: func(w http.ResponseWriter, _ *http.Request) {
+			groups := []uam.GroupResponse{}
+			if created.Load() {
+				id, name := "id", "platform"
+				groups = append(groups, uam.GroupResponse{ID: &id, Name: &name})
+			}
+			writeBare(w, http.StatusOK, uam.GroupListResponse{Groups: &groups})
+		},
+		"GET " + groupItemP: func(w http.ResponseWriter, _ *http.Request) {
+			writeBare(w, http.StatusOK, map[string]any{"name": "platform"})
+		},
+	})
+
+	if _, err := runtime.CreateGroup(context.Background(), "platform"); err != nil {
+		t.Fatalf("CreateGroup() error = %v", err)
+	}
+	assertJSON(t, "create group", body.Load(), `{"groupName":"platform"}`)
+}
+
+// The role list is read without query parameters, so UAM applies its own defaults.
+func TestRoleListSendsNoQueryString(t *testing.T) {
+	t.Parallel()
+	var query atomic.Value
+	runtime := uamRuntime(t, map[string]http.HandlerFunc{
+		"GET " + roleListPath: func(w http.ResponseWriter, r *http.Request) {
+			query.Store(r.URL.RawQuery)
+			writeBare(w, http.StatusOK, []any{})
+		},
+	})
+
+	if err := runtime.DeleteRole(context.Background(), "operator"); err != nil {
+		t.Fatalf("DeleteRole() error = %v", err)
+	}
+	if query.Load() != "" {
+		t.Errorf("role list query = %q, want none", query.Load())
+	}
+}
+
+// Every UAM route escapes its path parameters exactly once, as a single segment, and every
+// request carries the bearer token and the tenant header.
+func TestUAMRoutesEscapePathSegmentsAndAuthorizeEveryRequest(t *testing.T) {
+	t.Parallel()
+	const (
+		namespace = "team a/b"
+		ns        = "team%20a%2Fb"
+		uuid      = "uuid/1"
+		role      = "ops/admin x"
+		roleSeg   = "ops%2Fadmin%20x"
+		group     = "plat/form%"
+		groupSeg  = "plat%2Fform%25"
+	)
+	var mu sync.Mutex
+	var seen []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/realms/realm/protocol/openid-connect/token" {
+			_ = json.NewEncoder(w).Encode(map[string]any{"access_token": "token", "expires_in": 3600})
+			return
+		}
+		request := r.Method + " " + r.URL.EscapedPath()
+		mu.Lock()
+		seen = append(seen, request)
+		mu.Unlock()
+		if r.Header.Get("Authorization") != "Bearer token" || r.Header.Get("X-Tenant") != namespace {
+			t.Errorf("%s: Authorization = %q, X-Tenant = %q", request, r.Header.Get("Authorization"), r.Header.Get("X-Tenant"))
+		}
+		switch request {
+		case "GET /api/uam/v1/tenants/" + ns:
+			writeBare(w, http.StatusOK, map[string]any{"id": uuid})
+		case "GET /api/uam/v1/tenants/" + ns + "/roles":
+			writeBare(w, http.StatusOK, []map[string]any{{"id": "db-id", "name": role}})
+		case "GET /api/uam/v1/tenants/uuid%2F1/roles/" + roleSeg:
+			writeBare(w, http.StatusOK, map[string]any{"name": role, "composites": []string{"b", "a"}})
+		case "POST /api/uam/v1/tenants/" + ns + "/roles",
+			"PUT /api/uam/v1/tenants/" + ns + "/roles/" + roleSeg,
+			"DELETE /api/uam/v1/tenants/" + ns + "/roles/" + roleSeg,
+			"POST /api/uam/v1/tenants/groups",
+			"DELETE /api/uam/v1/tenants/groups/" + groupSeg:
+			writeBare(w, http.StatusOK, map[string]any{"message": "ok"})
+		case "GET /api/uam/v1/tenants/groups":
+			writeBare(w, http.StatusOK, map[string]any{"groups": []map[string]any{{"id": "gid", "name": group}}})
+		case "GET /api/uam/v1/tenants/groups/" + groupSeg:
+			writeBare(w, http.StatusOK, map[string]any{"name": group})
+		default:
+			t.Errorf("unexpected request %s", request)
+			w.WriteHeader(http.StatusTeapot)
+		}
+	}))
+	t.Cleanup(server.Close)
+	config, err := NewConfig(server.URL, namespace, server.URL, "realm", "client", "secret", 0)
+	if err != nil {
+		t.Fatalf("NewConfig() error = %v", err)
+	}
+	runtime := NewRuntime(config)
+	ctx := context.Background()
+
+	if _, err := runtime.CreateRole(ctx, role, []string{"a"}); err != nil {
+		t.Fatalf("CreateRole() error = %v", err)
+	}
+	updated, err := runtime.UpdateRole(ctx, role, []string{"a", "b"})
+	if err != nil {
+		t.Fatalf("UpdateRole() error = %v", err)
+	}
+	if strings.Join(updated.Actions, ",") != "a,b" {
+		t.Errorf("role.Actions = %v, want them sorted", updated.Actions)
+	}
+	if err := runtime.DeleteRole(ctx, role); err != nil {
+		t.Fatalf("DeleteRole() error = %v", err)
+	}
+	if _, err := runtime.CreateGroup(ctx, group); err != nil {
+		t.Fatalf("CreateGroup() error = %v", err)
+	}
+	if err := runtime.DeleteGroup(ctx, group); err != nil {
+		t.Fatalf("DeleteGroup() error = %v", err)
+	}
+
+	for _, want := range []string{
+		"GET /api/uam/v1/tenants/" + ns,
+		"GET /api/uam/v1/tenants/uuid%2F1/roles/" + roleSeg,
+		"POST /api/uam/v1/tenants/" + ns + "/roles",
+		"PUT /api/uam/v1/tenants/" + ns + "/roles/" + roleSeg,
+		"DELETE /api/uam/v1/tenants/" + ns + "/roles/" + roleSeg,
+		"POST /api/uam/v1/tenants/groups",
+		"GET /api/uam/v1/tenants/groups/" + groupSeg,
+		"DELETE /api/uam/v1/tenants/groups/" + groupSeg,
+	} {
+		if !slices.Contains(seen, want) {
+			t.Errorf("missing request %s; saw %v", want, seen)
+		}
+	}
+}
+
+func TestDeleteGroupAddressesTheGroupByName(t *testing.T) {
+	t.Parallel()
+	var deleted atomic.Bool
+	runtime := uamRuntime(t, map[string]http.HandlerFunc{
+		"GET " + groupListP: func(w http.ResponseWriter, _ *http.Request) {
+			writeBare(w, http.StatusOK, map[string]any{"groups": []map[string]any{{"id": "id", "name": "platform"}}})
+		},
+		"DELETE " + groupItemP: func(w http.ResponseWriter, _ *http.Request) {
+			deleted.Store(true)
+			w.WriteHeader(http.StatusNoContent)
+		},
+	})
+
+	if err := runtime.DeleteGroup(context.Background(), "platform"); err != nil {
+		t.Fatalf("DeleteGroup() error = %v", err)
+	}
+	if !deleted.Load() {
+		t.Error("DeleteGroup() did not reach the name-addressed route")
+	}
+}
+
+// A 502 from a list read is a failure, never proof of absence, so delete must not no-op.
+func TestDeleteDoesNotTreatA502ListAsAbsence(t *testing.T) {
+	t.Parallel()
+	runtime := uamRuntime(t, map[string]http.HandlerFunc{
+		"GET " + roleListPath: func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusBadGateway) },
+		"GET " + groupListP:   func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusBadGateway) },
+	})
+
+	err := runtime.DeleteRole(context.Background(), "operator")
+	if err == nil || errors.Is(err, ErrResourceNotFound) || err.Error() != "list roles: uam returned HTTP 502" {
+		t.Errorf("DeleteRole() error = %v, want the list failure", err)
+	}
+	err = runtime.DeleteGroup(context.Background(), "platform")
+	if err == nil || errors.Is(err, ErrResourceNotFound) || err.Error() != "list groups: uam returned HTTP 502" {
+		t.Errorf("DeleteGroup() error = %v, want the list failure", err)
+	}
+}
+
+func TestUAMWriteErrorsKeepTheirStatusAndWording(t *testing.T) {
+	t.Parallel()
+	runtime := uamRuntime(t, map[string]http.HandlerFunc{
+		"GET " + roleListPath: func(w http.ResponseWriter, _ *http.Request) {
+			writeBare(w, http.StatusOK, []map[string]any{{"id": "id", "name": "operator"}})
+		},
+		"PUT " + roleWritePath: func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusConflict) },
+		"POST " + roleListPath: func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusBadGateway) },
+		"DELETE " + groupItemP: func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNotFound) },
+		"GET " + groupListP: func(w http.ResponseWriter, _ *http.Request) {
+			writeBare(w, http.StatusOK, map[string]any{"groups": []map[string]any{{"id": "id", "name": "platform"}}})
+		},
+	})
+	ctx := context.Background()
+
+	if _, err := runtime.UpdateRole(ctx, "operator", nil); !errors.Is(err, ErrResourceConflict) || !strings.HasPrefix(err.Error(), `update role "operator": `) {
+		t.Errorf("UpdateRole() error = %v, want a wrapped conflict", err)
+	}
+	if _, err := runtime.CreateRole(ctx, "operator", nil); err == nil || err.Error() != `create role "operator": uam returned HTTP 502` {
+		t.Errorf("CreateRole() error = %v", err)
+	}
+	if err := runtime.DeleteGroup(ctx, "platform"); !errors.Is(err, ErrResourceNotFound) || !strings.HasPrefix(err.Error(), `delete group "platform": `) {
+		t.Errorf("DeleteGroup() error = %v, want a wrapped not-found", err)
 	}
 }
