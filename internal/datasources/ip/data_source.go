@@ -45,7 +45,7 @@ func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp 
 		Description: "Lists the IP addresses currently reserved for a tenant.",
 		Attributes: map[string]schema.Attribute{
 			"ips": schema.ListNestedAttribute{
-				Description: "Reserved IP addresses, sorted by address so an entry keeps its index when IPAM returns them in another order.",
+				Description: "Reserved IP addresses, sorted by address so an entry keeps its index when ASC returns them in another order.",
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{

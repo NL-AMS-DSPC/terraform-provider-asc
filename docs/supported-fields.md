@@ -2,7 +2,7 @@
 
 The generated pages under `docs/resources/` and `docs/data-sources/` list every attribute of every
 resource and data source. This page answers what they cannot: which attribute can be changed on a
-live resource, which one destroys and recreates it, how each resource is imported, and which gateway
+live resource, which one destroys and recreates it, how each resource is imported, and which api
 gaps those answers follow from.
 
 The provider registers ten resources and nine data sources, across three API boundaries:
@@ -20,14 +20,14 @@ their own section, because what a UAM read can report is narrower than what its 
 ## Change behaviour
 
 "In place" means Terraform applies the change to the live resource. "Replaces" means the plan
-destroys and recreates it. Where the reason is a gateway limitation rather than a Terraform one, it
+destroys and recreates it. Where the reason is an api limitation rather than a Terraform one, it
 is stated.
 
 ### asc_vpc
 
 | Attribute | Schema | Change | Why |
 | --- | --- | --- | --- |
-| `name` | Required | Replaces | The name identifies the VPC to the gateway. |
+| `name` | Required | Replaces | The name identifies the VPC to the api. |
 | `subnets` | Required, at least one | Replaces when a configured field of an inline subnet changes | No route changes an inline subnet in place. Only `name`, `cidr`, `type` and `tags` of each element are compared; the computed nested fields are ignored so that an unrelated edit does not replace the VPC. |
 | `tags` | Optional | In place | `PATCH /vpcs/{name}`. |
 
@@ -64,7 +64,7 @@ Read-only: `urn`, `sku`, `os`, `status`, `last_error`, `attached_volumes`, `inte
 `public_ips` only reports the addresses the machine lists; `asc_ip_allocation` is what adds and
 removes them. Like `attached_volumes`, it is sorted, here numerically by address, so the order a read returns
 cannot change state.
-`internal_ip` is null until infra-gateway assigns one.
+`internal_ip` is null until ASC assigns one.
 
 ### asc_vm_group
 
@@ -73,10 +73,10 @@ cannot change state.
 | `name` | Required, same pattern and length as a virtual machine name | Replaces | |
 | `sku_id` | Required | Replaces | |
 | `vpc_id` | Required, UUID v4 | Replaces | |
-| `image` | Optional | Replaces | Configuration-only: the gateway never echoes it back, so it cannot be computed. An empty value defaults server-side. |
+| `image` | Optional | Replaces | Configuration-only: the api never echoes it back, so it cannot be computed. An empty value defaults server-side. |
 | `autoscaling` | Required, with `min_replicas` and `max_replicas` between 1 and 100 and `max_replicas` at least `min_replicas`; optional `cron` block with required `timezone`, `start`, `end` and `desired_replicas` between 0 and 100 | Replaces | infra-gateway registers no scale or update route for a group's policy. |
 | `customization` | Optional, sensitive | Replaces | Never served back. |
-| `tags` | Optional | Replaces | infra-gateway registers no PATCH route for a group, so tags cannot be reconciled in place the way a VPC's can. |
+| `tags` | Optional | Replaces | ASC registers no PATCH route for a group, so tags cannot be reconciled in place the way a VPC's can. |
 
 Read-only: `urn`, `sku`, `status`, `last_error`, `attached_volumes`.
 
@@ -109,7 +109,7 @@ settle asynchronously and state is taken from an authoritative re-read afterward
 
 Read-only: `status`, `last_error`.
 
-infra-gateway has no attachment object of its own; the relationship lives on the volume, so the pair
+ASC has no attachment object of its own; the relationship lives on the volume, so the pair
 of names is the whole identity and the two computed attributes are the volume state that proves the
 attachment landed. A volume that is gone, or that is now attached to another machine, removes the
 resource from state so the next plan recreates it.
@@ -121,8 +121,8 @@ resource from state so the next plan recreates it.
 | `vm_name` | Required | Replaces | Moving an address is a deallocation followed by an allocation, not an update. |
 | `ip` | Required, canonical IPv4 address | Replaces | Must already be reserved, typically by `asc_ip`. Only IPv4 is supported, and a non-canonical spelling such as `10.0.0.01` is rejected at plan time because it would never match the address the machine lists. |
 
-infra-gateway has no allocation object of its own; the address lives in the machine's
-`addresses.publicIPs`, so the pair is the whole identity. 
+ASC has no allocation object of its own; the address lives in the machine's
+`public_ips`, so the pair is the whole identity. 
 `POST /vms/{name}/ip` with `{"ip": "..."}` only acknowledges the command, 
 and the provider polls `GET /vms/{name}` until the address is listed.
 Deleting sends `DELETE /vms/{name}/ip` with the same body and waits until the address is gone. A
@@ -132,7 +132,7 @@ operation with its `lastError`.
 
 ### asc_role
 
-Roles live on `/api/uam`, not on infra-gateway, and the differences below are all forced by the
+Roles live on `/api/uam`, not on the core api, and the differences below are all forced by the
 [UAM contract](uam-contract.md).
 
 | Attribute | Schema | Change | Why |
@@ -191,13 +191,13 @@ name rather than repeat the status.
 ### asc_ip
 
 Reservations live on `/api/ipam`. There is no configurable attribute at all: `POST /reservations`
-takes no body and IPAM picks the address, so every attribute is read-only.
+takes no body and ASC picks the address, so every attribute is read-only.
 
 | Attribute | Schema | Change | Why |
 | --- | --- | --- | --- |
-| `ip` | Computed | Forces recreation if lost | The address IPAM assigned. Kept from state once known, because nothing about it can be recomputed from configuration. |
+| `ip` | Computed | Forces recreation if lost | The address ASC assigned. Kept from state once known, because nothing about it can be recomputed from configuration. |
 | `reserved_at` | Computed | Kept from state | Timestamp `POST /reservations` returns alongside the address. |
-| `allocated_to` | Computed | Read on every refresh | `allocatedTo` from `GET /reservations/{ip}`: the URN of the virtual machine the address is allocated to, so it compares with `asc_virtual_machine.urn`. It is null while the address is free, as IPAM sends it. An `asc_ip_allocation` changes it without touching the reservation, so it is never kept from state and a change never replaces the address. |
+| `allocated_to` | Computed | Read on every refresh | `allocatedTo` from `GET /reservations/{ip}`: the URN of the virtual machine the address is allocated to, so it compares with `asc_virtual_machine.urn`. It is null while the address is free, as ASC sends it. An `asc_ip_allocation` changes it without touching the reservation, so it is never kept from state and a change never replaces the address. |
 
 `Read` and import both call `GET /reservations/{ip}`, which returns the single reservation. A 404
 removes the resource from state, and the next plan reserves a new, different address
@@ -228,7 +228,7 @@ nothing on either side of it, is rejected with a diagnostic naming the expected 
 
 ### What import cannot recover
 
-infra-gateway does not serve these values back, so a read cannot fill them and the provider does not
+ASC does not serve these values back, so a read cannot fill them and the provider does not
 invent them. They stay null after an import until the configuration supplies them.
 
 | Resource | Attributes | Consequence |
@@ -236,7 +236,7 @@ invent them. They stay null after an import until the configuration supplies the
 | `asc_vm_group` | `vpc_id`, `image`, `customization` | They must come from the configuration after an import. Each forces replacement, so importing a group whose configuration differs plans a replacement rather than silently adopting it. |
 | `asc_virtual_machine` | `customization` | Write-only. The value in state is the configured one, preserved across reads because the GET deliberately omits it; an import leaves it null. |
 
-## What the gateway does not serve
+## What the api does not serve
 
 | Gap | Consequence for the provider |
 | --- | --- |
@@ -244,14 +244,14 @@ invent them. They stay null after an import until the configuration supplies the
 | No single-subnet GET | The subnet read lists `GET /vpcs/{vpc}/subnets/` and matches on the exact name; a miss is reported as not found. |
 | The VM read model builds `attachedVolumes` by ranging a Go map | The order differs between two reads of an unchanged machine, so the client sorts the list before it reaches state. A VM group's attached volumes are sorted for the same reason. |
 | No collection is served in a guaranteed order | Every list recorded positionally in state is sorted provider-side on the field that identifies its element, `asc_skus` by SKU id included, so that a reshuffle alone never shows up as a diff. |
-| `size` is an opaque Kubernetes quantity | The gateway may echo an equal size back in a different spelling, for example `10240Mi` for `10Gi`. The provider keeps the configured spelling while the byte count matches and adopts the gateway's only when the magnitude really changed, which is what an out-of-band resize looks like. `size_bytes` is the value to compare against. |
-| Virtual machines and virtual machine groups share one name reservation | `vm_names_in_use` is keyed on the tenant and name for both, so a group cannot take a machine's name or the reverse. infra-gateway releases a group's name when it acknowledges the group's deletion, which is what lets a replacement reuse it. A 409 from `POST /vm-groups` therefore always means the name is taken right now, and the provider reports it at once rather than retrying. A group's replica names, `<group>-0` and so on, are not released on deletion; that is a separate gateway gap and does not affect the group's own name. |
+| `size` is an opaque Kubernetes quantity | The api may echo an equal size back in a different spelling, for example `10240Mi` for `10Gi`. The provider keeps the configured spelling while the byte count matches and adopts the api's only when the magnitude really changed, which is what an out-of-band resize looks like. `size_bytes` is the value to compare against. |
+| Virtual machines and virtual machine groups share one name reservation | `vm_names_in_use` is keyed on the tenant and name for both, so a group cannot take a machine's name or the reverse. ASC releases a group's name when it acknowledges the group's deletion, which is what lets a replacement reuse it. A 409 from `POST /vm-groups` therefore always means the name is taken right now, and the provider reports it at once rather than retrying. A group's replica names, `<group>-0` and so on, are not released on deletion; that is a separate api gap and does not affect the group's own name. |
 | A duplicate volume name returns an untyped HTTP 500, not a typed 409 | An untyped 500 can equally mean the create partially succeeded, so volume creation reports the error verbatim instead of retrying. VPC, virtual machine and VM group creation do retry, because their name collisions are typed 409s; group names share the virtual machine reservation table. |
 | `PatchVolume` omits the tag conflict check the VPC, subnet and VM patch handlers perform | Breaching the tag limit on a volume surfaces as an untyped HTTP 500 rather than a 409. |
 | Attach and detach answer with an acknowledgement only | Completion is read from the volume's own `status` and `attachedToVM`. Deleting a volume that is still attached is refused and reported as is; detaching is not the provider's decision to make. |
-| `attachedToVM` holds the machine's instance id, not its name | `get_volume` records `VMAttachedToVolumeAcknowledgedEvent.InstanceID` and drops the `VMName` the same event carries, so the field named after a machine name holds a uuid. The provider resolves the machine through `GET /vms/{name}` and matches its urn's resource id, accepting either spelling so a gateway that starts serving the name keeps working. `asc_volume.attached_to_vm` and the `asc_volume` data source therefore expose the uuid; `asc_volume_attachment.vm_name` stays the configured name. |
+| `attachedToVM` holds the machine's instance id, not its name | `get_volume` records `VMAttachedToVolumeAcknowledgedEvent.InstanceID` and drops the `VMName` the same event carries, so the field named after a machine name holds a uuid. The provider resolves the machine through `GET /vms/{name}` and matches its urn's resource id, accepting either spelling so an api that starts serving the name keeps working. `asc_volume.attached_to_vm` and the `asc_volume` data source therefore expose the uuid; `asc_volume_attachment.vm_name` stays the configured name. |
 
-On infra-gateway, only HTTP 404 removes a resource from state or makes a delete idempotent.
+On ASC, only HTTP 404 removes a resource from state or makes a delete idempotent.
 Authentication, validation, transport and other server errors are propagated.
 
 ## The UAM data sources

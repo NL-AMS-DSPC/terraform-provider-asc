@@ -25,7 +25,7 @@ output "reserved_ips" {
 
 ### Read-Only
 
-- `ips` (Attributes List) Reserved IP addresses, sorted by address so an entry keeps its index when IPAM returns them in another order. (see [below for nested schema](#nestedatt--ips))
+- `ips` (Attributes List) Reserved IP addresses, sorted by address so an entry keeps its index when ASC returns them in another order. (see [below for nested schema](#nestedatt--ips))
 
 <a id="nestedatt--ips"></a>
 ### Nested Schema for `ips`
