@@ -115,6 +115,10 @@ data "asc_virtual_machine" "app" {
 				ResourceName: "asc_ip_allocation.test", ImportState: true, ImportStateId: "app:10.0.0.1",
 				ImportStateVerify: true, ImportStateVerifyIdentifierAttribute: "vm_name",
 			},
+			{
+				ResourceName: "asc_ip_allocation.test", ImportState: true, ImportStateId: "app:10.0.0.01",
+				ExpectError: regexp.MustCompile("Invalid IP address"),
+			},
 		},
 	})
 }

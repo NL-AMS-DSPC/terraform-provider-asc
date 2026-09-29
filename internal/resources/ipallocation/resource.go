@@ -139,6 +139,7 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 	ip := req.ID[separator+1:]
 	if !isValidIP(ip) {
 		resp.Diagnostics.AddError("Invalid IP address", fmt.Sprintf("%q, must be an IPv4 address.", ip))
+		return
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("vm_name"), req.ID[:separator])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("ip"), ip)...)
