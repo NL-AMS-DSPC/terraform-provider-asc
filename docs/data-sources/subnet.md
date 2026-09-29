@@ -3,12 +3,12 @@
 page_title: "asc_subnet Data Source - asc"
 subcategory: ""
 description: |-
-  Reads a subnet of a VPC managed by ASC infra-gateway.
+  Reads a subnet of a VPC managed by ASC.
 ---
 
 # asc_subnet (Data Source)
 
-Reads a subnet of a VPC managed by ASC infra-gateway.
+Reads a subnet of a VPC managed by ASC.
 
 ## Example Usage
 
@@ -38,7 +38,7 @@ resource "asc_virtual_machine" "edge" {
 - `cidr` (String) CIDR block of the subnet.
 - `id` (String) Identifier of the subnet.
 - `last_error` (String) Last error reported for the subnet, empty when healthy.
-- `status` (String) Lifecycle status reported by infra-gateway.
+- `status` (String) Lifecycle status reported by ASC.
 - `tags` (Map of String) Tags applied to the subnet.
 - `type` (String) Subnet type, public or private.
 - `urn` (String) URN of the subnet.

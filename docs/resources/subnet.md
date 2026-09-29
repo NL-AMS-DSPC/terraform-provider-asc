@@ -3,12 +3,12 @@
 page_title: "asc_subnet Resource - asc"
 subcategory: ""
 description: |-
-  Manages a standalone subnet through ASC infra-gateway.
+  Manages a standalone subnet through ASC.
 ---
 
 # asc_subnet (Resource)
 
-Manages a standalone subnet through ASC infra-gateway.
+Manages a standalone subnet through ASC.
 
 ## Example Usage
 
@@ -35,7 +35,7 @@ resource "asc_subnet" "example" {
 
 ### Optional
 
-- `tags` (Map of String) Tags applied to the subnet. infra-gateway patches subnet tags in place, so changing them does not replace the subnet.
+- `tags` (Map of String) Tags applied to the subnet.
 
 ### Read-Only
 

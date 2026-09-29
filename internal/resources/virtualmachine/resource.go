@@ -131,7 +131,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 	}
 
 	resp.Schema = schema.Schema{
-		Description: "Manages a virtual machine through ASC infra-gateway.",
+		Description: "Manages a virtual machine through ASC.",
 		Attributes: map[string]schema.Attribute{
 			"urn": schema.StringAttribute{Computed: true},
 			"name": schema.StringAttribute{
@@ -151,17 +151,15 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"status":     schema.StringAttribute{Computed: true},
 			"last_error": schema.StringAttribute{Computed: true},
 			"tags": schema.MapAttribute{
-				Description: "Tags applied to the virtual machine. infra-gateway patches virtual " +
-					"machine tags in place, so changing them does not replace the machine.",
-				Optional: true, ElementType: types.StringType,
+				Description: "Tags applied to the virtual machine.",
+				Optional:    true, ElementType: types.StringType,
 			},
 			"attached_volumes": schema.ListAttribute{
-				Description: "Names of the volumes attached to the machine, sorted. infra-gateway " +
-					"assembles this list from a map, so it is sorted here to keep state stable.",
-				Computed: true, ElementType: types.StringType,
+				Description: "Names of the volumes attached to the machine, sorted.",
+				Computed:    true, ElementType: types.StringType,
 			},
 			"internal_ip": schema.StringAttribute{
-				Description: "Internal IP address of the machine, null until infra-gateway assigns one.",
+				Description: "Internal IP address of the machine, null until ASC assigns one.",
 				Computed:    true,
 			},
 			"public_ips": schema.ListAttribute{

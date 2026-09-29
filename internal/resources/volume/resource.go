@@ -65,21 +65,21 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 	replaceString := []planmodifier.String{stringplanmodifier.RequiresReplace()}
 
 	resp.Schema = schema.Schema{
-		Description: "Manages a block volume through ASC infra-gateway.",
+		Description: "Manages a block volume through ASC.",
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
-				Description:   "Name of the volume, which identifies it in infra-gateway.",
+				Description:   "Name of the volume, which identifies it in ASC.",
 				Required:      true,
 				PlanModifiers: replaceString,
 				Validators:    []validator.String{stringvalidator.LengthBetween(1, 50)},
 			},
 			"size": schema.StringAttribute{
 				Description: "Requested capacity as a Kubernetes quantity, for example \"10Gi\". " +
-					"A larger value resizes the volume in place; infra-gateway cannot shrink one.",
+					"A larger value resizes the volume in place; ASC cannot shrink one.",
 				Required: true,
 			},
 			"size_bytes": schema.Int64Attribute{
-				Description: "Capacity in bytes. infra-gateway may echo back a different but " +
+				Description: "Capacity in bytes. ASC may echo back a different but " +
 					"numerically equal spelling of size, so this is the value to compare against.",
 				Computed: true,
 			},
@@ -90,17 +90,17 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				PlanModifiers: replaceString,
 				Validators:    []validator.String{stringvalidator.OneOf("ReadWriteOnce", "ReadWriteMany", "ReadOnlyMany")},
 			},
-			"volume_mode":    schema.StringAttribute{Description: "Volume mode reported by infra-gateway.", Computed: true},
+			"volume_mode":    schema.StringAttribute{Description: "Volume mode reported by ASC.", Computed: true},
 			"urn":            schema.StringAttribute{Description: "URN of the volume, which carries its uuid.", Computed: true},
-			"status":         schema.StringAttribute{Description: "Lifecycle status reported by infra-gateway.", Computed: true},
-			"last_error":     schema.StringAttribute{Description: "Last error reported by infra-gateway, empty when there is none.", Computed: true},
-			"attached_to_vm": schema.StringAttribute{Description: "Instance id of the virtual machine the volume is attached to, empty when it is detached. infra-gateway reports the machine's uuid here, not its name.", Computed: true},
+			"status":         schema.StringAttribute{Description: "Lifecycle status reported by ASC.", Computed: true},
+			"last_error":     schema.StringAttribute{Description: "Last error reported by iASC, empty when there is none.", Computed: true},
+			"attached_to_vm": schema.StringAttribute{Description: "Instance id of the virtual machine the volume is attached to, empty when it is detached. ASC reports the machine's uuid here, not its name.", Computed: true},
 			"tags": schema.MapAttribute{
 				Description: "Tags applied to the volume. Tags are updated in place.",
 				Optional:    true, ElementType: types.StringType,
 			},
-			"labels":      schema.MapAttribute{Description: "Labels infra-gateway reports for the volume.", Computed: true, ElementType: types.StringType},
-			"annotations": schema.MapAttribute{Description: "Annotations infra-gateway reports for the volume.", Computed: true, ElementType: types.StringType},
+			"labels":      schema.MapAttribute{Description: "Labels ASC reports for the volume.", Computed: true, ElementType: types.StringType},
+			"annotations": schema.MapAttribute{Description: "Annotations ASC reports for the volume.", Computed: true, ElementType: types.StringType},
 		},
 	}
 }
@@ -142,7 +142,7 @@ func (r *Resource) ModifyPlan(ctx context.Context, req resource.ModifyPlanReques
 		current, err := client.ParseQuantity(state.Size.ValueString())
 		if err == nil && planned < current {
 			resp.Diagnostics.AddAttributeError(path.Root("size"), "Volume cannot be shrunk", fmt.Sprintf(
-				"Volume %q is %s (%d bytes) and the configuration asks for %s (%d bytes). infra-gateway only grows a volume, so shrinking requires replacing it.",
+				"Volume %q is %s (%d bytes) and the configuration asks for %s (%d bytes). ASC only grows a volume, so shrinking requires replacing it.",
 				state.Name.ValueString(), state.Size.ValueString(), current, plan.Size.ValueString(), planned))
 			return
 		}
@@ -273,7 +273,7 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 func setFromVolume(ctx context.Context, model *Model, value client.Volume, diags *diag.Diagnostics) {
 	actual, err := client.ParseQuantity(value.Size)
 	if err != nil {
-		diags.AddError("Unsupported volume size", fmt.Sprintf("infra-gateway reported size %q for volume %q: %s", value.Size, value.Name, err))
+		diags.AddError("Unsupported volume size", fmt.Sprintf("ASC reported size %q for volume %q: %s", value.Size, value.Name, err))
 		return
 	}
 

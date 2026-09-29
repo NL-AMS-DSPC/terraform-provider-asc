@@ -89,13 +89,12 @@ func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp 
 					"gpu_type":      schema.StringAttribute{Description: "GPU model, empty when the SKU has none.", Computed: true},
 				},
 			},
-			"status":     schema.StringAttribute{Description: "Lifecycle status reported by infra-gateway.", Computed: true},
+			"status":     schema.StringAttribute{Description: "Lifecycle status reported by ASC.", Computed: true},
 			"last_error": schema.StringAttribute{Description: "Last error reported for the group, empty when there is none.", Computed: true},
 			"tags":       schema.MapAttribute{Description: "Tags on the group.", Computed: true, ElementType: types.StringType},
 			"attached_volumes": schema.ListAttribute{
-				Description: "Names of the volumes attached to the group, sorted; the gateway does " +
-					"not report them in a stable order.",
-				Computed: true, ElementType: types.StringType,
+				Description: "Names of the volumes attached to the group, sorted.",
+				Computed:    true, ElementType: types.StringType,
 			},
 			"autoscaling": schema.SingleNestedAttribute{
 				Description: "Scaling bounds of the group.",

@@ -51,7 +51,7 @@ func (d *DataSource) Metadata(_ context.Context, req datasource.MetadataRequest,
 
 func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Reads a subnet of a VPC managed by ASC infra-gateway.",
+		Description: "Reads a subnet of a VPC managed by ASC.",
 		Attributes: map[string]schema.Attribute{
 			"id":         schema.StringAttribute{Description: "Identifier of the subnet.", Computed: true},
 			"urn":        schema.StringAttribute{Description: "URN of the subnet.", Computed: true},
@@ -60,7 +60,7 @@ func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp 
 			"vpc_id":     schema.StringAttribute{Description: "Identifier of the owning VPC.", Computed: true},
 			"cidr":       schema.StringAttribute{Description: "CIDR block of the subnet.", Computed: true},
 			"type":       schema.StringAttribute{Description: "Subnet type, public or private.", Computed: true},
-			"status":     schema.StringAttribute{Description: "Lifecycle status reported by infra-gateway.", Computed: true},
+			"status":     schema.StringAttribute{Description: "Lifecycle status reported by ASC.", Computed: true},
 			"last_error": schema.StringAttribute{Description: "Last error reported for the subnet, empty when healthy.", Computed: true},
 			"tags":       schema.MapAttribute{Description: "Tags applied to the subnet.", Computed: true, ElementType: types.StringType},
 		},
@@ -94,7 +94,7 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 		return
 	}
 	if err != nil {
-		resp.Diagnostics.AddError("Unable to read subnet", fmt.Sprintf("Reading subnet %q of VPC %q from infra-gateway failed: %s", name, vpcName, err))
+		resp.Diagnostics.AddError("Unable to read subnet", fmt.Sprintf("Reading subnet %q of VPC %q from ASC failed: %s", name, vpcName, err))
 		return
 	}
 

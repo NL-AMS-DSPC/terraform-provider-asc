@@ -3,12 +3,12 @@
 page_title: "asc_vm_group Resource - asc"
 subcategory: ""
 description: |-
-  Manages a virtual machine group through ASC infra-gateway.
+  Manages a virtual machine group through ASC .
 ---
 
 # asc_vm_group (Resource)
 
-Manages a virtual machine group through ASC infra-gateway.
+Manages a virtual machine group through ASC .
 
 ## Example Usage
 
@@ -42,7 +42,7 @@ resource "asc_vm_group" "example" {
 
 ### Required
 
-- `autoscaling` (Attributes) Scaling bounds of the group. infra-gateway has no update route for a group's policy, so any change replaces the group. (see [below for nested schema](#nestedatt--autoscaling))
+- `autoscaling` (Attributes) Scaling bounds of the group. ASC has no update route for a group's policy, so any change replaces the group. (see [below for nested schema](#nestedatt--autoscaling))
 - `name` (String)
 - `sku_id` (String)
 - `vpc_id` (String)
@@ -55,7 +55,7 @@ resource "asc_vm_group" "example" {
 
 ### Read-Only
 
-- `attached_volumes` (List of String) Names of the volumes attached to the group, sorted; the gateway does not report them in a stable order.
+- `attached_volumes` (List of String) Names of the volumes attached to the group, sorted
 - `last_error` (String)
 - `sku` (Attributes) (see [below for nested schema](#nestedatt--sku))
 - `status` (String)

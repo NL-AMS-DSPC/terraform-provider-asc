@@ -77,8 +77,8 @@ would not by itself bridge a different source address and resource type.
 
 A shrinking `asc_volume` is the one case that resolves to neither a change nor a
 replacement: `ModifyPlan` rejects it at plan time with a "Volume cannot be
-shrunk" diagnostic naming both sizes, because infra-gateway can only grow a
-volume. That is the shape every unrepresentable change should take -- an error
+shrunk" diagnostic naming both sizes, because a volume can only grow. 
+That is the shape every unrepresentable change should take -- an error
 the reader can act on, not a silent destroy.
 
 `asc_virtual_machine`, `asc_vm_group`, `asc_role` and `asc_volume_attachment`

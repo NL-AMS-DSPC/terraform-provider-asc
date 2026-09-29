@@ -3,12 +3,12 @@
 page_title: "asc_vpc Resource - asc"
 subcategory: ""
 description: |-
-  Manages a VPC through ASC infra-gateway.
+  Manages a VPC through ASC.
 ---
 
 # asc_vpc (Resource)
 
-Manages a VPC through ASC infra-gateway.
+Manages a VPC through ASC.
 
 ## Example Usage
 
@@ -34,7 +34,7 @@ resource "asc_vpc" "example" {
 
 ### Optional
 
-- `tags` (Map of String) Tags applied to the VPC. infra-gateway patches VPC tags in place, so changing them does not replace the VPC. The tags on an inline subnet are part of the replacement-forcing subnets list.
+- `tags` (Map of String) Tags applied to the VPC. ASC patches VPC tags in place, so changing them does not replace the VPC. The tags on an inline subnet are part of the replacement-forcing subnets list.
 
 ### Read-Only
 

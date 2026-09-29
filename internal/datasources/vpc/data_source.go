@@ -74,17 +74,17 @@ func (d *DataSource) Metadata(_ context.Context, req datasource.MetadataRequest,
 
 func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Reads a VPC managed by ASC infra-gateway.",
+		Description: "Reads a VPC managed by ASC.",
 		Attributes: map[string]schema.Attribute{
 			"id":         schema.StringAttribute{Description: "Identifier of the VPC.", Computed: true},
 			"urn":        schema.StringAttribute{Description: "URN of the VPC.", Computed: true},
 			"name":       schema.StringAttribute{Description: "Name of the VPC to read.", Required: true},
 			"cidr":       schema.StringAttribute{Description: "CIDR block of the VPC.", Computed: true},
-			"status":     schema.StringAttribute{Description: "Lifecycle status reported by infra-gateway.", Computed: true},
+			"status":     schema.StringAttribute{Description: "Lifecycle status reported by ASC.", Computed: true},
 			"last_error": schema.StringAttribute{Description: "Last error reported for the VPC, empty when healthy.", Computed: true},
 			"subnets": schema.ListNestedAttribute{
 				// The event stream preserves subnet creation order.
-				Description: "Subnets belonging to the VPC, in the order infra-gateway reports them.",
+				Description: "Subnets belonging to the VPC, in the order ASC reports them.",
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
 					"id":         schema.StringAttribute{Description: "Identifier of the subnet.", Computed: true},
@@ -130,7 +130,7 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 		return
 	}
 	if err != nil {
-		resp.Diagnostics.AddError("Unable to read VPC", fmt.Sprintf("Reading VPC %q from infra-gateway failed: %s", name, err))
+		resp.Diagnostics.AddError("Unable to read VPC", fmt.Sprintf("Reading VPC %q from ASC failed: %s", name, err))
 		return
 	}
 

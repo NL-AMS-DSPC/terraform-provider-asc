@@ -22,7 +22,7 @@ func tagPatchFor(current, desired []Tag) ([]TagPatch, error) {
 	desiredByKey := make(map[string]string, len(desired))
 	for _, tag := range desired {
 		if tag.Value == "" {
-			return nil, fmt.Errorf("tag %q has an empty value: infra-gateway reads an empty tag value as a deletion, so tag values must not be empty", tag.Key)
+			return nil, fmt.Errorf("tag %q has an empty value: ASC reads an empty tag value as a deletion, so tag values must not be empty", tag.Key)
 		}
 		desiredByKey[tag.Key] = tag.Value
 	}

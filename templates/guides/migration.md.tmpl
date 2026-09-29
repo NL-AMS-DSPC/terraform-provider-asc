@@ -63,9 +63,10 @@ address, `registry.terraform.io/nl-ams-dspc/asc`, the same `asc_*` type names an
 version 0, so Terraform does not treat it as a different provider: it hands the state over, the
 framework decodes it, and the first plan is a refresh. **Do not remove and re-import these
 entries.** `internal/tests/migration_test.go` seeds exactly this state for all four resources and
-asserts the first plan proposes nothing against a mock gateway. For VM groups, first rename
+asserts the first plan proposes nothing against a mock api. For VM groups, first rename
 `autoscaling_policy` to `autoscaling` in configuration while preserving its values; the old
-argument is rejected. The state fixture retains the old spelling until refresh. That safety depends on the refresh reaching the gateway, because `asc_vm_group`'s renamed
+argument is rejected. The state fixture retains the old spelling until refresh.
+That safety depends on the refresh reaching the api, because `asc_vm_group`'s renamed
 `autoscaling` attribute starts null and forces replacement until `Read` refills it; the
 [upgrade runbook](https://github.com/NL-AMS-DSPC/terraform-provider-asc/blob/main/docs/guides/upgrade-runbook.md)
 treats a failed or skipped refresh as a stop for that reason.

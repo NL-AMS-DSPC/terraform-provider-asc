@@ -25,7 +25,7 @@ output "sku_names" {
 
 ### Read-Only
 
-- `skus` (Attributes List) Available SKUs, ordered by id. infra-gateway does not guarantee a stable order, so the list is sorted here to keep state and plans stable across reads. (see [below for nested schema](#nestedatt--skus))
+- `skus` (Attributes List) Available SKUs, ordered by id. (see [below for nested schema](#nestedatt--skus))
 
 <a id="nestedatt--skus"></a>
 ### Nested Schema for `skus`

@@ -66,7 +66,7 @@ func (c *Runtime) CreateVMGroup(ctx context.Context, request CreateVMGroupReques
 			return VMGroup{}, fmt.Errorf(
 				"create VM group %q: the name is already in use for this tenant. "+
 					"Virtual machines and virtual machine groups share one name reservation, "+
-					"and infra-gateway holds a group's name until it acknowledges the group's "+
+					"and ASC holds a group's name until it acknowledges the group's "+
 					"deletion, so a group Terraform destroyed moments ago may still hold it: %w",
 				request.Name, err)
 		}

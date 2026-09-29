@@ -56,10 +56,8 @@ func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp 
 		Description: "Lists the SKUs available to the tenant.",
 		Attributes: map[string]schema.Attribute{
 			"skus": schema.ListNestedAttribute{
-				Description: "Available SKUs, ordered by id. infra-gateway does not " +
-					"guarantee a stable order, so the list is sorted here to keep " +
-					"state and plans stable across reads.",
-				Computed: true,
+				Description: "Available SKUs, ordered by id.",
+				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"id":            schema.StringAttribute{Description: "Identifier of the SKU.", Computed: true},

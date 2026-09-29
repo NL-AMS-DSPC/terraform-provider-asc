@@ -49,7 +49,7 @@ func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, res
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	replaceString := []planmodifier.String{stringplanmodifier.RequiresReplace()}
 	resp.Schema = schema.Schema{
-		Description: "Attaches a block volume to a virtual machine through ASC infra-gateway.",
+		Description: "Attaches a block volume to a virtual machine through ASC.",
 		Attributes: map[string]schema.Attribute{
 			"volume_name": schema.StringAttribute{
 				Description:   "Name of the volume to attach.",

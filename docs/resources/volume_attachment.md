@@ -3,12 +3,12 @@
 page_title: "asc_volume_attachment Resource - asc"
 subcategory: ""
 description: |-
-  Attaches a block volume to a virtual machine through ASC infra-gateway.
+  Attaches a block volume to a virtual machine through ASC.
 ---
 
 # asc_volume_attachment (Resource)
 
-Attaches a block volume to a virtual machine through ASC infra-gateway.
+Attaches a block volume to a virtual machine through ASC.
 
 ## Example Usage
 

@@ -25,10 +25,10 @@ This runbook does not repeat either; it sequences them.
 ## What this runbook is founded on, and what it is not
 
 The migration behaviour this runbook relies on is tested in
-`internal/tests/migration_test.go` against an **httptest mock gateway**, not
+`internal/tests/migration_test.go` against an **httptest mock api**, not
 against a live ASC deployment. The mock serves the objects the fixture state
 describes, so the tests prove what Terraform and the provider do with legacy
-state and a gateway response of that shape. They prove nothing about how a real
+state and an api response of that shape. They prove nothing about how a real
 ASC environment answers.
 
 Nothing here has been verified against a real ASC deployment. No release has
@@ -50,7 +50,7 @@ roll back.
 - **Go 1.27.1 or later**, and only if you build the provider from source. The
   module declares `go 1.27.1`. An operator installing a released archive needs
   no Go toolchain.
-- **Access to the gateway from wherever you run Terraform.** Every step below
+- **Access to the api from wherever you run Terraform.** Every step below
   depends on a refresh reaching `/api/infra-gateway`, for the reason set out
   under [stop conditions](#why-a-skipped-refresh-is-the-condition-that-matters-most).
 - **A workspace you can afford to roll back**, since nothing here has been run
@@ -257,7 +257,7 @@ reason.
 | An error naming a provider you did not expect | **Stop** | You are on the wrong branch; go back to step 0 |
 
 The plan proposing nothing is only meaningful if the refresh actually happened.
-A plan that never reached the gateway also proposes nothing, and proves nothing.
+A plan that never reached the api also proposes nothing, and proves nothing.
 Confirm the refresh ran — `terraform plan` prints a `Refreshing state...` line
 per resource, and `plan.jsonl` carries `refresh_start` messages — before reading
 an empty plan as success.
@@ -269,9 +269,9 @@ them aborts the upgrade.
 
 | Observable | Why it aborts |
 | --- | --- |
-| Any request outside `/api/infra-gateway`, `/api/uam` and the configured realm token path | The provider crossed the approved service boundary. Stop and retain a redacted request log. |
+| Any request outside the normal api paths and the configured realm token path | The provider crossed the approved service boundary. Stop and retain a redacted request log. |
 | You passed `-refresh=false`, or set `TF_CLI_ARGS_plan` to include it | The plan is computed against stale state. See below. |
-| A refresh error: `Error: Unable to Refresh Resource`, a connection refused, a timeout, or any 5xx from the gateway | Same as above — an object that did not refresh is planned from what state says, not from what exists. |
+| A refresh error: `Error: Unable to Refresh Resource`, a connection refused, a timeout, or any 5xx from the api | Same as above — an object that did not refresh is planned from what state says, not from what exists. |
 | The plan replaces an `asc_vm_group` and the diff shows `autoscaling` forcing replacement | The refresh did not refill the renamed attribute. Applying this destroys the group's machines. |
 | The plan proposes a create, delete or replace for any object whose configuration you did not change | Whatever the reason, it is not the upgrade doing nothing. |
 | `Error: Missing required provider` or a plan asking for `nl-ams-dspc/dspc` | Origin A state in a workspace you were treating as origin B. |
@@ -290,10 +290,10 @@ A plan computed against that stale state would compare a configured
 attribute, and propose to replace the group — which destroys the machines in it.
 
 It does not, because Terraform refreshes before it plans: `Read` fetches the
-live policy from the gateway and writes it into the refreshed state, and the
+live policy from the api and writes it into the refreshed state, and the
 plan is computed against that. The rename is safe *because of the refresh*, not
 in spite of it. Remove the refresh — with `-refresh=false`, an unreachable
-gateway, or a gateway answering errors — and the safety is gone. That is why a
+api, or an api answering errors — and the safety is gone. That is why a
 failed or skipped refresh is a stop, not a warning.
 
 ## Staged rollout gates
@@ -475,8 +475,8 @@ read cannot recover — in place of a path that does nothing.
      in configuration, keeping the policy values unchanged. The old argument
      is unsupported. Refresh fills the renamed state attribute. See [why a skipped refresh
      matters](#why-a-skipped-refresh-is-the-condition-that-matters-most).
-   - `asc_subnet`'s `id` was the composite `vpc-name:subnet-name` and is now the
-     gateway's uuid. It is computed, so the refresh overwrites it.
+   - `asc_subnet`'s `id` was the composite `vpc-name:subnet-name` and is now the uuid.
+     It is computed, so the refresh overwrites it.
    - `asc_vpc`'s inline subnets no longer carry `vpc_name`; `vpc_id` still
      carries the linkage.
    - `tags` no longer forces replacement on `asc_vpc` or
@@ -508,14 +508,14 @@ read cannot recover — in place of a path that does nothing.
 
 ## What was tested, and what was not
 
-Tested, in `internal/tests/migration_test.go`, against an httptest mock gateway
+Tested, in `internal/tests/migration_test.go`, against an httptest mock api
 and the real `terraform` CLI driven over committed legacy-shaped state fixtures:
 
 - `TestMigrationFromLegacySameAddressPlansNothing` — for `asc_vpc`,
   `asc_subnet`, `asc_virtual_machine` and `asc_vm_group`, origin B state plus
-  equivalent configuration using current attribute names plans zero changes, and the gateway was actually
+  equivalent configuration using current attribute names plans zero changes, and the api was actually
   reached, so the empty plan is the result of a real refresh.
-- `TestMigrationAssertionDetectsAReplacement` — the guard can fail. A gateway
+- `TestMigrationAssertionDetectsAReplacement` — the guard can fail. An api
   reporting a SKU the configuration does not ask for makes the plan replace the
   group, and the assertion reports it. Without this the four green cases above
   would be unfalsifiable.
@@ -524,7 +524,7 @@ and the real `terraform` CLI driven over committed legacy-shaped state fixtures:
 - `TestMigrationVanishedObjectPlansACreateNotADestroy` — an object deleted
   outside Terraform before the upgrade plans exactly one create and nothing
   else. A create is the right answer when the object is already gone; a delete
-  here would mean the provider tried to destroy something the gateway says is
+  here would mean the provider tried to destroy something the api says is
   absent.
 - `TestMigrationWrongTenantFailsLoudly` — pointing the upgrade at the wrong
   namespace fails with an error and produces no planned change, so a refusal to
@@ -549,7 +549,7 @@ Not tested, and stated here rather than left to be discovered:
 - **Anything against a real ASC deployment.** Every test above talks to a mock.
 - **Live apply, drift, cancellation and cleanup.** The runbook tests apply an
   inspected no-op against the mock, using saved and automatic plans, then
-  re-plan and assert no gateway mutations. They do not apply to a live stack.
+  re-plan and assert no api mutations. They do not apply to a live stack.
 - **The renamed resources' re-import.** `asc_volume` and
   `asc_volume_attachment` are not imported by any test. The
   `asc_virtual_machine` import is covered, against the mock, so treat it as
@@ -577,7 +577,7 @@ explicit real-stack work.
 | `state pull`, `state list`, `state show`, `state push` without force | `TestMigrationRunbookBackupAndRestore`, isolated local backend only. |
 | `plan -out`, `show -json`, `plan -json` | All migration cases; successful plans are checked from saved plan JSON. |
 | `plan -refresh-only`, `show -json refresh.tfplan` | Mock backup/restore rehearsal. |
-| Saved-plan and automatic no-op `apply` | `TestMigrationRunbookNoOpApply`; gateway requests must remain GET-only. |
+| Saved-plan and automatic no-op `apply` | `TestMigrationRunbookNoOpApply`; api requests must remain GET-only. |
 | Legacy VM `state rm` then `import`, retired-entry `state rm` | Mock migration tests. |
 | Origin-A inventory/removal, volume/attachment re-import, real backend restore, rollout gates, deliberate drift, cancellation/recovery and cleanup | **Requires the disposable real stack. Not performed.** |
 

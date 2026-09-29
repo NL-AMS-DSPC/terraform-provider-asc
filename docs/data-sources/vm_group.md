@@ -31,11 +31,11 @@ output "example_group_replicas" {
 
 ### Read-Only
 
-- `attached_volumes` (List of String) Names of the volumes attached to the group, sorted; the gateway does not report them in a stable order.
+- `attached_volumes` (List of String) Names of the volumes attached to the group, sorted.
 - `autoscaling` (Attributes) Scaling bounds of the group. (see [below for nested schema](#nestedatt--autoscaling))
 - `last_error` (String) Last error reported for the group, empty when there is none.
 - `sku` (Attributes) SKU backing every member of the group. (see [below for nested schema](#nestedatt--sku))
-- `status` (String) Lifecycle status reported by infra-gateway.
+- `status` (String) Lifecycle status reported by ASC.
 - `tags` (Map of String) Tags on the group.
 - `urn` (String) Resource identifier of the group.
 

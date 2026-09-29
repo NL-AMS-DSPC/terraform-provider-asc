@@ -3,12 +3,12 @@
 page_title: "asc_virtual_machine Resource - asc"
 subcategory: ""
 description: |-
-  Manages a virtual machine through ASC infra-gateway.
+  Manages a virtual machine through ASC.
 ---
 
 # asc_virtual_machine (Resource)
 
-Manages a virtual machine through ASC infra-gateway.
+Manages a virtual machine through ASC.
 
 ## Example Usage
 
@@ -37,12 +37,12 @@ resource "asc_virtual_machine" "example" {
 - `customization` (Attributes, Sensitive) (see [below for nested schema](#nestedatt--customization))
 - `enable_logging` (Boolean)
 - `image` (String)
-- `tags` (Map of String) Tags applied to the virtual machine. infra-gateway patches virtual machine tags in place, so changing them does not replace the machine.
+- `tags` (Map of String) Tags applied to the virtual machine.
 
 ### Read-Only
 
-- `attached_volumes` (List of String) Names of the volumes attached to the machine, sorted. infra-gateway assembles this list from a map, so it is sorted here to keep state stable.
-- `internal_ip` (String) Internal IP address of the machine, null until infra-gateway assigns one.
+- `attached_volumes` (List of String) Names of the volumes attached to the machine, sorted.
+- `internal_ip` (String) Internal IP address of the machine, null until ASC assigns one.
 - `last_error` (String)
 - `os` (Attributes) (see [below for nested schema](#nestedatt--os))
 - `public_ips` (List of String) Public IP addresses allocated to the machine, sorted. Allocate them with asc_ip_allocation; this list only reports them.

@@ -59,7 +59,7 @@ func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, res
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	replaceString := []planmodifier.String{stringplanmodifier.RequiresReplace()}
 	resp.Schema = schema.Schema{
-		Description: "Manages a standalone subnet through ASC infra-gateway.",
+		Description: "Manages a standalone subnet through ASC.",
 		Attributes: map[string]schema.Attribute{
 			"id":       schema.StringAttribute{Computed: true},
 			"urn":      schema.StringAttribute{Computed: true},
@@ -82,8 +82,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"status":     schema.StringAttribute{Computed: true},
 			"last_error": schema.StringAttribute{Computed: true},
 			"tags": schema.MapAttribute{
-				Description: "Tags applied to the subnet. infra-gateway patches subnet tags in " +
-					"place, so changing them does not replace the subnet.",
+				Description: "Tags applied to the subnet.",
 				Optional:    true,
 				ElementType: types.StringType,
 			},
