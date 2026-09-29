@@ -35,8 +35,9 @@ type Resource struct {
 // Model has no configurable attributes: IPAM picks the address, and a new
 // reservation is the only way to get a different one.
 type Model struct {
-	IP         types.String `tfsdk:"ip"`
-	ReservedAt types.String `tfsdk:"reserved_at"`
+	IP          types.String `tfsdk:"ip"`
+	ReservedAt  types.String `tfsdk:"reserved_at"`
+	AllocatedTo types.String `tfsdk:"allocated_to"`
 }
 
 // NewResource creates the asc_ip resource.
@@ -60,6 +61,10 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				Description:   "Time at which the address was reserved.",
 				Computed:      true,
 				PlanModifiers: keep,
+			},
+			"allocated_to": schema.StringAttribute{
+				Description: "URN of the virtual machine the address is allocated to, null while it is free. Compare it with asc_virtual_machine.urn.",
+				Computed:    true,
 			},
 		},
 	}
@@ -135,4 +140,5 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 func setFromReservation(model *Model, reservation client.Reservation) {
 	model.IP = types.StringValue(reservation.IP)
 	model.ReservedAt = types.StringValue(reservation.ReservedAt)
+	model.AllocatedTo = types.StringPointerValue(reservation.AllocatedTo)
 }

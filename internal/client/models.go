@@ -44,16 +44,22 @@ type CreateSubnetRequest struct {
 }
 
 type VM struct {
-	URN             string   `json:"urn"`
-	Name            string   `json:"name"`
-	VPCID           string   `json:"vpcID"`
-	SKU             SKU      `json:"sku"`
-	Status          string   `json:"status"`
-	LastError       string   `json:"lastError"`
-	Tags            []Tag    `json:"tags"`
-	AttachedVolumes []string `json:"attachedVolumes"`
-	OS              OS       `json:"os"`
-	EnableLogging   bool     `json:"enableLogging"`
+	URN             string    `json:"urn"`
+	Name            string    `json:"name"`
+	VPCID           string    `json:"vpcID"`
+	SKU             SKU       `json:"sku"`
+	Status          string    `json:"status"`
+	LastError       string    `json:"lastError"`
+	Tags            []Tag     `json:"tags"`
+	AttachedVolumes []string  `json:"attachedVolumes"`
+	OS              OS        `json:"os"`
+	EnableLogging   bool      `json:"enableLogging"`
+	Addresses       Addresses `json:"addresses"`
+}
+
+type Addresses struct {
+	InternalIP *string  `json:"internalIP"`
+	PublicIPs  []string `json:"publicIPs"`
 }
 
 type SKU struct {
@@ -100,6 +106,14 @@ type CloudInitCustomization struct {
 type IgnitionCustomization struct {
 	Format string `json:"format"`
 	Config string `json:"config"`
+}
+
+type IPAllocationRequest struct {
+	IP string `json:"ip"`
+}
+
+type IPDeallocationRequest struct {
+	IP string `json:"ip"`
 }
 
 func (v VPC) lifecycle() (string, string) { return v.Status, v.LastError }

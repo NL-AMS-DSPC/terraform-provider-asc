@@ -50,6 +50,8 @@ type Model struct {
 	LastError       types.String        `tfsdk:"last_error"`
 	Tags            types.Map           `tfsdk:"tags"`
 	AttachedVolumes types.List          `tfsdk:"attached_volumes"`
+	InternalIP      types.String        `tfsdk:"internal_ip"`
+	PublicIPs       types.List          `tfsdk:"public_ips"`
 	OS              types.Object        `tfsdk:"os"`
 	Customization   *CustomizationModel `tfsdk:"customization"`
 	EnableLogging   types.Bool          `tfsdk:"enable_logging"`
@@ -156,6 +158,15 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"attached_volumes": schema.ListAttribute{
 				Description: "Names of the volumes attached to the machine, sorted. infra-gateway " +
 					"assembles this list from a map, so it is sorted here to keep state stable.",
+				Computed: true, ElementType: types.StringType,
+			},
+			"internal_ip": schema.StringAttribute{
+				Description: "Internal IP address of the machine, null until infra-gateway assigns one.",
+				Computed:    true,
+			},
+			"public_ips": schema.ListAttribute{
+				Description: "Public IP addresses allocated to the machine, sorted. Allocate them " +
+					"with asc_ip_allocation; this list only reports them.",
 				Computed: true, ElementType: types.StringType,
 			},
 			"os": schema.SingleNestedAttribute{Computed: true, Attributes: computedOS},
@@ -323,4 +334,9 @@ func setFromVM(ctx context.Context, model *Model, value client.VM, diags *diag.D
 	volumes, volumeDiags := types.ListValueFrom(ctx, types.StringType, value.AttachedVolumes)
 	diags.Append(volumeDiags...)
 	model.AttachedVolumes = volumes
+
+	model.InternalIP = types.StringPointerValue(value.Addresses.InternalIP)
+	publicIPs, publicIPDiags := types.ListValueFrom(ctx, types.StringType, value.Addresses.PublicIPs)
+	diags.Append(publicIPDiags...)
+	model.PublicIPs = publicIPs
 }

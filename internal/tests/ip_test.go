@@ -8,10 +8,14 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/client"
 )
 
 const reservationsPath = "/api/ipam/reservations"
+
+// maxReservations bounds the addresses a reservationStore hands out, 10.0.0.1 upwards.
+const maxReservations = 9
 
 // reservationStore hands out sequential addresses so tests can assert on a known IP.
 type reservationStore struct {
@@ -22,7 +26,7 @@ type reservationStore struct {
 
 func (s *reservationStore) handlers(t *testing.T) map[string]http.HandlerFunc {
 	t.Helper()
-	return map[string]http.HandlerFunc{
+	handlers := map[string]http.HandlerFunc{
 		"POST " + reservationsPath: func(w http.ResponseWriter, _ *http.Request) {
 			s.mu.Lock()
 			defer s.mu.Unlock()
@@ -58,6 +62,22 @@ func (s *reservationStore) handlers(t *testing.T) map[string]http.HandlerFunc {
 			w.WriteHeader(http.StatusOK)
 		},
 	}
+	// The router matches exact paths, so GET /reservations/{ip} is registered for every address the store can hold.
+	for n := 1; n <= maxReservations; n++ {
+		ip := fmt.Sprintf("10.0.0.%d", n)
+		handlers["GET "+reservationsPath+"/"+ip] = func(w http.ResponseWriter, _ *http.Request) {
+			s.mu.Lock()
+			defer s.mu.Unlock()
+			for _, reservation := range s.reservations {
+				if reservation.IP == ip {
+					writeBare(w, http.StatusOK, reservation)
+					return
+				}
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}
+	return handlers
 }
 
 func TestIPReservationProvisioning(t *testing.T) {
@@ -72,6 +92,7 @@ func TestIPReservationProvisioning(t *testing.T) {
 			Check: resource.ComposeAggregateTestCheckFunc(
 				resource.TestCheckResourceAttr("asc_ip.test", "ip", "10.0.0.1"),
 				resource.TestCheckResourceAttr("asc_ip.test", "reserved_at", "2026-09-23T14:00:00Z"),
+				resource.TestCheckNoResourceAttr("asc_ip.test", "allocated_to"),
 			),
 		},
 		{ResourceName: "asc_ip.test", ImportState: true, ImportStateId: "10.0.0.1", ImportStateVerify: true, ImportStateVerifyIdentifierAttribute: "ip"},
@@ -84,7 +105,7 @@ func TestIPReservationProvisioning(t *testing.T) {
 	}
 }
 
-func TestIPReservationRefreshDropsAReservationReleasedOutsideTerraform(t *testing.T) {
+func TestIPReservationReReserve(t *testing.T) {
 	store := &reservationStore{}
 	environment := newTestEnvironment(t, store.handlers(t))
 
@@ -105,10 +126,36 @@ func TestIPReservationRefreshDropsAReservationReleasedOutsideTerraform(t *testin
 	}})
 }
 
+// An allocation changes allocated_to without touching the reservation, so a refresh must
+// pick it up and the next plan must not replace the address.
+func TestIPReservationRefreshesAllocationWithoutReplacement(t *testing.T) {
+	store := &reservationStore{}
+	environment := newTestEnvironment(t, store.handlers(t))
+
+	config := environment.providerConfig() + `resource "asc_ip" "test" {}`
+
+	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: providerFactories, Steps: []resource.TestStep{
+		{Config: config, Check: resource.TestCheckNoResourceAttr("asc_ip.test", "allocated_to")},
+		{
+			Config: config,
+			PreConfig: func() {
+				store.mu.Lock()
+				defer store.mu.Unlock()
+				store.reservations[0].AllocatedTo = new(appVMURN)
+			},
+			ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr("asc_ip.test", "ip", "10.0.0.1"),
+				resource.TestCheckResourceAttr("asc_ip.test", "allocated_to", appVMURN),
+			),
+		},
+	}})
+}
+
 func TestIPReservationsDataSourceListsReservedAddresses(t *testing.T) {
 	store := &reservationStore{reservations: []client.Reservation{
 		{IP: "10.0.0.1", ReservedAt: "2026-09-23T14:00:00Z"},
-		{IP: "10.0.0.2", ReservedAt: "2026-09-23T15:00:00Z"},
+		{IP: "10.0.0.2", ReservedAt: "2026-09-23T15:00:00Z", AllocatedTo: new(appVMURN)},
 	}}
 	environment := newTestEnvironment(t, store.handlers(t))
 
@@ -119,6 +166,8 @@ func TestIPReservationsDataSourceListsReservedAddresses(t *testing.T) {
 			resource.TestCheckResourceAttr("data.asc_ips.test", "ips.0.ip", "10.0.0.1"),
 			resource.TestCheckResourceAttr("data.asc_ips.test", "ips.1.ip", "10.0.0.2"),
 			resource.TestCheckResourceAttr("data.asc_ips.test", "ips.1.reserved_at", "2026-09-23T15:00:00Z"),
+			resource.TestCheckNoResourceAttr("data.asc_ips.test", "ips.0.allocated_to"),
+			resource.TestCheckResourceAttr("data.asc_ips.test", "ips.1.allocated_to", appVMURN),
 		),
 	}}})
 }

@@ -118,8 +118,8 @@ if set(schemas) != {address}:
 schema = schemas[address]
 resources = {"asc_vpc", "asc_subnet", "asc_virtual_machine", "asc_vm_group",
              "asc_volume", "asc_volume_attachment", "asc_role", "asc_group",
-             "asc_ip"}
-data_sources = resources - {"asc_volume_attachment", "asc_ip"} | {"asc_skus", "asc_ips"}
+             "asc_ip", "asc_ip_allocation"}
+data_sources = resources - {"asc_volume_attachment", "asc_ip", "asc_ip_allocation"} | {"asc_skus", "asc_ips"}
 if set(schema.get("resource_schemas", {})) != resources:
     sys.exit("installed provider exposes an unexpected resource inventory")
 if set(schema.get("data_source_schemas", {})) != data_sources:
@@ -133,5 +133,5 @@ install-check: PASS (version $VERSION)
   - terraform init installed $NAMESPACE/$TYPE v$VERSION for ${GOOS}_${GOARCH}
   - .terraform.lock.hcl pins $REGISTRY_HOST/$NAMESPACE/$TYPE at $VERSION with an h1 hash
   - unpacked executable is $PROVIDER_BINARY
-  - terraform providers confirms the address and version; the installed binary serves all nine resources and nine data sources
+  - terraform providers confirms the address and version; the installed binary serves all ten resources and nine data sources
 EOF

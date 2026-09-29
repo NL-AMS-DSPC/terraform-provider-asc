@@ -25,5 +25,6 @@ output "example_reserved_ip" {
 
 ### Read-Only
 
+- `allocated_to` (String) URN of the virtual machine the address is allocated to, null while it is free. Compare it with asc_virtual_machine.urn.
 - `ip` (String) IP address reserved.
 - `reserved_at` (String) Time at which the address was reserved.

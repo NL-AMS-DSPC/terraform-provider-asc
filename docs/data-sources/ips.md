@@ -25,12 +25,13 @@ output "reserved_ips" {
 
 ### Read-Only
 
-- `ips` (Attributes List) Reserved IP addresses. (see [below for nested schema](#nestedatt--ips))
+- `ips` (Attributes List) Reserved IP addresses, sorted by address so an entry keeps its index when IPAM returns them in another order. (see [below for nested schema](#nestedatt--ips))
 
 <a id="nestedatt--ips"></a>
 ### Nested Schema for `ips`
 
 Read-Only:
 
+- `allocated_to` (String) URN of the workload the address is allocated to, null while it is free. Compare it e.g. with asc_virtual_machine.urn.
 - `ip` (String) The IP address.
 - `reserved_at` (String) Time at which the address was reserved.

@@ -18,7 +18,7 @@ service prefix cannot be reintroduced by accident.
 
 | Resources | Data sources |
 | --- | --- |
-| `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume`, `asc_volume_attachment`, `asc_role`, `asc_group`, `asc_ip` | `asc_skus`, `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume`, `asc_role`, `asc_group`, `asc_ips` |
+| `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume`, `asc_volume_attachment`, `asc_role`, `asc_group`, `asc_ip`, `asc_ip_allocation` | `asc_skus`, `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume`, `asc_role`, `asc_group`, `asc_ips` |
 
 Per-attribute change, import and read behaviour is in
 [docs/supported-fields.md](docs/supported-fields.md). The UAM route contract and

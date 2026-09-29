@@ -40,6 +40,8 @@ type Model struct {
 	LastError       types.String `tfsdk:"last_error"`
 	Tags            types.Map    `tfsdk:"tags"`
 	AttachedVolumes types.List   `tfsdk:"attached_volumes"`
+	InternalIP      types.String `tfsdk:"internal_ip"`
+	PublicIPs       types.List   `tfsdk:"public_ips"`
 	OS              types.Object `tfsdk:"os"`
 	EnableLogging   types.Bool   `tfsdk:"enable_logging"`
 }
@@ -122,6 +124,12 @@ func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp 
 				Computed:    true,
 				ElementType: types.StringType,
 			},
+			"internal_ip": schema.StringAttribute{Description: "Internal IP address of the virtual machine, null until infra-gateway assigns one.", Computed: true},
+			"public_ips": schema.ListAttribute{
+				Description: "Public IP addresses allocated to the virtual machine, sorted for the same reason as attached_volumes.",
+				Computed:    true,
+				ElementType: types.StringType,
+			},
 			"os":             schema.SingleNestedAttribute{Description: "Operating system image the virtual machine boots.", Computed: true, Attributes: computedOS},
 			"enable_logging": schema.BoolAttribute{Description: "Whether platform logging is enabled for the virtual machine.", Computed: true},
 		},
@@ -166,6 +174,11 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 	attachedVolumes, volumeDiags := types.ListValueFrom(ctx, types.StringType, volumes)
 	resp.Diagnostics.Append(volumeDiags...)
 
+	addresses := slices.Clone(current.Addresses.PublicIPs)
+	slices.SortFunc(addresses, client.CompareAddresses)
+	publicIPs, publicIPDiags := types.ListValueFrom(ctx, types.StringType, addresses)
+	resp.Diagnostics.Append(publicIPDiags...)
+
 	sku, skuDiags := types.ObjectValueFrom(ctx, skuTypes, skuModel{
 		ID: types.StringValue(current.SKU.ID), Name: types.StringValue(current.SKU.Name), Family: types.StringValue(current.SKU.Family),
 		Threads: types.Int64Value(int64(current.SKU.Threads)), Cores: types.Int64Value(int64(current.SKU.Cores)),
@@ -194,6 +207,8 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 		LastError:       types.StringValue(current.LastError),
 		Tags:            common.TagsToTerraform(ctx, current.Tags, &resp.Diagnostics),
 		AttachedVolumes: attachedVolumes,
+		InternalIP:      types.StringPointerValue(current.Addresses.InternalIP),
+		PublicIPs:       publicIPs,
 		OS:              osValue,
 		EnableLogging:   types.BoolValue(current.EnableLogging),
 	}

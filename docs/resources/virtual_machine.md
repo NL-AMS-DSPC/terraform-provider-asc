@@ -42,8 +42,10 @@ resource "asc_virtual_machine" "example" {
 ### Read-Only
 
 - `attached_volumes` (List of String) Names of the volumes attached to the machine, sorted. infra-gateway assembles this list from a map, so it is sorted here to keep state stable.
+- `internal_ip` (String) Internal IP address of the machine, null until infra-gateway assigns one.
 - `last_error` (String)
 - `os` (Attributes) (see [below for nested schema](#nestedatt--os))
+- `public_ips` (List of String) Public IP addresses allocated to the machine, sorted. Allocate them with asc_ip_allocation; this list only reports them.
 - `sku` (Attributes) (see [below for nested schema](#nestedatt--sku))
 - `status` (String)
 - `urn` (String)

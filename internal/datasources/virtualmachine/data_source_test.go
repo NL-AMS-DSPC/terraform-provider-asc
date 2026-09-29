@@ -78,7 +78,7 @@ func TestDataSourceSchemaMirrorsTheReadableResource(t *testing.T) {
 	// name identifies the machine to look up; everything else is served by
 	// infra-gateway and may never be set in a configuration.
 	required := map[string]bool{"name": true}
-	for _, attribute := range []string{"urn", "name", "sku", "vpc_id", "status", "last_error", "tags", "attached_volumes", "os", "enable_logging"} {
+	for _, attribute := range []string{"urn", "name", "sku", "vpc_id", "status", "last_error", "tags", "attached_volumes", "internal_ip", "public_ips", "os", "enable_logging"} {
 		found, ok := attributes[attribute]
 		if !ok {
 			t.Fatalf("attribute %q is missing", attribute)
@@ -90,8 +90,8 @@ func TestDataSourceSchemaMirrorsTheReadableResource(t *testing.T) {
 			t.Errorf("attribute %q is optional, which would let a configuration override a served value", attribute)
 		}
 	}
-	if len(attributes) != 10 {
-		t.Fatalf("attributes = %d, want 10", len(attributes))
+	if len(attributes) != 12 {
+		t.Fatalf("attributes = %d, want 12", len(attributes))
 	}
 	// image and sku_id would only repeat os.id and sku.id, and customization is
 	// write-only, so none of them belong on a read-only view.
@@ -177,6 +177,34 @@ func TestDataSourceReadSortsAttachedVolumes(t *testing.T) {
 	// Sorting in place would reorder the caller's slice; the client owns that
 	// value and the read must not mutate it.
 	if strings.Join(shuffled, ",") != "vol-c,vol-a,vol-b" {
+		t.Fatalf("the client slice was mutated: %v", shuffled)
+	}
+}
+
+func TestDataSourceReadAddresses(t *testing.T) {
+	t.Parallel()
+
+	internalIP := "192.168.0.10"
+	shuffled := []string{"10.0.0.10", "10.0.0.2"}
+	state, response := read(t, stubClient{vm: client.VM{
+		URN: "asc:vm:test-vm", Name: "test-vm",
+		Addresses: client.Addresses{InternalIP: &internalIP, PublicIPs: shuffled},
+	}}, "test-vm")
+	if response.Diagnostics.HasError() {
+		t.Fatalf("Read() diagnostics = %v", response.Diagnostics)
+	}
+	if state.InternalIP.ValueString() != internalIP {
+		t.Fatalf("internal_ip = %v, want %q", state.InternalIP, internalIP)
+	}
+
+	var publicIPs []string
+	if diags := state.PublicIPs.ElementsAs(context.Background(), &publicIPs, false); diags.HasError() {
+		t.Fatalf("ElementsAs() diagnostics = %v", diags)
+	}
+	if strings.Join(publicIPs, ",") != "10.0.0.2,10.0.0.10" {
+		t.Fatalf("public_ips = %v, want sorted by address", publicIPs)
+	}
+	if strings.Join(shuffled, ",") != "10.0.0.10,10.0.0.2" {
 		t.Fatalf("the client slice was mutated: %v", shuffled)
 	}
 }

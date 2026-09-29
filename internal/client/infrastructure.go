@@ -2,16 +2,19 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"slices"
 	"strings"
 	"time"
 )
 
 const (
-	vpcKind    = "VPC"
-	subnetKind = "subnet"
-	vmKind     = "VM"
+	vpcKind          = "VPC"
+	subnetKind       = "subnet"
+	vmKind           = "VM"
+	ipAllocationKind = "IPAllocation"
 )
 
 func (c *Runtime) CreateVPC(ctx context.Context, request CreateVPCRequest) (VPC, error) {
@@ -84,13 +87,15 @@ func (c *Runtime) CreateVM(ctx context.Context, request CreateVMRequest) (VM, er
 	)
 }
 
-// GetVM sorts attached volumes because the gateway returns them in map iteration order.
+// GetVM sorts attached volumes because the gateway returns them in map iteration order,
+// and public IPs by address so their order cannot change state either.
 func (c *Runtime) GetVM(ctx context.Context, name string) (VM, error) {
 	var result VM
 	if err := c.get(ctx, svcInfraGateway, vmPath(name), &result); err != nil {
 		return VM{}, err
 	}
 	slices.Sort(result.AttachedVolumes)
+	slices.SortFunc(result.Addresses.PublicIPs, CompareAddresses)
 	return result, nil
 }
 
@@ -106,6 +111,64 @@ func (c *Runtime) DeleteVM(ctx context.Context, name string) error {
 	)
 }
 
+// AllocateIP waits for the VM to list the address among its public IPs
+func (c *Runtime) AllocateIP(ctx context.Context, vmName, ip string) (VM, error) {
+	operationCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
+	defer cancel()
+
+	if err := c.post(operationCtx, svcInfraGateway, vmIPPath(vmName), IPAllocationRequest{IP: ip}); err != nil {
+		return VM{}, fmt.Errorf("allocate IP %q to VM %q: %w", ip, vmName, err)
+	}
+	return waitUntil(operationCtx, c, ipAllocationKind, ipAllocationName(vmName, ip), c.vmReader(vmName),
+		func(current VM) bool { return slices.Contains(current.Addresses.PublicIPs, ip) }, "report the IP allocated")
+}
+
+// DeallocateIP waits for the VM to stop listing the address. A missing VM also means the allocation is gone.
+func (c *Runtime) DeallocateIP(ctx context.Context, vmName, ip string) error {
+	operationCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
+	defer cancel()
+
+	err := c.request(operationCtx, svcInfraGateway, http.MethodDelete, vmIPPath(vmName), IPDeallocationRequest{IP: ip}, nil)
+	if errors.Is(err, ErrResourceNotFound) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("deallocate IP %q from VM %q: %w", ip, vmName, err)
+	}
+
+	name := ipAllocationName(vmName, ip)
+	for {
+		current, err := c.GetVM(operationCtx, vmName)
+		if errors.Is(err, ErrResourceNotFound) {
+			return nil // no VM, no problem
+		}
+		if err != nil {
+			return fmt.Errorf("wait for %s to deallocate: %w", name, err)
+		}
+		if stateErr := terminalStateError(ipAllocationKind, name, current.Status, current.LastError); stateErr != nil {
+			return stateErr
+		}
+		if !slices.Contains(current.Addresses.PublicIPs, ip) {
+			return nil
+		}
+		if err := c.waitPoll(operationCtx); err != nil {
+			return fmt.Errorf("wait for %s to deallocate: %w", name, err)
+		}
+	}
+}
+
+// GetIPAllocation returns ErrResourceNotFound if the VM is gone or no longer lists the address
+func (c *Runtime) GetIPAllocation(ctx context.Context, vmName, ip string) (VM, error) {
+	current, err := c.GetVM(ctx, vmName)
+	if err != nil {
+		return VM{}, err
+	}
+	if !slices.Contains(current.Addresses.PublicIPs, ip) {
+		return VM{}, fmt.Errorf("%w: IP %q is not allocated to VM %q", ErrResourceNotFound, ip, vmName)
+	}
+	return current, nil
+}
+
 func (c *Runtime) vpcReader(name string) readFunc[VPC] {
 	return func(ctx context.Context) (VPC, error) { return c.GetVPC(ctx, name) }
 }
@@ -117,6 +180,10 @@ func (c *Runtime) vmReader(name string) readFunc[VM] {
 func vpcPath(name string) string { return "/vpcs/" + escapedPathSegment(name) }
 
 func vmPath(name string) string { return "/vms/" + escapedPathSegment(name) }
+
+func vmIPPath(name string) string { return vmPath(name) + "/ip" }
+
+func ipAllocationName(vmName, ip string) string { return vmName + ":" + ip }
 
 func subnetsPath(vpcName string) string {
 	return fmt.Sprintf("/vpcs/%s/subnets/", escapedPathSegment(vpcName))

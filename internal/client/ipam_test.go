@@ -3,9 +3,11 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"slices"
 	"testing"
 	"time"
 )
@@ -106,10 +108,24 @@ func TestListReservations(t *testing.T) {
 		want []Reservation
 	}{
 		"multiple reservations": {
-			body: `{"reservations":[{"ip":"10.0.0.1","reservedAt":"2026-09-23T14:00:00Z"},{"ip":"10.0.0.2","reservedAt":"2026-09-23T15:00:00Z"}]}`,
+			body: `{"reservations":[{"ip":"10.0.0.1","reservedAt":"2026-09-23T14:00:00Z"},{"ip":"10.0.0.2","reservedAt":"2026-09-23T15:00:00Z","allocatedTo":"asc:atos:compute:tenant:virtual_machine:20000000-0000-4000-8000-000000000001"}]}`,
+			want: []Reservation{
+				{IP: ip1, ReservedAt: reservedAt1},
+				{IP: ip2, ReservedAt: reservedAt2, AllocatedTo: new(appVMURN)},
+			},
+		},
+		"free addresses with allocatedTo null or missing": {
+			body: `{"reservations":[{"ip":"10.0.0.1","reservedAt":"2026-09-23T14:00:00Z","allocatedTo":null},{"ip":"10.0.0.2","reservedAt":"2026-09-23T15:00:00Z"}]}`,
 			want: []Reservation{
 				{IP: ip1, ReservedAt: reservedAt1},
 				{IP: ip2, ReservedAt: reservedAt2},
+			},
+		},
+		"sorted by address, not as text": {
+			body: `{"reservations":[{"ip":"10.0.0.10","reservedAt":"2026-09-23T15:00:00Z"},{"ip":"10.0.0.2","reservedAt":"2026-09-23T14:00:00Z"}]}`,
+			want: []Reservation{
+				{IP: ip2, ReservedAt: reservedAt1},
+				{IP: "10.0.0.10", ReservedAt: reservedAt2},
 			},
 		},
 		"empty catalogue": {
@@ -138,20 +154,39 @@ func TestListReservations(t *testing.T) {
 	}
 }
 
+func TestCompareAddresses(t *testing.T) {
+	t.Parallel()
+
+	addresses := []string{"not-an-ip", "10.0.0.10", "192.168.0.1", "10.0.0.2", "another", "9.255.255.255"}
+	slices.SortFunc(addresses, CompareAddresses)
+	want := []string{"9.255.255.255", "10.0.0.2", "10.0.0.10", "192.168.0.1", "another", "not-an-ip"}
+	if !slices.Equal(addresses, want) {
+		t.Fatalf("sorted = %v, want %v", addresses, want)
+	}
+}
+
 func TestGetReservation(t *testing.T) {
 	t.Parallel()
 
+	vmURN := "urn:vm:app"
 	tests := map[string]struct {
+		status  int
 		body    string
 		want    Reservation
 		wantErr error
 	}{
-		"match found": {
-			body: `{"reservations":[{"ip":"10.0.0.1","reservedAt":"2026-09-23T14:00:00Z"}]}`,
-			want: Reservation{IP: ip1, ReservedAt: reservedAt1},
+		"free": {
+			status: http.StatusOK,
+			body:   `{"ip":"10.0.0.1","reservedAt":"2026-09-23T14:00:00Z","allocatedTo":null}`,
+			want:   Reservation{IP: ip1, ReservedAt: reservedAt1},
 		},
-		"no match": {
-			body:    `{"reservations":[]}`,
+		"allocated": {
+			status: http.StatusOK,
+			body:   `{"ip":"10.0.0.1","reservedAt":"2026-09-23T14:00:00Z","allocatedTo":"urn:vm:app"}`,
+			want:   Reservation{IP: ip1, ReservedAt: reservedAt1, AllocatedTo: &vmURN},
+		},
+		"not reserved": {
+			status:  http.StatusNotFound,
 			wantErr: ErrResourceNotFound,
 		},
 	}
@@ -160,14 +195,20 @@ func TestGetReservation(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			runtime := newReservationTestRuntime(t, withToken(func(w http.ResponseWriter, _ *http.Request) {
+			var path string
+			runtime := newReservationTestRuntime(t, withToken(func(w http.ResponseWriter, r *http.Request) {
+				path = r.Method + " " + r.URL.Path
 				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(test.status)
 				_, _ = w.Write([]byte(test.body))
 			}))
 
 			reservation, err := runtime.GetReservation(context.Background(), ip1)
+			if path != "GET /api/ipam/reservations/10.0.0.1" {
+				t.Errorf("request = %q, want GET /api/ipam/reservations/10.0.0.1", path)
+			}
 			if test.wantErr != nil {
-				if err != test.wantErr {
+				if !errors.Is(err, test.wantErr) {
 					t.Fatalf("GetReservation() error = %v, want %v", err, test.wantErr)
 				}
 				return
@@ -175,7 +216,7 @@ func TestGetReservation(t *testing.T) {
 			if err != nil {
 				t.Fatalf("GetReservation: %v", err)
 			}
-			if reservation != test.want {
+			if !reflect.DeepEqual(reservation, test.want) {
 				t.Errorf("reservation = %+v, want %+v", reservation, test.want)
 			}
 		})
@@ -186,7 +227,7 @@ func TestReleaseIPContract(t *testing.T) {
 	t.Parallel()
 
 	var path string
-	var body releaseReservationRequest
+	var body reservationRequest
 	runtime := newReservationTestRuntime(t, withToken(func(w http.ResponseWriter, r *http.Request) {
 		path = r.Method + " " + r.URL.Path
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {

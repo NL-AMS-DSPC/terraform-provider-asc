@@ -26,6 +26,7 @@ import (
 	vpcdatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/vpc"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/group"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/ip"
+	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/ipallocation"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/role"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/subnet"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/virtualmachine"
@@ -187,6 +188,7 @@ func (p *ASCProvider) Resources(context.Context) []func() resource.Resource {
 		role.NewResource,
 		group.NewResource,
 		ip.NewResource,
+		ipallocation.NewResource,
 	}
 }
 

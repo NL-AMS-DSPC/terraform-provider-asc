@@ -36,7 +36,7 @@ func TestProviderMetadataAndSchema(t *testing.T) {
 	wantResources := []string{
 		"asc_vpc", "asc_subnet", "asc_virtual_machine",
 		"asc_vm_group", "asc_volume", "asc_volume_attachment",
-		"asc_role", "asc_group", "asc_ip",
+		"asc_role", "asc_group", "asc_ip", "asc_ip_allocation",
 	}
 	var gotResources []string
 	for _, factory := range implementation.Resources(context.Background()) {

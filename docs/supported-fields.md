@@ -5,11 +5,11 @@ resource and data source. This page answers what they cannot: which attribute ca
 live resource, which one destroys and recreates it, how each resource is imported, and which gateway
 gaps those answers follow from.
 
-The provider registers nine resources and nine data sources, across three API boundaries:
+The provider registers ten resources and nine data sources, across three API boundaries:
 
 | Boundary | Resources | Data sources |
 | --- | --- | --- |
-| `/api/infra-gateway` | `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume`, `asc_volume_attachment` | `asc_skus`, `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume` |
+| `/api/infra-gateway` | `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume`, `asc_volume_attachment`, `asc_ip_allocation` | `asc_skus`, `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume` |
 | `/api/uam` | `asc_role`, `asc_group` | `asc_role`, `asc_group` |
 | `/api/ipam` | `asc_ip` | `asc_ips` |
 
@@ -59,7 +59,12 @@ Read-only: `id`, `urn`, `status`, `last_error`.
 | `customization` | Optional, sensitive | Replaces | Write-only; see [what import cannot recover](#what-import-cannot-recover). |
 | `tags` | Optional | In place | `PATCH /vms/{name}`. |
 
-Read-only: `urn`, `sku`, `os`, `status`, `last_error`, `attached_volumes`.
+Read-only: `urn`, `sku`, `os`, `status`, `last_error`, `attached_volumes`, `internal_ip`, `public_ips`.
+
+`public_ips` only reports the addresses the machine lists; `asc_ip_allocation` is what adds and
+removes them. Like `attached_volumes`, it is sorted, here numerically by address, so the order a read returns
+cannot change state.
+`internal_ip` is null until infra-gateway assigns one.
 
 ### asc_vm_group
 
@@ -108,6 +113,22 @@ infra-gateway has no attachment object of its own; the relationship lives on the
 of names is the whole identity and the two computed attributes are the volume state that proves the
 attachment landed. A volume that is gone, or that is now attached to another machine, removes the
 resource from state so the next plan recreates it.
+
+### asc_ip_allocation
+
+| Attribute | Schema | Change | Why |
+| --- | --- | --- | --- |
+| `vm_name` | Required | Replaces | Moving an address is a deallocation followed by an allocation, not an update. |
+| `ip` | Required, canonical IPv4 address | Replaces | Must already be reserved, typically by `asc_ip`. Only IPv4 is supported, and a non-canonical spelling such as `10.0.0.01` is rejected at plan time because it would never match the address the machine lists. |
+
+infra-gateway has no allocation object of its own; the address lives in the machine's
+`addresses.publicIPs`, so the pair is the whole identity. 
+`POST /vms/{name}/ip` with `{"ip": "..."}` only acknowledges the command, 
+and the provider polls `GET /vms/{name}` until the address is listed.
+Deleting sends `DELETE /vms/{name}/ip` with the same body and waits until the address is gone. A
+machine that is gone, or that no longer lists the address, removes the resource from state so the
+next plan allocates it again. A machine that enters the `error` state during either wait fails the
+operation with its `lastError`.
 
 ### asc_role
 
@@ -176,10 +197,10 @@ takes no body and IPAM picks the address, so every attribute is read-only.
 | --- | --- | --- | --- |
 | `ip` | Computed | Forces recreation if lost | The address IPAM assigned. Kept from state once known, because nothing about it can be recomputed from configuration. |
 | `reserved_at` | Computed | Kept from state | Timestamp `POST /reservations` returns alongside the address. |
+| `allocated_to` | Computed | Read on every refresh | `allocatedTo` from `GET /reservations/{ip}`: the URN of the virtual machine the address is allocated to, so it compares with `asc_virtual_machine.urn`. It is null while the address is free, as IPAM sends it. An `asc_ip_allocation` changes it without touching the reservation, so it is never kept from state and a change never replaces the address. |
 
-`Read` and import both filter `GET /reservations` for the
-matching `ip`. A reservation missing from that list removes the resource from state, and the next
-plan reserves a new, different address; there is no way to ask IPAM for a specific one back.
+`Read` and import both call `GET /reservations/{ip}`, which returns the single reservation. A 404
+removes the resource from state, and the next plan reserves a new, different address
 
 The resource's `Update` is unreachable: both attributes are computed, so no configuration change can
 produce a plan that reaches it. Deleting it sends `DELETE /reservations` with `{"ip": "..."}` in the
@@ -187,7 +208,7 @@ body.
 
 ## Import
 
-All nine resources are importable.
+All ten resources are importable.
 
 | Resource | Import ID | Example |
 | --- | --- | --- |
@@ -197,11 +218,12 @@ All nine resources are importable.
 | `asc_vm_group` | `name` | `terraform import asc_vm_group.example web-pool` |
 | `asc_volume` | `name` | `terraform import asc_volume.example data-01` |
 | `asc_volume_attachment` | `volume-name:vm-name` | `terraform import asc_volume_attachment.example data-01:web-01` |
+| `asc_ip_allocation` | `vm-name:ip` | `terraform import asc_ip_allocation.example web-01:10.0.0.1` |
 | `asc_role` | `name` | `terraform import asc_role.example network-admin` |
 | `asc_group` | `name` | `terraform import asc_group.example platform-team` |
 | `asc_ip` | `ip` | `terraform import asc_ip.example 10.0.0.1` |
 
-The two pair-formed identifiers split on the first `:`; an identifier with no separator, or with
+The three pair-formed identifiers split on the first `:`; an identifier with no separator, or with
 nothing on either side of it, is rejected with a diagnostic naming the expected form.
 
 ### What import cannot recover
@@ -261,7 +283,12 @@ fails the build.
 
 ## IPAM
 
-`asc_ip` and `asc_ips` are the only resources on `/api/ipam`. Unlike
-infra-gateway, IPAM responses are never wrapped in a `data` envelope, and unlike UAM there is no
-tenant-scoped path segment to resolve first: `/reservations` is the entire route, for all three
-verbs.
+IPAM responses are not wrapped in a `data` envelope.
+
+`asc_ips` sorts the list numerically by address (`10.0.0.2` before `10.0.0.10`), so an index such
+as `ips[0]` keeps pointing at the same address when IPAM returns the list in another order. It
+still shifts when a reservation is added or released ahead of it. Referencing a specific
+`asc_ip` is the stable way to choose the address an `asc_ip_allocation` uses.
+
+`asc_ip` and `asc_ips` does have an `allocated_to` field which, when empty, denotes a free ip, otherwise the urn
+of a workload that can be compared to `asc_virtual_machine.urn`.

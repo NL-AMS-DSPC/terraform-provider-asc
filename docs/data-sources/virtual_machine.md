@@ -33,8 +33,10 @@ output "bastion_cores" {
 
 - `attached_volumes` (List of String) Identifiers of the attached volumes, sorted. infra-gateway does not guarantee a stable order, so the list is sorted here to keep state and plans stable across reads.
 - `enable_logging` (Boolean) Whether platform logging is enabled for the virtual machine.
+- `internal_ip` (String) Internal IP address of the virtual machine, null until infra-gateway assigns one.
 - `last_error` (String) Last error reported for the virtual machine, empty when healthy.
 - `os` (Attributes) Operating system image the virtual machine boots. (see [below for nested schema](#nestedatt--os))
+- `public_ips` (List of String) Public IP addresses allocated to the virtual machine, sorted for the same reason as attached_volumes.
 - `sku` (Attributes) SKU the virtual machine runs on. (see [below for nested schema](#nestedatt--sku))
 - `status` (String) Lifecycle status reported by infra-gateway.
 - `tags` (Map of String) Tags applied to the virtual machine.

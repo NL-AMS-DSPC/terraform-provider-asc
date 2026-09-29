@@ -23,8 +23,9 @@ type DataSource struct {
 
 // Model mirrors one entry of the asc_ip resource.
 type Model struct {
-	IP         types.String `tfsdk:"ip"`
-	ReservedAt types.String `tfsdk:"reserved_at"`
+	IP          types.String `tfsdk:"ip"`
+	ReservedAt  types.String `tfsdk:"reserved_at"`
+	AllocatedTo types.String `tfsdk:"allocated_to"`
 }
 
 // DataSourceModel is the top level state of the data source.
@@ -44,12 +45,16 @@ func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp 
 		Description: "Lists the IP addresses currently reserved for a tenant.",
 		Attributes: map[string]schema.Attribute{
 			"ips": schema.ListNestedAttribute{
-				Description: "Reserved IP addresses.",
+				Description: "Reserved IP addresses, sorted by address so an entry keeps its index when IPAM returns them in another order.",
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"ip":          schema.StringAttribute{Description: "The IP address.", Computed: true},
 						"reserved_at": schema.StringAttribute{Description: "Time at which the address was reserved.", Computed: true},
+						"allocated_to": schema.StringAttribute{
+							Description: "URN of the workload the address is allocated to, null while it is free. Compare it e.g. with asc_virtual_machine.urn.",
+							Computed:    true,
+						},
 					},
 				},
 			},
@@ -79,8 +84,9 @@ func (d *DataSource) Read(ctx context.Context, _ datasource.ReadRequest, resp *d
 	state := DataSourceModel{IPs: make([]Model, len(reservations))}
 	for i, reservation := range reservations {
 		state.IPs[i] = Model{
-			IP:         types.StringValue(reservation.IP),
-			ReservedAt: types.StringValue(reservation.ReservedAt),
+			IP:          types.StringValue(reservation.IP),
+			ReservedAt:  types.StringValue(reservation.ReservedAt),
+			AllocatedTo: types.StringPointerValue(reservation.AllocatedTo),
 		}
 	}
 
