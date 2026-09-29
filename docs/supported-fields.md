@@ -290,5 +290,5 @@ as `ips[0]` keeps pointing at the same address when IPAM returns the list in ano
 still shifts when a reservation is added or released ahead of it. Referencing a specific
 `asc_ip` is the stable way to choose the address an `asc_ip_allocation` uses.
 
-`asc_ip` and `asc_ips` does have an `allocated_to` field which, when empty, denotes a free ip, otherwise the urn
+`asc_ip` and `asc_ips` have an `allocated_to` field which, when empty, denotes a free IP, otherwise the urn
 of a workload that can be compared to `asc_virtual_machine.urn`.

@@ -136,8 +136,12 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 		resp.Diagnostics.AddError("Invalid IP allocation import identifier", "Use vm-name:ip.")
 		return
 	}
+	ip := req.ID[separator+1:]
+	if !isValidIP(ip) {
+		resp.Diagnostics.AddError("Invalid IP address", fmt.Sprintf("%q, must be an IPv4 address.", ip))
+	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("vm_name"), req.ID[:separator])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("ip"), req.ID[separator+1:])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("ip"), ip)...)
 }
 
 // ipv4Validator implements the schema String interface and enforces IPV4 addresses that are equal to the configured address
@@ -152,7 +156,12 @@ func (v ipv4Validator) ValidateString(ctx context.Context, req validator.StringR
 		return
 	}
 	value := req.ConfigValue.ValueString()
-	if address, err := netip.ParseAddr(value); err != nil || !address.Is4() || address.String() != value {
+	if !isValidIP(value) {
 		resp.Diagnostics.AddAttributeError(req.Path, "Invalid IP address", fmt.Sprintf("%q %s.", value, v.Description(ctx)))
 	}
+}
+
+func isValidIP(ip string) bool {
+	address, err := netip.ParseAddr(ip)
+	return err == nil && address.Is4() && address.String() == ip
 }
