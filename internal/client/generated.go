@@ -16,7 +16,7 @@ import (
 
 // infraAPI and uamAPI return the oapi-codegen clients. They build requests from the
 // vendored ASC specs; responses are decoded here because several Swaggo @Success
-// annotations do not describe the body the services actually send (see decodeInfra).
+// annotations do not describe the body the services actually send (see decodeData).
 func (c *Runtime) infraAPI() *infra.Client {
 	return &infra.Client{Server: serviceURL(c.config.Endpoint, infraGatewayPrefix), Client: c.httpClient}
 }
@@ -109,7 +109,7 @@ func callInfra[T any](ctx context.Context, call generatedCall, output *T) error 
 		_, _ = io.Copy(io.Discard, resp.Body)
 		return nil
 	}
-	return decodeInfra(resp.Body, output)
+	return decodeData(resp.Body, output)
 }
 
 // callUAM sends a generated UAM request and decodes a successful bare JSON body into
@@ -156,10 +156,10 @@ func send(ctx context.Context, svc svcType, call generatedCall) (*http.Response,
 	return resp, nil
 }
 
-// decodeInfra unwraps infra-gateway's {"data": ...} envelope. The generated parsers are
+// decodeData unwraps a {"data": ...} response envelope. The generated parsers are
 // not used: ListSubnets, for one, is annotated as an array of envelopes while the gateway
 // sends a single envelope around the array.
-func decodeInfra[T any](body io.Reader, output *T) error {
+func decodeData[T any](body io.Reader, output *T) error {
 	var envelope struct {
 		Data json.RawMessage `json:"data"`
 	}
