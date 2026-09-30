@@ -50,25 +50,25 @@ func (d *DataSource) Metadata(_ context.Context, req datasource.MetadataRequest,
 
 func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Reads a block volume from ASC infra-gateway.",
+		Description: "Reads an ASC block volume.",
 		Attributes: map[string]schema.Attribute{
-			"name": schema.StringAttribute{Description: "Name of the volume, which identifies it in infra-gateway.", Required: true},
-			"size": schema.StringAttribute{Description: "Capacity as infra-gateway spells it, for example \"10Gi\".", Computed: true},
+			"name": schema.StringAttribute{Description: "Name of the volume.", Required: true},
+			"size": schema.StringAttribute{Description: "Reported capacity, for example \"10Gi\".", Computed: true},
 			"size_bytes": schema.Int64Attribute{
-				Description: "Capacity in bytes. infra-gateway may spell an equal size differently " +
+				Description: "Capacity in bytes. The reported size may use equivalent spellings " +
 					"between reads, so this is the value to compare against.",
 				Computed: true,
 			},
 			"storage_class":  schema.StringAttribute{Description: "Storage class backing the volume.", Computed: true},
 			"access_mode":    schema.StringAttribute{Description: "Access mode of the volume.", Computed: true},
-			"volume_mode":    schema.StringAttribute{Description: "Volume mode reported by infra-gateway.", Computed: true},
+			"volume_mode":    schema.StringAttribute{Description: "Volume mode.", Computed: true},
 			"urn":            schema.StringAttribute{Description: "URN of the volume, which carries its uuid.", Computed: true},
-			"status":         schema.StringAttribute{Description: "Lifecycle status reported by infra-gateway.", Computed: true},
-			"last_error":     schema.StringAttribute{Description: "Last error reported by infra-gateway, empty when there is none.", Computed: true},
-			"attached_to_vm": schema.StringAttribute{Description: "Instance id of the virtual machine the volume is attached to, empty when it is detached. infra-gateway reports the machine's uuid here, not its name.", Computed: true},
+			"status":         schema.StringAttribute{Description: "Current lifecycle status.", Computed: true},
+			"last_error":     schema.StringAttribute{Description: "Last error reported for the volume, empty when there is none.", Computed: true},
+			"attached_to_vm": schema.StringAttribute{Description: "UUID of the virtual machine the volume is attached to, empty when detached.", Computed: true},
 			"tags":           schema.MapAttribute{Description: "Tags applied to the volume.", Computed: true, ElementType: types.StringType},
-			"labels":         schema.MapAttribute{Description: "Labels infra-gateway reports for the volume.", Computed: true, ElementType: types.StringType},
-			"annotations":    schema.MapAttribute{Description: "Annotations infra-gateway reports for the volume.", Computed: true, ElementType: types.StringType},
+			"labels":         schema.MapAttribute{Description: "Labels of the volume.", Computed: true, ElementType: types.StringType},
+			"annotations":    schema.MapAttribute{Description: "Annotations of the volume.", Computed: true, ElementType: types.StringType},
 		},
 	}
 }
@@ -97,7 +97,7 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 	if errors.Is(err, client.ErrResourceNotFound) {
 		// A data source names a volume the configuration depends on, so an
 		// absent one is a configuration error rather than drift to reconcile.
-		resp.Diagnostics.AddError("Volume not found", fmt.Sprintf("infra-gateway has no volume named %q.", name))
+		resp.Diagnostics.AddError("Volume not found", fmt.Sprintf("No volume found named %q.", name))
 		return
 	}
 	if err != nil {
@@ -107,7 +107,7 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 
 	size, err := client.ParseQuantity(current.Size)
 	if err != nil {
-		resp.Diagnostics.AddError("Unsupported volume size", fmt.Sprintf("infra-gateway reported size %q for volume %q: %s", current.Size, name, err))
+		resp.Diagnostics.AddError("Unsupported volume size", fmt.Sprintf("ASC reported size %q for volume %q: %s", current.Size, name, err))
 		return
 	}
 

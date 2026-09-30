@@ -3,12 +3,12 @@
 page_title: "asc_virtual_machine Data Source - asc"
 subcategory: ""
 description: |-
-  Reads a virtual machine managed by ASC infra-gateway.
+  Reads an ASC virtual machine.
 ---
 
 # asc_virtual_machine (Data Source)
 
-Reads a virtual machine managed by ASC infra-gateway.
+Reads an ASC virtual machine.
 
 ## Example Usage
 
@@ -31,12 +31,12 @@ output "bastion_cores" {
 
 ### Read-Only
 
-- `attached_volumes` (List of String) Identifiers of the attached volumes, sorted. infra-gateway does not guarantee a stable order, so the list is sorted here to keep state and plans stable across reads.
+- `attached_volumes` (List of String) Names of the attached volumes, sorted.
 - `enable_logging` (Boolean) Whether platform logging is enabled for the virtual machine.
 - `last_error` (String) Last error reported for the virtual machine, empty when healthy.
 - `os` (Attributes) Operating system image the virtual machine boots. (see [below for nested schema](#nestedatt--os))
 - `sku` (Attributes) SKU the virtual machine runs on. (see [below for nested schema](#nestedatt--sku))
-- `status` (String) Lifecycle status reported by infra-gateway.
+- `status` (String) Current lifecycle status.
 - `tags` (Map of String) Tags applied to the virtual machine.
 - `urn` (String) URN of the virtual machine.
 - `vpc_id` (String) Identifier of the VPC the virtual machine belongs to.

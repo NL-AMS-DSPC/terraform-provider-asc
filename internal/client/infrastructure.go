@@ -101,25 +101,22 @@ func (c *Runtime) CreateSubnet(ctx context.Context, vpcName string, request Crea
 	return c.GetSubnet(ctx, vpcName, request.Name)
 }
 
-// createSubnetBody encodes the generated request but leaves vpcID out when it is empty:
-// the generated type always sends it, while the provider has only ever sent a set value.
+// createSubnetBody preserves the provider's omission of an unset vpcID. The outer
+// field overrides the generated field's JSON tag, so the request needs only one
+// encoding pass. Resource creation supplies the parent VPC's ID.
 func createSubnetBody(request CreateSubnetRequest) ([]byte, error) {
-	encoded, err := json.Marshal(infra.CreateSubnetJSONRequestBody{
-		Name:  request.Name,
-		Cidr:  request.CIDR,
-		VpcID: request.VPCID,
-		Type:  infra.SubnetType(request.Type),
-		Tags:  infraTags(request.Tags),
+	return json.Marshal(struct {
+		infra.CreateSubnetJSONRequestBody
+		VPCID *string `json:"vpcID,omitempty"`
+	}{
+		CreateSubnetJSONRequestBody: infra.CreateSubnetJSONRequestBody{
+			Name: request.Name,
+			Cidr: request.CIDR,
+			Type: infra.SubnetType(request.Type),
+			Tags: infraTags(request.Tags),
+		},
+		VPCID: optionalString(request.VPCID),
 	})
-	if err != nil || request.VPCID != "" {
-		return encoded, err
-	}
-	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(encoded, &fields); err != nil {
-		return nil, err
-	}
-	delete(fields, "vpcID")
-	return json.Marshal(fields)
 }
 
 // ListSubnets decodes the gateway's single envelope around the array; the generated

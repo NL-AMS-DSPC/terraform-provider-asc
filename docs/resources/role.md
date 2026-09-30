@@ -3,12 +3,12 @@
 page_title: "asc_role Resource - asc"
 subcategory: ""
 description: |-
-  Manages a role in the configured UAM tenant.
+  Manages a role in the configured tenant.
 ---
 
 # asc_role (Resource)
 
-Manages a role in the configured UAM tenant.
+Manages a role in the configured tenant.
 
 ## Example Usage
 
@@ -28,8 +28,8 @@ resource "asc_role" "example" {
 
 ### Required
 
-- `actions` (Set of String) Actions the role grants. UAM accepts them as "actions" and reports them back as "composites"; the order is not preserved, so this is a set.
-- `name` (String) Name of the role, which is also its identity. UAM's update addresses a role by the name in the request body, so a role cannot be renamed and a new name replaces it.
+- `actions` (Set of String) Actions the role grants, as an unordered set.
+- `name` (String) Name of the role. Changing the name replaces the role.
 
 ### Read-Only
 

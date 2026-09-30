@@ -67,14 +67,14 @@ func (p *ASCProvider) Metadata(_ context.Context, _ provider.MetadataRequest, re
 
 func (p *ASCProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manage ASC infrastructure through infra-gateway using OAuth client credentials.",
+		Description: "Manage Atos Sovereign Cloud resources using OAuth client credentials.",
 		Attributes: map[string]schema.Attribute{
 			"endpoint": schema.StringAttribute{
 				Description: "ASC API endpoint. May be set with ASC_ENDPOINT.",
 				Optional:    true,
 			},
 			"namespace": schema.StringAttribute{
-				Description: "Tenant namespace sent to infra-gateway as X-Tenant. May be set with ASC_NAMESPACE.",
+				Description: "Tenant namespace to manage. May be set with ASC_NAMESPACE.",
 				Optional:    true,
 			},
 			"auth_url": schema.StringAttribute{

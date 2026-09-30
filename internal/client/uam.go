@@ -165,6 +165,12 @@ func (c *Runtime) roleID(ctx context.Context, name string) (string, error) {
 	}, &roles); err != nil {
 		return "", fmt.Errorf("list roles: %w", err)
 	}
+	// A malformed collection cannot prove that a managed role is absent.
+	for i, role := range roles {
+		if value(role.Name) == "" {
+			return "", fmt.Errorf("list roles: role at index %d has no name", i)
+		}
+	}
 	for _, role := range roles {
 		if value(role.Name) == name {
 			return value(role.ID), nil
@@ -251,7 +257,16 @@ func (c *Runtime) groupSummary(ctx context.Context, name string) (uam.GroupRespo
 	}, &list); err != nil {
 		return uam.GroupResponse{}, fmt.Errorf("list groups: %w", err)
 	}
-	for _, group := range value(list.Groups) {
+	if list.Groups == nil {
+		return uam.GroupResponse{}, fmt.Errorf("list groups: expected a non-null groups array")
+	}
+	// Validate every entry before deciding that a managed group is absent.
+	for i, group := range *list.Groups {
+		if value(group.Name) == "" {
+			return uam.GroupResponse{}, fmt.Errorf("list groups: group at index %d has no name", i)
+		}
+	}
+	for _, group := range *list.Groups {
 		if value(group.Name) == name {
 			return group, nil
 		}

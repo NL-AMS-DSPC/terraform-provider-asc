@@ -40,12 +40,12 @@ func (d *DataSource) Metadata(_ context.Context, req datasource.MetadataRequest,
 
 func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Reads a group by name from the configured UAM tenant.",
+		Description: "Reads a group by name from the configured tenant.",
 		Attributes: map[string]schema.Attribute{
 			"name":        schema.StringAttribute{Description: "Name of the group.", Required: true},
-			"id":          schema.StringAttribute{Description: "Identifier UAM records for the group.", Computed: true},
+			"id":          schema.StringAttribute{Description: "Identifier of the group.", Computed: true},
 			"urn":         schema.StringAttribute{Description: "Resource identifier of the group.", Computed: true},
-			"description": schema.StringAttribute{Description: "Description UAM records for the group.", Computed: true},
+			"description": schema.StringAttribute{Description: "Description of the group.", Computed: true},
 			"members": schema.ListNestedAttribute{
 				Description: "Users and API clients that belong to the group, sorted by name.",
 				Computed:    true,

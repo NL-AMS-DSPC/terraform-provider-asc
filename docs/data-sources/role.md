@@ -3,12 +3,12 @@
 page_title: "asc_role Data Source - asc"
 subcategory: ""
 description: |-
-  Reads a role by name from the configured UAM tenant.
+  Reads a role by name from the configured tenant.
 ---
 
 # asc_role (Data Source)
 
-Reads a role by name from the configured UAM tenant.
+Reads a role by name from the configured tenant.
 
 ## Example Usage
 
@@ -31,5 +31,5 @@ output "example_role_actions" {
 
 ### Read-Only
 
-- `actions` (Set of String) Actions the role grants, which UAM reports as its composites.
+- `actions` (Set of String) Actions the role grants.
 - `urn` (String) Resource identifier of the role.

@@ -83,6 +83,13 @@ Each package vendors its spec with the ASC revision and sha256 in `SOURCE.md`,
 so building the provider needs neither ASC nor Bazel. `make generate`
 regenerates the clients; `make check-generated` fails when a spec no longer
 matches its recorded checksum or the generated code is stale.
+The pinned ASC source is available in [draft PR #1074](https://github.com/NL-AMS-DSPC/asc/pull/1074),
+which depends on the minimal infrastructure contract in ASC PR #1000. It is not yet merged into
+upstream `main`. The response-schema follow-up is tracked in that draft: several success
+annotations differ from the handler output, so the provider still decodes response bodies
+explicitly. The subnet request adapter preserves the earlier omission of an unset `vpcID`
+with one encoding pass; normal subnet resource creation supplies the required parent UUID.
+
 IPAM has no Terraform-facing ASC spec yet, so the IP reservation resource
 keeps a small handwritten transport in `internal/client/transport.go`.
 

@@ -59,24 +59,23 @@ func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, res
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages a group in the configured UAM tenant.",
+		Description: "Manages a group in the configured tenant.",
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
-				Description: "Name of the group, which is also how every route addresses it. UAM " +
-					"exposes no update route, so a new name replaces the group.",
+				Description:   "Name of the group. Changing the name replaces the group.",
 				Required:      true,
 				Validators:    []validator.String{stringvalidator.LengthAtLeast(3)},
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-			"id":  schema.StringAttribute{Description: "Identifier UAM records for the group.", Computed: true},
+			"id":  schema.StringAttribute{Description: "Identifier of the group.", Computed: true},
 			"urn": schema.StringAttribute{Description: "Resource identifier of the group.", Computed: true},
 			"description": schema.StringAttribute{
-				Description: "Description UAM records for the group. It is read-only: no route accepts one.",
+				Description: "Description of the group. Read-only.",
 				Computed:    true,
 			},
 			"members": schema.ListNestedAttribute{
 				Description: "Users and API clients that belong to the group, sorted by name. " +
-					"Membership is read-only because UAM exposes no route that adds or removes a member.",
+					"Membership cannot be changed through this provider.",
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
 					"name":    schema.StringAttribute{Description: "Username or API client name of the member.", Computed: true},

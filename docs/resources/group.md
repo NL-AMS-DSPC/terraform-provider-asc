@@ -3,12 +3,12 @@
 page_title: "asc_group Resource - asc"
 subcategory: ""
 description: |-
-  Manages a group in the configured UAM tenant.
+  Manages a group in the configured tenant.
 ---
 
 # asc_group (Resource)
 
-Manages a group in the configured UAM tenant.
+Manages a group in the configured tenant.
 
 ## Example Usage
 
@@ -27,13 +27,13 @@ output "example_group_members" {
 
 ### Required
 
-- `name` (String) Name of the group, which is also how every route addresses it. UAM exposes no update route, so a new name replaces the group.
+- `name` (String) Name of the group. Changing the name replaces the group.
 
 ### Read-Only
 
-- `description` (String) Description UAM records for the group. It is read-only: no route accepts one.
-- `id` (String) Identifier UAM records for the group.
-- `members` (Attributes List) Users and API clients that belong to the group, sorted by name. Membership is read-only because UAM exposes no route that adds or removes a member. (see [below for nested schema](#nestedatt--members))
+- `description` (String) Description of the group. Read-only.
+- `id` (String) Identifier of the group.
+- `members` (Attributes List) Users and API clients that belong to the group, sorted by name. Membership cannot be changed through this provider. (see [below for nested schema](#nestedatt--members))
 - `urn` (String) Resource identifier of the group.
 
 <a id="nestedatt--members"></a>

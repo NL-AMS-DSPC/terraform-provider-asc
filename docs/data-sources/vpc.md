@@ -3,12 +3,12 @@
 page_title: "asc_vpc Data Source - asc"
 subcategory: ""
 description: |-
-  Reads a VPC managed by ASC infra-gateway.
+  Reads an ASC VPC.
 ---
 
 # asc_vpc (Data Source)
 
-Reads a VPC managed by ASC infra-gateway.
+Reads an ASC VPC.
 
 ## Example Usage
 
@@ -34,8 +34,8 @@ output "platform_subnet_cidrs" {
 - `cidr` (String) CIDR block of the VPC.
 - `id` (String) Identifier of the VPC.
 - `last_error` (String) Last error reported for the VPC, empty when healthy.
-- `status` (String) Lifecycle status reported by infra-gateway.
-- `subnets` (Attributes List) Subnets belonging to the VPC, in the order infra-gateway reports them. (see [below for nested schema](#nestedatt--subnets))
+- `status` (String) Current lifecycle status.
+- `subnets` (Attributes List) Subnets belonging to the VPC. Order is not guaranteed. (see [below for nested schema](#nestedatt--subnets))
 - `tags` (Map of String) Tags applied to the VPC.
 - `urn` (String) URN of the VPC.
 

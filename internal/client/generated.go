@@ -124,9 +124,14 @@ func callUAM[T any](ctx context.Context, call generatedCall, output *T) error {
 		_, _ = io.Copy(io.Discard, resp.Body)
 		return nil
 	}
-	if err := json.NewDecoder(resp.Body).Decode(output); err != nil {
+	var decoded *T
+	if err := json.NewDecoder(resp.Body).Decode(&decoded); err != nil {
 		return fmt.Errorf("decode %s response: %w", svcUAM, err)
 	}
+	if decoded == nil {
+		return fmt.Errorf("validate %s response: expected a non-null JSON value", svcUAM)
+	}
+	*output = *decoded
 	return nil
 }
 

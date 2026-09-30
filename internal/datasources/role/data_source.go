@@ -37,12 +37,12 @@ func (d *DataSource) Metadata(_ context.Context, req datasource.MetadataRequest,
 
 func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Reads a role by name from the configured UAM tenant.",
+		Description: "Reads a role by name from the configured tenant.",
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{Description: "Name of the role.", Required: true},
 			"urn":  schema.StringAttribute{Description: "Resource identifier of the role.", Computed: true},
 			"actions": schema.SetAttribute{
-				Description: "Actions the role grants, which UAM reports as its composites.",
+				Description: "Actions the role grants.",
 				Computed:    true, ElementType: types.StringType,
 			},
 		},

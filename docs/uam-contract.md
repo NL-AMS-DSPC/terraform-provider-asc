@@ -12,8 +12,8 @@ Two differences from infra-gateway are structural and neither is negotiable:
   `httptransport.RespondWithJSON`, which wraps the payload in `{"data": ...}`.
   UAM answers through `http_api.RespondWithJSON` →
   `httptransport.RespondWithJSONObject`, which encodes the payload bare. The
-  existing `Runtime.request` unwraps `data` unconditionally, so UAM needs its
-  own decode path rather than a reused one.
+  `callInfra` helper unwraps `data`; `callUAM` decodes bare JSON. Null bodies,
+  missing group arrays and nameless collection entries are rejected before deciding absence.
 - **Missing resources are not 404.** UAM's downstream `fromResponse` turns every
   non-2xx from the authorization service into an untyped
   `fmt.Errorf("request failed with status %d: ...")`, and `HandleServiceError`
