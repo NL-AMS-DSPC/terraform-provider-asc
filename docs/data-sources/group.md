@@ -3,12 +3,12 @@
 page_title: "asc_group Data Source - asc"
 subcategory: ""
 description: |-
-  Reads a group by name from the configured UAM tenant.
+  Reads a group by name from the configured tenant.
 ---
 
 # asc_group (Data Source)
 
-Reads a group by name from the configured UAM tenant.
+Reads a group by name from the configured tenant.
 
 ## Example Usage
 
@@ -31,8 +31,8 @@ output "example_group_member_names" {
 
 ### Read-Only
 
-- `description` (String) Description UAM records for the group.
-- `id` (String) Identifier UAM records for the group.
+- `description` (String) Description of the group.
+- `id` (String) Identifier of the group.
 - `members` (Attributes List) Users and API clients that belong to the group, sorted by name. (see [below for nested schema](#nestedatt--members))
 - `urn` (String) Resource identifier of the group.
 

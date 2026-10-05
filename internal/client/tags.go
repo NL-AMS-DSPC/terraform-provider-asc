@@ -4,21 +4,15 @@ import (
 	"context"
 	"fmt"
 	"sort"
+
+	"github.com/nl-ams-dspc/terraform-provider-asc/internal/asc/infra"
 )
 
-// TagPatch sets a key, or deletes it when Value is empty. Omitted keys are unchanged.
-type TagPatch struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
-type tagPatchRequest struct {
-	Tags []TagPatch `json:"tags"`
-}
-
-// tagPatchFor returns a deterministic patch. Empty desired values are rejected because the
+// tagPatchFor returns a deterministic patch. An entry sets its key, or deletes it when its
+// value is empty; omitted keys are unchanged. Every entry carries a value, so a deletion
+// travels as an explicit empty string. Empty desired values are rejected because the
 // gateway interprets them as deletions.
-func tagPatchFor(current, desired []Tag) ([]TagPatch, error) {
+func tagPatchFor(current, desired []Tag) ([]infra.PatchTag, error) {
 	desiredByKey := make(map[string]string, len(desired))
 	for _, tag := range desired {
 		if tag.Value == "" {
@@ -32,15 +26,16 @@ func tagPatchFor(current, desired []Tag) ([]TagPatch, error) {
 		currentByKey[tag.Key] = tag.Value
 	}
 
-	patch := make([]TagPatch, 0, len(desired))
+	patch := make([]infra.PatchTag, 0, len(desired))
 	for key, value := range desiredByKey {
 		if existing, ok := currentByKey[key]; !ok || existing != value {
-			patch = append(patch, TagPatch{Key: key, Value: value})
+			patch = append(patch, infra.PatchTag{Key: key, Value: &value})
 		}
 	}
 	for key := range currentByKey {
 		if _, ok := desiredByKey[key]; !ok {
-			patch = append(patch, TagPatch{Key: key})
+			deletion := ""
+			patch = append(patch, infra.PatchTag{Key: key, Value: &deletion})
 		}
 	}
 	sort.Slice(patch, func(i, j int) bool { return patch[i].Key < patch[j].Key })
@@ -64,13 +59,12 @@ func sameTags(left, right []Tag) bool {
 	return true
 }
 
-func (c *Runtime) patchTags(ctx context.Context, path string, patch []TagPatch) error {
-	return c.patch(ctx, svcInfraGateway, path, tagPatchRequest{Tags: patch})
-}
+// tagPatcher sends a tag patch to one resource's PATCH operation.
+type tagPatcher func(ctx context.Context, body infra.PatchTagsRequest) error
 
 // reconcileTags polls until a read reports the desired tags. PATCH responses may echo only
 // the patch or return a stale projection.
-func reconcileTags[T resourceView](ctx context.Context, c *Runtime, kind, name, path string, current, desired []Tag, read readFunc[T]) (T, error) {
+func reconcileTags[T resourceView](ctx context.Context, c *Runtime, kind, name string, send tagPatcher, current, desired []Tag, read readFunc[T]) (T, error) {
 	var zero T
 	operationCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
 	defer cancel()
@@ -80,7 +74,7 @@ func reconcileTags[T resourceView](ctx context.Context, c *Runtime, kind, name, 
 		return zero, fmt.Errorf("update %s %q tags: %w", kind, name, err)
 	}
 	if len(patch) > 0 {
-		if err := c.patchTags(operationCtx, path, patch); err != nil {
+		if err := send(operationCtx, infra.PatchTagsRequest{Tags: &patch}); err != nil {
 			return zero, fmt.Errorf("update %s %q tags: %w", kind, name, err)
 		}
 	}

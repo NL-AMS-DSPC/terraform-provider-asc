@@ -106,19 +106,17 @@ func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp 
 	}
 
 	resp.Schema = schema.Schema{
-		Description: "Reads a virtual machine managed by ASC infra-gateway.",
+		Description: "Reads an ASC virtual machine.",
 		Attributes: map[string]schema.Attribute{
 			"urn":        schema.StringAttribute{Description: "URN of the virtual machine.", Computed: true},
 			"name":       schema.StringAttribute{Description: "Name of the virtual machine to read.", Required: true},
 			"sku":        schema.SingleNestedAttribute{Description: "SKU the virtual machine runs on.", Computed: true, Attributes: computedSKU},
 			"vpc_id":     schema.StringAttribute{Description: "Identifier of the VPC the virtual machine belongs to.", Computed: true},
-			"status":     schema.StringAttribute{Description: "Lifecycle status reported by infra-gateway.", Computed: true},
+			"status":     schema.StringAttribute{Description: "Current lifecycle status.", Computed: true},
 			"last_error": schema.StringAttribute{Description: "Last error reported for the virtual machine, empty when healthy.", Computed: true},
 			"tags":       schema.MapAttribute{Description: "Tags applied to the virtual machine.", Computed: true, ElementType: types.StringType},
 			"attached_volumes": schema.ListAttribute{
-				Description: "Identifiers of the attached volumes, sorted. infra-gateway " +
-					"does not guarantee a stable order, so the list is sorted here to " +
-					"keep state and plans stable across reads.",
+				Description: "Names of the attached volumes, sorted.",
 				Computed:    true,
 				ElementType: types.StringType,
 			},
@@ -155,7 +153,7 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 		return
 	}
 	if err != nil {
-		resp.Diagnostics.AddError("Unable to read virtual machine", fmt.Sprintf("Reading virtual machine %q from infra-gateway failed: %s", name, err))
+		resp.Diagnostics.AddError("Unable to read virtual machine", fmt.Sprintf("Reading virtual machine %q failed: %s", name, err))
 		return
 	}
 

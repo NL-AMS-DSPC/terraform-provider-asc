@@ -77,7 +77,7 @@ func TestAccSubnetDataSource(t *testing.T) {
 		VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.0/25", Type: "private", Status: "active",
 	}
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
-		"GET /api/infra-gateway/vpcs/test-vpc/subnets/": func(w http.ResponseWriter, _ *http.Request) {
+		"GET /api/infra-gateway/vpcs/test-vpc/subnets": func(w http.ResponseWriter, _ *http.Request) {
 			writeData(w, http.StatusOK, []client.Subnet{other, subnet})
 		},
 	})
@@ -105,7 +105,7 @@ data "asc_subnet" "test" {
 
 func TestAccSubnetDataSourceRejectsUnknownVPC(t *testing.T) {
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
-		"GET /api/infra-gateway/vpcs/ghost/subnets/": func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNotFound) },
+		"GET /api/infra-gateway/vpcs/ghost/subnets": func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNotFound) },
 	})
 
 	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: providerFactories, Steps: []resource.TestStep{{
@@ -120,7 +120,7 @@ data "asc_subnet" "test" {
 
 func TestAccSubnetDataSourceRejectsUnknownSubnet(t *testing.T) {
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
-		"GET /api/infra-gateway/vpcs/test-vpc/subnets/": func(w http.ResponseWriter, _ *http.Request) {
+		"GET /api/infra-gateway/vpcs/test-vpc/subnets": func(w http.ResponseWriter, _ *http.Request) {
 			writeData(w, http.StatusOK, []client.Subnet{})
 		},
 	})

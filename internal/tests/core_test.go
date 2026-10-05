@@ -170,7 +170,7 @@ func inPlace(address string) resource.ConfigPlanChecks {
 
 func writeData(w http.ResponseWriter, status int, value any) {
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(map[string]any{"data": value})
+	_ = json.NewEncoder(w).Encode(map[string]any{"data": wire(value)})
 }
 
 func TestVPCProvisioning(t *testing.T) {
@@ -184,7 +184,7 @@ func TestVPCProvisioning(t *testing.T) {
 		}},
 	}
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
-		"POST /api/infra-gateway/vpcs/": func(w http.ResponseWriter, _ *http.Request) {
+		"POST /api/infra-gateway/vpcs": func(w http.ResponseWriter, _ *http.Request) {
 			writeData(w, http.StatusCreated, map[string]string{"created": vpc.Name})
 		},
 		"GET /api/infra-gateway/vpcs/test-vpc": func(w http.ResponseWriter, _ *http.Request) {
@@ -224,10 +224,10 @@ func TestSubnetProvisioning(t *testing.T) {
 		VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.128/25", Type: "public", Status: "active",
 	}
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
-		"POST /api/infra-gateway/vpcs/test-vpc/subnets/": func(w http.ResponseWriter, _ *http.Request) {
+		"POST /api/infra-gateway/vpcs/test-vpc/subnets": func(w http.ResponseWriter, _ *http.Request) {
 			writeData(w, http.StatusCreated, map[string]string{"created": subnet.Name})
 		},
-		"GET /api/infra-gateway/vpcs/test-vpc/subnets/": func(w http.ResponseWriter, _ *http.Request) { writeData(w, http.StatusOK, []client.Subnet{subnet}) },
+		"GET /api/infra-gateway/vpcs/test-vpc/subnets": func(w http.ResponseWriter, _ *http.Request) { writeData(w, http.StatusOK, []client.Subnet{subnet}) },
 		"DELETE /api/infra-gateway/vpcs/test-vpc/subnets/test-subnet": func(w http.ResponseWriter, _ *http.Request) {
 			writeData(w, http.StatusOK, map[string]string{"deleted": subnet.Name})
 		},
@@ -261,7 +261,7 @@ func TestVirtualMachineProvisioning(t *testing.T) {
 		Tags: []client.Tag{{Key: "env", Value: "test"}}, EnableLogging: true,
 	}
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
-		"POST /api/infra-gateway/vms/": func(w http.ResponseWriter, _ *http.Request) {
+		"POST /api/infra-gateway/vms": func(w http.ResponseWriter, _ *http.Request) {
 			writeData(w, http.StatusCreated, map[string]string{"created": vm.Name})
 		},
 		"GET /api/infra-gateway/vms/test-vm": func(w http.ResponseWriter, _ *http.Request) {
@@ -340,7 +340,7 @@ func TestVPCProvisioningReplacementWaitsForNameRelease(t *testing.T) {
 	}
 
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
-		"POST /api/infra-gateway/vpcs/": func(w http.ResponseWriter, _ *http.Request) {
+		"POST /api/infra-gateway/vpcs": func(w http.ResponseWriter, _ *http.Request) {
 			mu.Lock()
 			defer mu.Unlock()
 			posts++
@@ -417,7 +417,7 @@ func TestVirtualMachineProvisioningReplacementWaitsForNameRelease(t *testing.T) 
 	}
 
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
-		"POST /api/infra-gateway/vms/": func(w http.ResponseWriter, _ *http.Request) {
+		"POST /api/infra-gateway/vms": func(w http.ResponseWriter, _ *http.Request) {
 			mu.Lock()
 			defer mu.Unlock()
 			posts++
@@ -527,7 +527,7 @@ func TestVPCTagsUpdateInPlace(t *testing.T) {
 	var deleted atomic.Bool
 	tags, patch := taggedTagStore(map[string]string{"env": "test", "owner": "platform"})
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
-		"POST /api/infra-gateway/vpcs/": func(w http.ResponseWriter, _ *http.Request) {
+		"POST /api/infra-gateway/vpcs": func(w http.ResponseWriter, _ *http.Request) {
 			writeData(w, http.StatusCreated, map[string]string{"created": "test-vpc"})
 		},
 		"GET /api/infra-gateway/vpcs/test-vpc": func(w http.ResponseWriter, _ *http.Request) {
@@ -586,10 +586,10 @@ func TestSubnetTagsUpdateInPlace(t *testing.T) {
 	var deleted atomic.Bool
 	tags, patch := taggedTagStore(map[string]string{"env": "test"})
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
-		"POST /api/infra-gateway/vpcs/test-vpc/subnets/": func(w http.ResponseWriter, _ *http.Request) {
+		"POST /api/infra-gateway/vpcs/test-vpc/subnets": func(w http.ResponseWriter, _ *http.Request) {
 			writeData(w, http.StatusCreated, map[string]string{"created": "test-subnet"})
 		},
-		"GET /api/infra-gateway/vpcs/test-vpc/subnets/": func(w http.ResponseWriter, _ *http.Request) {
+		"GET /api/infra-gateway/vpcs/test-vpc/subnets": func(w http.ResponseWriter, _ *http.Request) {
 			if deleted.Load() {
 				writeData(w, http.StatusOK, []client.Subnet{})
 				return
@@ -637,7 +637,7 @@ func TestVirtualMachineTagsUpdateInPlaceAndVolumesStaySorted(t *testing.T) {
 	var reads atomic.Int64
 	var deleted atomic.Bool
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
-		"POST /api/infra-gateway/vms/": func(w http.ResponseWriter, _ *http.Request) {
+		"POST /api/infra-gateway/vms": func(w http.ResponseWriter, _ *http.Request) {
 			writeData(w, http.StatusCreated, map[string]string{"created": "test-vm"})
 		},
 		"GET /api/infra-gateway/vms/test-vm": func(w http.ResponseWriter, _ *http.Request) {

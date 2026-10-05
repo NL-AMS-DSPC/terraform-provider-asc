@@ -10,6 +10,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/nl-ams-dspc/terraform-provider-asc/internal/asc/infra"
 )
 
 func TestTagPatchForComputesSetsAndDeletes(t *testing.T) {
@@ -18,43 +20,43 @@ func TestTagPatchForComputesSetsAndDeletes(t *testing.T) {
 		name    string
 		current []Tag
 		desired []Tag
-		want    []TagPatch
+		want    []infra.PatchTag
 	}{
 		{
 			name:    "adds a new key",
 			current: []Tag{{Key: "env", Value: "test"}},
 			desired: []Tag{{Key: "env", Value: "test"}, {Key: "owner", Value: "platform"}},
-			want:    []TagPatch{{Key: "owner", Value: "platform"}},
+			want:    []infra.PatchTag{setTag("owner", "platform")},
 		},
 		{
 			name:    "overwrites a changed value",
 			current: []Tag{{Key: "env", Value: "test"}},
 			desired: []Tag{{Key: "env", Value: "prod"}},
-			want:    []TagPatch{{Key: "env", Value: "prod"}},
+			want:    []infra.PatchTag{setTag("env", "prod")},
 		},
 		{
 			name:    "deletes a removed key with an empty value",
 			current: []Tag{{Key: "env", Value: "test"}, {Key: "owner", Value: "platform"}},
 			desired: []Tag{{Key: "env", Value: "test"}},
-			want:    []TagPatch{{Key: "owner"}},
+			want:    []infra.PatchTag{deleteTag("owner")},
 		},
 		{
 			name:    "clears every tag",
 			current: []Tag{{Key: "b", Value: "2"}, {Key: "a", Value: "1"}},
 			desired: nil,
-			want:    []TagPatch{{Key: "a"}, {Key: "b"}},
+			want:    []infra.PatchTag{deleteTag("a"), deleteTag("b")},
 		},
 		{
 			name:    "is empty when nothing changed",
 			current: []Tag{{Key: "env", Value: "test"}},
 			desired: []Tag{{Key: "env", Value: "test"}},
-			want:    []TagPatch{},
+			want:    []infra.PatchTag{},
 		},
 		{
 			name:    "orders mixed changes by key",
 			current: []Tag{{Key: "gone", Value: "1"}, {Key: "kept", Value: "1"}},
 			desired: []Tag{{Key: "added", Value: "1"}, {Key: "kept", Value: "2"}},
-			want:    []TagPatch{{Key: "added", Value: "1"}, {Key: "gone"}, {Key: "kept", Value: "2"}},
+			want:    []infra.PatchTag{setTag("added", "1"), deleteTag("gone"), setTag("kept", "2")},
 		},
 	}
 
@@ -97,7 +99,7 @@ func TestSameTagsIgnoresOrder(t *testing.T) {
 func TestReconcileTagsIgnoresThePatchEchoAndReadsBack(t *testing.T) {
 	t.Parallel()
 	var mu sync.Mutex
-	var body tagPatchRequest
+	var body infra.PatchTagsRequest
 	patched := false
 	reads := 0
 
@@ -113,7 +115,7 @@ func TestReconcileTagsIgnoresThePatchEchoAndReadsBack(t *testing.T) {
 			patched = true
 			// The gateway echoes only the patch entries, including the
 			// empty-valued deletion. State must not be taken from here.
-			_ = json.NewEncoder(w).Encode(map[string]any{"data": VPC{Name: "test-vpc", Status: "active", Tags: []Tag{{Key: "env", Value: "prod"}, {Key: "owner"}}}})
+			_ = json.NewEncoder(w).Encode(map[string]any{"data": vpcData(VPC{Name: "test-vpc", Status: "active", Tags: []Tag{{Key: "env", Value: "prod"}, {Key: "owner"}}})})
 			return
 		}
 		reads++
@@ -137,7 +139,12 @@ func TestReconcileTagsIgnoresThePatchEchoAndReadsBack(t *testing.T) {
 	current := []Tag{{Key: "env", Value: "test"}, {Key: "owner", Value: "platform"}}
 	desired := []Tag{{Key: "env", Value: "prod"}}
 
-	updated, err := reconcileTags(context.Background(), runtime, "VPC", "test-vpc", "/vpcs/test-vpc", current, desired, read)
+	send := func(ctx context.Context, body infra.PatchTagsRequest) error {
+		return callInfra[infra.VPCResponse](ctx, func(ctx context.Context) (*http.Response, error) {
+			return runtime.infraAPI().PatchVPC(ctx, "test-vpc", &infra.PatchVPCParams{XTenant: runtime.tenant()}, body, runtime.infraEditor())
+		}, nil)
+	}
+	updated, err := reconcileTags(context.Background(), runtime, "VPC", "test-vpc", send, current, desired, read)
 	if err != nil {
 		t.Fatalf("reconcileTags() error = %v", err)
 	}
@@ -147,8 +154,8 @@ func TestReconcileTagsIgnoresThePatchEchoAndReadsBack(t *testing.T) {
 
 	mu.Lock()
 	defer mu.Unlock()
-	want := []TagPatch{{Key: "env", Value: "prod"}, {Key: "owner"}}
-	if !reflect.DeepEqual(body.Tags, want) {
+	want := []infra.PatchTag{setTag("env", "prod"), deleteTag("owner")}
+	if body.Tags == nil || !reflect.DeepEqual(*body.Tags, want) {
 		t.Fatalf("patch body = %#v, want %#v", body.Tags, want)
 	}
 	if reads < 2 {
@@ -167,7 +174,7 @@ func TestReconcileTagsSkipsThePatchWhenNothingChanged(t *testing.T) {
 		if r.Method == http.MethodPatch {
 			patches++
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"data": VPC{Name: "test-vpc", Status: "active", Tags: []Tag{{Key: "env", Value: "test"}}}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": vpcData(VPC{Name: "test-vpc", Status: "active", Tags: []Tag{{Key: "env", Value: "test"}}})})
 	}))
 	t.Cleanup(server.Close)
 
@@ -181,7 +188,11 @@ func TestReconcileTagsSkipsThePatchWhenNothingChanged(t *testing.T) {
 
 	read := func(ctx context.Context) (VPC, error) { return runtime.GetVPC(ctx, "test-vpc") }
 	tags := []Tag{{Key: "env", Value: "test"}}
-	if _, err := reconcileTags(context.Background(), runtime, "VPC", "test-vpc", "/vpcs/test-vpc", tags, tags, read); err != nil {
+	send := func(context.Context, infra.PatchTagsRequest) error {
+		t.Error("send called for an unchanged tag set")
+		return nil
+	}
+	if _, err := reconcileTags(context.Background(), runtime, "VPC", "test-vpc", send, tags, tags, read); err != nil {
 		t.Fatalf("reconcileTags() error = %v", err)
 	}
 	if patches != 0 {

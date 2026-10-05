@@ -3,12 +3,12 @@
 page_title: "asc_volume Resource - asc"
 subcategory: ""
 description: |-
-  Manages a block volume through ASC infra-gateway.
+  Manages an ASC block volume.
 ---
 
 # asc_volume (Resource)
 
-Manages a block volume through ASC infra-gateway.
+Manages an ASC block volume.
 
 ## Example Usage
 
@@ -31,8 +31,8 @@ resource "asc_volume" "example" {
 ### Required
 
 - `access_mode` (String) Access mode of the volume.
-- `name` (String) Name of the volume, which identifies it in infra-gateway.
-- `size` (String) Requested capacity as a Kubernetes quantity, for example "10Gi". A larger value resizes the volume in place; infra-gateway cannot shrink one.
+- `name` (String) Name of the volume.
+- `size` (String) Requested capacity as a Kubernetes quantity, for example "10Gi". Increasing the capacity resizes the volume in place. Shrinking is not supported.
 - `storage_class` (String) Storage class backing the volume.
 
 ### Optional
@@ -41,11 +41,11 @@ resource "asc_volume" "example" {
 
 ### Read-Only
 
-- `annotations` (Map of String) Annotations infra-gateway reports for the volume.
-- `attached_to_vm` (String) Instance id of the virtual machine the volume is attached to, empty when it is detached. infra-gateway reports the machine's uuid here, not its name.
-- `labels` (Map of String) Labels infra-gateway reports for the volume.
-- `last_error` (String) Last error reported by infra-gateway, empty when there is none.
-- `size_bytes` (Number) Capacity in bytes. infra-gateway may echo back a different but numerically equal spelling of size, so this is the value to compare against.
-- `status` (String) Lifecycle status reported by infra-gateway.
+- `annotations` (Map of String) Annotations of the volume.
+- `attached_to_vm` (String) UUID of the virtual machine the volume is attached to, empty when detached.
+- `labels` (Map of String) Labels of the volume.
+- `last_error` (String) Last error reported for the volume, empty when there is none.
+- `size_bytes` (Number) Capacity in bytes. The reported size may use a different but numerically equal spelling of size, so this is the value to compare against.
+- `status` (String) Current lifecycle status.
 - `urn` (String) URN of the volume, which carries its uuid.
-- `volume_mode` (String) Volume mode reported by infra-gateway.
+- `volume_mode` (String) Volume mode.

@@ -3,12 +3,12 @@
 page_title: "asc_volume Data Source - asc"
 subcategory: ""
 description: |-
-  Reads a block volume from ASC infra-gateway.
+  Reads an ASC block volume.
 ---
 
 # asc_volume (Data Source)
 
-Reads a block volume from ASC infra-gateway.
+Reads an ASC block volume.
 
 ## Example Usage
 
@@ -27,19 +27,19 @@ output "volume_size_bytes" {
 
 ### Required
 
-- `name` (String) Name of the volume, which identifies it in infra-gateway.
+- `name` (String) Name of the volume.
 
 ### Read-Only
 
 - `access_mode` (String) Access mode of the volume.
-- `annotations` (Map of String) Annotations infra-gateway reports for the volume.
-- `attached_to_vm` (String) Instance id of the virtual machine the volume is attached to, empty when it is detached. infra-gateway reports the machine's uuid here, not its name.
-- `labels` (Map of String) Labels infra-gateway reports for the volume.
-- `last_error` (String) Last error reported by infra-gateway, empty when there is none.
-- `size` (String) Capacity as infra-gateway spells it, for example "10Gi".
-- `size_bytes` (Number) Capacity in bytes. infra-gateway may spell an equal size differently between reads, so this is the value to compare against.
-- `status` (String) Lifecycle status reported by infra-gateway.
+- `annotations` (Map of String) Annotations of the volume.
+- `attached_to_vm` (String) UUID of the virtual machine the volume is attached to, empty when detached.
+- `labels` (Map of String) Labels of the volume.
+- `last_error` (String) Last error reported for the volume, empty when there is none.
+- `size` (String) Reported capacity, for example "10Gi".
+- `size_bytes` (Number) Capacity in bytes. The reported size may use equivalent spellings between reads, so this is the value to compare against.
+- `status` (String) Current lifecycle status.
 - `storage_class` (String) Storage class backing the volume.
 - `tags` (Map of String) Tags applied to the volume.
 - `urn` (String) URN of the volume, which carries its uuid.
-- `volume_mode` (String) Volume mode reported by infra-gateway.
+- `volume_mode` (String) Volume mode.

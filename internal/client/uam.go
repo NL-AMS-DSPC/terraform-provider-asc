@@ -4,31 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"slices"
 	"strings"
+
+	"github.com/nl-ams-dspc/terraform-provider-asc/internal/asc/uam"
 )
-
-const (
-	tenantsPath      = "/v1/tenants"
-	tenantGroupsPath = "/v1/tenants/groups"
-)
-
-// Role writes and collection reads resolve the tenant client ID, which is the configured
-// namespace.
-func (c *Runtime) tenantRolesPath() string {
-	return tenantsPath + "/" + escapedPathSegment(c.config.Namespace) + "/roles"
-}
-
-// roleReadPath uses the tenant UUID because UAM GetTenantRole forwards that segment
-// unchanged to authorization. Other role routes translate the namespace to a UUID. Revisit
-// this workaround if GetTenantRole starts translating it too.
-func (c *Runtime) roleReadPath(ctx context.Context, name string) (string, error) {
-	tenant, err := c.tenantUUID(ctx)
-	if err != nil {
-		return "", err
-	}
-	return tenantsPath + "/" + escapedPathSegment(tenant) + "/roles/" + escapedPathSegment(name), nil
-}
 
 // tenantUUID caches the namespace lookup for this provider instance. The credentials need
 // uam:GetTenant.
@@ -39,15 +20,21 @@ func (c *Runtime) tenantUUID(ctx context.Context) (string, error) {
 		return c.tenantID, nil
 	}
 
-	var tenant tenantResponse
-	if err := c.get(ctx, svcUAM, tenantsPath+"/"+escapedPathSegment(c.config.Namespace), &tenant); err != nil {
+	var tenant uam.TenantResponse
+	if err := callUAM(ctx, func(ctx context.Context) (*http.Response, error) {
+		if err := checkSegments(c.config.Namespace); err != nil {
+			return nil, err
+		}
+		return c.uamAPI().GetTenant(ctx, c.config.Namespace, c.uamEditor())
+	}, &tenant); err != nil {
 		return "", fmt.Errorf("resolve tenant %q: %w", c.config.Namespace, err)
 	}
-	if tenant.ID == "" {
+	id := value(tenant.ID)
+	if id == "" {
 		return "", fmt.Errorf("resolve tenant %q: UAM reported no tenant id", c.config.Namespace)
 	}
 
-	c.tenantID = tenant.ID
+	c.tenantID = id
 	return c.tenantID, nil
 }
 
@@ -77,57 +64,6 @@ type GroupMember struct {
 	Type    string
 }
 
-// tenantResponse carries the Keycloak client UUID required by the role item route.
-type tenantResponse struct {
-	ID string `json:"id"`
-}
-
-// Role writes use actions; item reads use composites. List responses omit both.
-type roleResponse struct {
-	ID          string   `json:"id"`
-	URN         string   `json:"urn"`
-	Name        string   `json:"name"`
-	Description string   `json:"description"`
-	Composites  []string `json:"composites"`
-}
-
-type createRoleRequest struct {
-	Name    string   `json:"name"`
-	Actions []string `json:"actions"`
-}
-
-// updateRoleRequest carries the role's database uuid because UAM validates it
-// as required and upserts on it.
-type updateRoleRequest struct {
-	ID      string   `json:"id"`
-	Name    string   `json:"name"`
-	Actions []string `json:"actions"`
-}
-
-type groupResponse struct {
-	ID          string                `json:"id"`
-	URN         string                `json:"urn"`
-	Name        string                `json:"name"`
-	TenantID    string                `json:"tenantId"`
-	Description string                `json:"description"`
-	Members     []groupMemberResponse `json:"members"`
-}
-
-type groupMemberResponse struct {
-	Name    string `json:"name"`
-	Enabled bool   `json:"enabled"`
-	Type    string `json:"type"`
-}
-
-// groupListResponse is the only UAM collection that is not a bare array.
-type groupListResponse struct {
-	Groups []groupResponse `json:"groups"`
-}
-
-type createGroupRequest struct {
-	GroupName string `json:"groupName"`
-}
-
 // GetRole checks existence through the list, then reads actions from the item route.
 // Missing item reads return an ambiguous 502.
 func (c *Runtime) GetRole(ctx context.Context, name string) (Role, error) {
@@ -135,24 +71,40 @@ func (c *Runtime) GetRole(ctx context.Context, name string) (Role, error) {
 		return Role{}, err
 	}
 
-	path, err := c.roleReadPath(ctx, name)
+	// The item read uses the tenant UUID because UAM GetTenantRole forwards that segment
+	// unchanged to authorization. Other role routes translate the namespace to a UUID.
+	// Revisit this workaround if GetTenantRole starts translating it too.
+	tenant, err := c.tenantUUID(ctx)
 	if err != nil {
 		return Role{}, fmt.Errorf("read role %q: %w", name, err)
 	}
 
-	var detail roleResponse
-	if err := c.get(ctx, svcUAM, path, &detail); err != nil {
+	// Role writes use actions; item reads use composites. List responses omit both.
+	var detail uam.RoleResponse
+	if err := callUAM(ctx, func(ctx context.Context) (*http.Response, error) {
+		if err := checkSegments(tenant, name); err != nil {
+			return nil, err
+		}
+		return c.uamAPI().GetTenantRole(ctx, tenant, name, c.uamEditor())
+	}, &detail); err != nil {
 		return Role{}, fmt.Errorf("read role %q: %w", name, err)
 	}
 
-	actions := slices.Clone(detail.Composites)
+	actions := slices.Clone(value(detail.Composites))
 	slices.Sort(actions)
-	return Role{URN: detail.URN, Name: name, Actions: actions}, nil
+	return Role{URN: value(detail.Urn), Name: name, Actions: actions}, nil
 }
 
 // CreateRole reads back the role because creation returns only an acknowledgement.
 func (c *Runtime) CreateRole(ctx context.Context, name string, actions []string) (Role, error) {
-	if err := c.post(ctx, svcUAM, c.tenantRolesPath(), createRoleRequest{Name: name, Actions: actions}); err != nil {
+	// Actions is always set so the wire body keeps "actions" even when it is empty or null.
+	request := uam.CreateTenantRoleJSONRequestBody{Name: name, Actions: &actions}
+	if err := callUAM[struct{}](ctx, func(ctx context.Context) (*http.Response, error) {
+		if err := checkSegments(c.config.Namespace); err != nil {
+			return nil, err
+		}
+		return c.uamAPI().CreateTenantRole(ctx, c.config.Namespace, request, c.uamEditor())
+	}, nil); err != nil {
 		return Role{}, fmt.Errorf("create role %q: %w", name, err)
 	}
 	return c.GetRole(ctx, name)
@@ -166,8 +118,15 @@ func (c *Runtime) UpdateRole(ctx context.Context, name string, actions []string)
 		return Role{}, err
 	}
 
-	request := updateRoleRequest{ID: id, Name: name, Actions: actions}
-	if err := c.put(ctx, svcUAM, c.tenantRolesPath()+"/"+escapedPathSegment(name), request); err != nil {
+	// The body carries the role's database uuid because UAM validates it as required and
+	// upserts on it. Name and actions are always set; group_id is never sent.
+	request := uam.UpdateTenantRoleJSONRequestBody{ID: id, Name: &name, Actions: &actions}
+	if err := callUAM[struct{}](ctx, func(ctx context.Context) (*http.Response, error) {
+		if err := checkSegments(c.config.Namespace, name); err != nil {
+			return nil, err
+		}
+		return c.uamAPI().UpdateTenantRole(ctx, c.config.Namespace, name, request, c.uamEditor())
+	}, nil); err != nil {
 		return Role{}, fmt.Errorf("update role %q: %w", name, err)
 	}
 	return c.GetRole(ctx, name)
@@ -183,22 +142,38 @@ func (c *Runtime) DeleteRole(ctx context.Context, name string) error {
 		return err
 	}
 
-	if err := c.delete(ctx, svcUAM, c.tenantRolesPath()+"/"+escapedPathSegment(name)); err != nil {
+	if err := callUAM[struct{}](ctx, func(ctx context.Context) (*http.Response, error) {
+		if err := checkSegments(c.config.Namespace, name); err != nil {
+			return nil, err
+		}
+		return c.uamAPI().DeleteTenantRole(ctx, c.config.Namespace, name, c.uamEditor())
+	}, nil); err != nil {
 		return fmt.Errorf("delete role %q: %w", name, err)
 	}
 	return nil
 }
 
 // roleID returns the database uuid the list route records for a role name, and
-// ErrResourceNotFound when the tenant has no such role.
+// ErrResourceNotFound when the tenant has no such role. No list parameters are sent.
 func (c *Runtime) roleID(ctx context.Context, name string) (string, error) {
-	var roles []roleResponse
-	if err := c.get(ctx, svcUAM, c.tenantRolesPath(), &roles); err != nil {
+	var roles []uam.RoleResponse
+	if err := callUAM(ctx, func(ctx context.Context) (*http.Response, error) {
+		if err := checkSegments(c.config.Namespace); err != nil {
+			return nil, err
+		}
+		return c.uamAPI().ListTenantRoles(ctx, c.config.Namespace, nil, c.uamEditor())
+	}, &roles); err != nil {
 		return "", fmt.Errorf("list roles: %w", err)
 	}
+	// A malformed collection cannot prove that a managed role is absent.
+	for i, role := range roles {
+		if value(role.Name) == "" {
+			return "", fmt.Errorf("list roles: role at index %d has no name", i)
+		}
+	}
 	for _, role := range roles {
-		if role.Name == name {
-			return role.ID, nil
+		if value(role.Name) == name {
+			return value(role.ID), nil
 		}
 	}
 	return "", ErrResourceNotFound
@@ -211,25 +186,40 @@ func (c *Runtime) GetGroup(ctx context.Context, name string) (Group, error) {
 		return Group{}, err
 	}
 
-	var detail groupResponse
-	if err := c.get(ctx, svcUAM, tenantGroupsPath+"/"+escapedPathSegment(name), &detail); err != nil {
+	var detail uam.GroupResponse
+	if err := callUAM(ctx, func(ctx context.Context) (*http.Response, error) {
+		if err := checkSegments(name); err != nil {
+			return nil, err
+		}
+		return c.uamAPI().GetTenantGroup(ctx, name, c.uamEditor())
+	}, &detail); err != nil {
 		return Group{}, fmt.Errorf("read group %q: %w", name, err)
 	}
 
-	members := make([]GroupMember, 0, len(detail.Members))
-	for _, member := range detail.Members {
-		members = append(members, GroupMember(member))
+	listed := value(detail.Members)
+	members := make([]GroupMember, 0, len(listed))
+	for _, member := range listed {
+		members = append(members, GroupMember{Name: value(member.Name), Enabled: value(member.Enabled), Type: value(member.Type)})
 	}
 	// UAM returns users and API clients in directory order; sort for stable Terraform state.
 	slices.SortFunc(members, func(a, b GroupMember) int { return strings.Compare(a.Name, b.Name) })
 
-	return Group{ID: summary.ID, URN: detail.URN, Name: name, Description: summary.Description, Members: members}, nil
+	return Group{
+		ID:          value(summary.ID),
+		URN:         value(detail.Urn),
+		Name:        name,
+		Description: value(summary.Description),
+		Members:     members,
+	}, nil
 }
 
 // CreateGroup checks the list after a failure because UAM reports duplicate names as an
 // untyped 502.
 func (c *Runtime) CreateGroup(ctx context.Context, name string) (Group, error) {
-	if err := c.post(ctx, svcUAM, tenantGroupsPath, createGroupRequest{GroupName: name}); err != nil {
+	request := uam.CreateTenantGroupJSONRequestBody{GroupName: name}
+	if err := callUAM[struct{}](ctx, func(ctx context.Context) (*http.Response, error) {
+		return c.uamAPI().CreateTenantGroup(ctx, request, c.uamEditor())
+	}, nil); err != nil {
 		if _, lookupErr := c.groupSummary(ctx, name); lookupErr == nil {
 			return Group{}, fmt.Errorf("create group %q: the name is already in use for this tenant: %w", name, err)
 		}
@@ -247,22 +237,39 @@ func (c *Runtime) DeleteGroup(ctx context.Context, name string) error {
 		return err
 	}
 
-	if err := c.delete(ctx, svcUAM, tenantGroupsPath+"/"+escapedPathSegment(name)); err != nil {
+	if err := callUAM[struct{}](ctx, func(ctx context.Context) (*http.Response, error) {
+		if err := checkSegments(name); err != nil {
+			return nil, err
+		}
+		return c.uamAPI().DeleteTenantGroup(ctx, name, c.uamEditor())
+	}, nil); err != nil {
 		return fmt.Errorf("delete group %q: %w", name, err)
 	}
 	return nil
 }
 
-// groupSummary resolves existence from the collection read.
-func (c *Runtime) groupSummary(ctx context.Context, name string) (groupResponse, error) {
-	var list groupListResponse
-	if err := c.get(ctx, svcUAM, tenantGroupsPath, &list); err != nil {
-		return groupResponse{}, fmt.Errorf("list groups: %w", err)
+// groupSummary resolves existence from the collection read. The group list is the only
+// UAM collection that is not a bare array.
+func (c *Runtime) groupSummary(ctx context.Context, name string) (uam.GroupResponse, error) {
+	var list uam.GroupListResponse
+	if err := callUAM(ctx, func(ctx context.Context) (*http.Response, error) {
+		return c.uamAPI().ListTenantGroups(ctx, c.uamEditor())
+	}, &list); err != nil {
+		return uam.GroupResponse{}, fmt.Errorf("list groups: %w", err)
 	}
-	for _, group := range list.Groups {
-		if group.Name == name {
+	if list.Groups == nil {
+		return uam.GroupResponse{}, fmt.Errorf("list groups: expected a non-null groups array")
+	}
+	// Validate every entry before deciding that a managed group is absent.
+	for i, group := range *list.Groups {
+		if value(group.Name) == "" {
+			return uam.GroupResponse{}, fmt.Errorf("list groups: group at index %d has no name", i)
+		}
+	}
+	for _, group := range *list.Groups {
+		if value(group.Name) == name {
 			return group, nil
 		}
 	}
-	return groupResponse{}, ErrResourceNotFound
+	return uam.GroupResponse{}, ErrResourceNotFound
 }

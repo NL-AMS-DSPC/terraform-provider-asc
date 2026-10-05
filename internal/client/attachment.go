@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
+
+	"github.com/nl-ams-dspc/terraform-provider-asc/internal/asc/infra"
 )
 
 const (
@@ -62,7 +65,13 @@ func (c *Runtime) AttachVolume(ctx context.Context, volumeName, vmName string) (
 		return Volume{}, fmt.Errorf("attach volume %q to VM %q: %w", volumeName, vmName, err)
 	}
 
-	if err := c.post(operationCtx, svcInfraGateway, attachmentPath(volumeName, vmName), nil); err != nil {
+	err = callInfra[infra.AttachVolumeResponse](operationCtx, func(ctx context.Context) (*http.Response, error) {
+		if err := checkSegments(volumeName, vmName); err != nil {
+			return nil, err
+		}
+		return c.infraAPI().AttachVolume(ctx, volumeName, vmName, &infra.AttachVolumeParams{XTenant: c.tenant()}, c.infraEditor())
+	}, nil)
+	if err != nil {
 		return Volume{}, fmt.Errorf("attach volume %q to VM %q: %w", volumeName, vmName, err)
 	}
 	return waitUntil(operationCtx, c, attachmentKind, attachmentName(volumeName, vmName), c.volumeReader(volumeName),
@@ -77,7 +86,13 @@ func (c *Runtime) DetachVolume(ctx context.Context, volumeName, vmName string) e
 	operationCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
 	defer cancel()
 
-	if err := c.delete(operationCtx, svcInfraGateway, attachmentPath(volumeName, vmName)); err != nil {
+	err := callInfra[infra.DetachVolumeResponse](operationCtx, func(ctx context.Context) (*http.Response, error) {
+		if err := checkSegments(volumeName, vmName); err != nil {
+			return nil, err
+		}
+		return c.infraAPI().DetachVolume(ctx, volumeName, vmName, &infra.DetachVolumeParams{XTenant: c.tenant()}, c.infraEditor())
+	}, nil)
+	if err != nil {
 		if errors.Is(err, ErrResourceNotFound) {
 			return nil
 		}
@@ -121,10 +136,6 @@ func (c *Runtime) GetVolumeAttachment(ctx context.Context, volumeName, vmName st
 		return Volume{}, fmt.Errorf("%w: volume %q is not attached to VM %q", ErrResourceNotFound, volumeName, vmName)
 	}
 	return current, nil
-}
-
-func attachmentPath(volumeName, vmName string) string {
-	return volumePath(volumeName) + "/attach/" + escapedPathSegment(vmName)
 }
 
 func attachmentName(volumeName, vmName string) string {

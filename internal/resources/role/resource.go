@@ -53,20 +53,17 @@ func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, res
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages a role in the configured UAM tenant.",
+		Description: "Manages a role in the configured tenant.",
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
-				Description: "Name of the role, which is also its identity. UAM's update addresses a " +
-					"role by the name in the request body, so a role cannot be renamed and a new name " +
-					"replaces it.",
+				Description:   "Name of the role. Changing the name replaces the role.",
 				Required:      true,
 				Validators:    []validator.String{stringvalidator.LengthBetween(1, 50)},
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"urn": schema.StringAttribute{Description: "Resource identifier of the role.", Computed: true},
 			"actions": schema.SetAttribute{
-				Description: "Actions the role grants. UAM accepts them as \"actions\" and reports them " +
-					"back as \"composites\"; the order is not preserved, so this is a set.",
+				Description: "Actions the role grants, as an unordered set.",
 				Required:    true,
 				ElementType: types.StringType,
 				Validators:  []validator.Set{setvalidator.SizeBetween(1, 50)},

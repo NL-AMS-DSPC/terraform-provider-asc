@@ -34,13 +34,13 @@ func TestCreateVMGroupSendsTheGatewayRequestShape(t *testing.T) {
 			w.WriteHeader(http.StatusCreated)
 			return
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"data": VMGroup{Name: "test-group", Status: "active"}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": vmGroupData(VMGroup{Name: "test-group", Status: "active"})})
 	})
 
 	if _, err := runtime.CreateVMGroup(context.Background(), vmGroupRequest()); err != nil {
 		t.Fatalf("CreateVMGroup() error = %v", err)
 	}
-	if got := path.Load(); got != "/api/infra-gateway/vm-groups/" {
+	if got := path.Load(); got != "/api/infra-gateway/vm-groups" {
 		t.Fatalf("create path = %v", got)
 	}
 	for key, want := range map[string]any{"name": "test-group", "skuID": "gp-2", "vpcID": "00000000-0000-4000-8000-000000000001", "image": "ubuntu-24.04"} {
@@ -78,7 +78,7 @@ func TestCreateVMGroupOmitsAnAbsentCronRule(t *testing.T) {
 			w.WriteHeader(http.StatusCreated)
 			return
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"data": VMGroup{Name: "test-group", Status: "active"}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": vmGroupData(VMGroup{Name: "test-group", Status: "active"})})
 	})
 
 	request := vmGroupRequest()
@@ -105,9 +105,9 @@ func TestCreateVMGroupWaitsForTheGroupToAppear(t *testing.T) {
 		case 1:
 			w.WriteHeader(http.StatusNotFound)
 		case 2:
-			_ = json.NewEncoder(w).Encode(map[string]any{"data": VMGroup{Name: "test-group", Status: "pending"}})
+			_ = json.NewEncoder(w).Encode(map[string]any{"data": vmGroupData(VMGroup{Name: "test-group", Status: "pending"})})
 		default:
-			_ = json.NewEncoder(w).Encode(map[string]any{"data": VMGroup{Name: "test-group", Status: "active"}})
+			_ = json.NewEncoder(w).Encode(map[string]any{"data": vmGroupData(VMGroup{Name: "test-group", Status: "active"})})
 		}
 	})
 
@@ -161,7 +161,7 @@ func TestCreateVMGroupReportsAGenuineConflict(t *testing.T) {
 			w.WriteHeader(http.StatusConflict)
 			return
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"data": VMGroup{Name: "test-group", Status: "active"}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": vmGroupData(VMGroup{Name: "test-group", Status: "active"})})
 	})
 
 	_, err := runtime.CreateVMGroup(context.Background(), vmGroupRequest())
@@ -177,7 +177,7 @@ func TestCreateVMGroupSurfacesTerminalError(t *testing.T) {
 			w.WriteHeader(http.StatusCreated)
 			return
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"data": VMGroup{Name: "test-group", Status: "error", LastError: "no capacity for the requested SKU"}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": vmGroupData(VMGroup{Name: "test-group", Status: "error", LastError: "no capacity for the requested SKU"})})
 	})
 
 	_, err := runtime.CreateVMGroup(context.Background(), vmGroupRequest())
@@ -233,7 +233,7 @@ func TestDeleteVMGroupWaitsForAuthoritativeAbsence(t *testing.T) {
 			return
 		}
 		if gets.Add(1) == 1 {
-			_ = json.NewEncoder(w).Encode(map[string]any{"data": VMGroup{Name: "test-group", Status: "deleting"}})
+			_ = json.NewEncoder(w).Encode(map[string]any{"data": vmGroupData(VMGroup{Name: "test-group", Status: "deleting"})})
 			return
 		}
 		w.WriteHeader(http.StatusNotFound)

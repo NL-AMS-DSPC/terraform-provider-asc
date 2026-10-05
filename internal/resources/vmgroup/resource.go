@@ -120,7 +120,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 	}
 
 	resp.Schema = schema.Schema{
-		Description: "Manages a virtual machine group through ASC infra-gateway.",
+		Description: "Manages an ASC virtual machine group.",
 		Attributes: map[string]schema.Attribute{
 			"urn": schema.StringAttribute{Computed: true},
 			"name": schema.StringAttribute{
@@ -144,8 +144,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			// The gateway never returns image, so it cannot be Computed.
 			"image": schema.StringAttribute{Optional: true, PlanModifiers: replaceString},
 			"autoscaling": schema.SingleNestedAttribute{
-				Description: "Scaling bounds of the group. infra-gateway has no update route for a " +
-					"group's policy, so any change replaces the group.",
+				Description:   "Scaling bounds of the group. Changing the policy replaces the group.",
 				Required:      true,
 				PlanModifiers: []planmodifier.Object{objectplanmodifier.RequiresReplace()},
 				Attributes: map[string]schema.Attribute{
@@ -176,9 +175,8 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplace()},
 			},
 			"attached_volumes": schema.ListAttribute{
-				Description: "Names of the volumes attached to the group, sorted; the gateway does " +
-					"not report them in a stable order.",
-				Computed: true, ElementType: types.StringType,
+				Description: "Names of the volumes attached to the group, sorted.",
+				Computed:    true, ElementType: types.StringType,
 			},
 			"customization": schema.SingleNestedAttribute{
 				Optional: true, Sensitive: true,

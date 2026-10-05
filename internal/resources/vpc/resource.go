@@ -81,7 +81,7 @@ func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, res
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages a VPC through ASC infra-gateway.",
+		Description: "Manages an ASC VPC.",
 		Attributes: map[string]schema.Attribute{
 			"id":         schema.StringAttribute{Computed: true},
 			"urn":        schema.StringAttribute{Computed: true},
@@ -110,9 +110,8 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				Validators: []validator.List{listvalidator.SizeAtLeast(1)},
 			},
 			"tags": schema.MapAttribute{
-				Description: "Tags applied to the VPC. infra-gateway patches VPC tags in place, " +
-					"so changing them does not replace the VPC. The tags on an inline subnet are " +
-					"part of the replacement-forcing subnets list.",
+				Description: "Tags applied to the VPC. Changing these tags updates the VPC in place. " +
+					"Changing tags on an inline subnet replaces the VPC.",
 				Optional:    true,
 				ElementType: types.StringType,
 			},

@@ -5,18 +5,21 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"reflect"
 	"strings"
 	"sync/atomic"
 	"testing"
+
+	"github.com/nl-ams-dspc/terraform-provider-asc/internal/asc/infra"
 )
 
 func TestCreateVolumeWaitsUntilProvisioningSettles(t *testing.T) {
 	t.Parallel()
 	var posts, gets atomic.Int64
-	var body CreateVolumeRequest
+	var body infra.CreateVolumeRequest
 	runtime := newLifecycleRuntime(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
-		case r.Method == http.MethodPost && r.URL.Path == "/api/infra-gateway/volumes/":
+		case r.Method == http.MethodPost && r.URL.Path == "/api/infra-gateway/volumes":
 			posts.Add(1)
 			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 				t.Errorf("decode create body: %v", err)
@@ -47,8 +50,8 @@ func TestCreateVolumeWaitsUntilProvisioningSettles(t *testing.T) {
 	if gets.Load() != 2 {
 		t.Fatalf("GET count = %d, want 2 (creating, then settled)", gets.Load())
 	}
-	want := CreateVolumeRequest{Name: "data", Size: "10Gi", StorageClass: "standard", AccessMode: "ReadWriteOnce", Tags: []Tag{{Key: "env", Value: "test"}}}
-	if body.Name != want.Name || body.Size != want.Size || body.StorageClass != want.StorageClass || body.AccessMode != want.AccessMode || len(body.Tags) != 1 || body.Tags[0] != want.Tags[0] {
+	want := infra.CreateVolumeRequest{Name: "data", Size: "10Gi", StorageClass: "standard", AccessMode: "ReadWriteOnce", Tags: &[]infra.Tag{{Key: "env", Value: "test"}}}
+	if body.Name != want.Name || body.Size != want.Size || body.StorageClass != want.StorageClass || body.AccessMode != want.AccessMode || body.Tags == nil || len(*body.Tags) != 1 || (*body.Tags)[0] != (*want.Tags)[0] {
 		t.Fatalf("create body = %#v, want %#v", body, want)
 	}
 }
@@ -88,7 +91,7 @@ func TestGetVolumeReportsAbsenceAsNotFound(t *testing.T) {
 
 func TestResizeVolumePostsSizeAndWaitsForTheNewByteCount(t *testing.T) {
 	t.Parallel()
-	var body resizeVolumeRequest
+	var body infra.ResizeVolumeRequest
 	var gets atomic.Int64
 	runtime := newLifecycleRuntime(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -124,7 +127,7 @@ func TestResizeVolumePostsSizeAndWaitsForTheNewByteCount(t *testing.T) {
 
 func TestUpdateVolumeTagsSendsTheComputedPatchAndReadsBack(t *testing.T) {
 	t.Parallel()
-	var patch tagPatchRequest
+	var patch infra.PatchTagsRequest
 	desired := []Tag{{Key: "env", Value: "test"}, {Key: "owner", Value: "platform"}}
 	runtime := newLifecycleRuntime(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
@@ -151,14 +154,9 @@ func TestUpdateVolumeTagsSendsTheComputedPatchAndReadsBack(t *testing.T) {
 	}
 	// The gateway patches rather than replaces, so the removed key travels as an
 	// explicit empty value and the unchanged keys are left out.
-	want := []TagPatch{{Key: "env", Value: "test"}, {Key: "owner", Value: "platform"}, {Key: "stale"}}
-	if len(patch.Tags) != len(want) {
+	want := []infra.PatchTag{setTag("env", "test"), setTag("owner", "platform"), deleteTag("stale")}
+	if patch.Tags == nil || !reflect.DeepEqual(*patch.Tags, want) {
 		t.Fatalf("patch = %#v, want %#v", patch.Tags, want)
-	}
-	for i, entry := range want {
-		if patch.Tags[i] != entry {
-			t.Fatalf("patch = %#v, want %#v", patch.Tags, want)
-		}
 	}
 	if !sameTags(updated.Tags, desired) {
 		t.Fatalf("UpdateVolumeTags() tags = %#v, want %#v", updated.Tags, desired)
@@ -263,6 +261,9 @@ func TestParseQuantity(t *testing.T) {
 }
 
 func writeVolumeData(w http.ResponseWriter, status int, value any) {
+	if volume, ok := value.(Volume); ok {
+		value = volumeData(volume)
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(map[string]any{"data": value})

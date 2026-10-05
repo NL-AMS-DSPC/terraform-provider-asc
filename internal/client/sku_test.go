@@ -36,10 +36,10 @@ func TestListSKUsContract(t *testing.T) {
 		tenant = r.Header.Get("X-Tenant")
 
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{"data": []SKU{{
-			ID: "sku-1", Name: "gp-small", Family: "general-purpose",
-			Threads: 2, Cores: 1, MemoryInMB: 2048, StorageInGB: 40,
-			StorageType: "standard", GPUCount: 1, GPUType: "nvidia-a100",
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": []map[string]any{{
+			"id": "sku-1", "name": "gp-small", "family": "general-purpose",
+			"threads": 2, "cores": 1, "memoryInMB": 2048, "storageInGB": 40,
+			"storageType": "standard", "GPUCount": 1, "GPUType": "nvidia-a100",
 		}}})
 	})
 
@@ -48,8 +48,8 @@ func TestListSKUsContract(t *testing.T) {
 		t.Fatalf("ListSKUs: %v", err)
 	}
 
-	if path != "GET /api/infra-gateway/skus/" {
-		t.Errorf("request = %q, want GET /api/infra-gateway/skus/", path)
+	if path != "GET /api/infra-gateway/skus" {
+		t.Errorf("request = %q, want GET /api/infra-gateway/skus", path)
 	}
 	if authorization != "Bearer token" {
 		t.Errorf("Authorization = %q", authorization)

@@ -43,7 +43,7 @@ func (g *composedGateway) handlers() map[string]http.HandlerFunc {
 	const vpcID = "00000000-0000-4000-8000-000000000001"
 
 	return map[string]http.HandlerFunc{
-		"POST /api/infra-gateway/vpcs/": func(w http.ResponseWriter, _ *http.Request) {
+		"POST /api/infra-gateway/vpcs": func(w http.ResponseWriter, _ *http.Request) {
 			g.mu.Lock()
 			defer g.mu.Unlock()
 			g.vpcPresent = true
@@ -73,7 +73,7 @@ func (g *composedGateway) handlers() map[string]http.HandlerFunc {
 			writeData(w, http.StatusOK, map[string]string{"deleted": "composed-vpc"})
 		},
 
-		"POST /api/infra-gateway/vms/": func(w http.ResponseWriter, _ *http.Request) {
+		"POST /api/infra-gateway/vms": func(w http.ResponseWriter, _ *http.Request) {
 			g.mu.Lock()
 			defer g.mu.Unlock()
 			g.vmPresent = true
@@ -104,7 +104,7 @@ func (g *composedGateway) handlers() map[string]http.HandlerFunc {
 			writeData(w, http.StatusOK, map[string]string{"deleted": "composed-vm"})
 		},
 
-		"POST /api/infra-gateway/volumes/": func(w http.ResponseWriter, _ *http.Request) {
+		"POST /api/infra-gateway/volumes": func(w http.ResponseWriter, _ *http.Request) {
 			g.mu.Lock()
 			defer g.mu.Unlock()
 			g.volumePresent = true
