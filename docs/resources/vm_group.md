@@ -20,7 +20,7 @@ resource "asc_vm_group" "example" {
   name   = "example-group"
   sku_id = "gp-2"
   vpc_id = asc_vpc.example.id
-  image  = "ubuntu-24.04-lts"
+  image  = "vm-images/ubuntu:24.04"
 
   boot_disk_size_gb = 32
 
@@ -56,7 +56,7 @@ resource "asc_vm_group" "example" {
 
 - `boot_disk_size_gb` (Number) Size in GB of the boot disk created for each machine. Defaults to 32. ASC never returns it, so the configured value is kept in state; state written before this attribute existed counts as 32. Changing it replaces the group.
 - `customization` (Attributes, Sensitive) First-boot customization of the group, as cloud-init or Ignition data. Sensitive: The gateway never returns it, so the configured value is kept in state. Changing it replaces the group. (see [below for nested schema](#nestedatt--customization))
-- `image` (String) Identifier of the operating system image, for example ubuntu-24.04-lts. When omitted, the provider requests ubuntu-24.04-lts. The gateway never returns it, so the configured value is kept in state. Changing it replaces the group.
+- `image` (String) Identifier of the operating system image, for example vm-images/ubuntu:24.04. When omitted, the provider requests vm-images/ubuntu:24.04. The gateway never returns it, so the configured value is kept in state. Changing it replaces the group.
 - `tags` (Map of String) Tags applied to the group. The gateway cannot patch group tags, so changing them replaces the group.
 
 ### Read-Only

@@ -319,7 +319,7 @@ func TestVirtualMachineProvisioningSendsTheConfiguredBootDiskSize(t *testing.T) 
 	vm := client.VM{
 		URN: "asc:vm:test-vm", Name: "test-vm", VPCID: "00000000-0000-4000-8000-000000000001",
 		SKU: client.SKU{ID: "gp-2", Name: "general-purpose"}, Status: "active",
-		OS: client.OS{ID: "ubuntu-24.04-lts", Family: "linux", Distribution: "ubuntu", Release: "24.04", DisplayName: "Ubuntu 24.04 LTS"},
+		OS: client.OS{ID: "vm-images/ubuntu:24.04", Family: "linux", Distribution: "ubuntu", Release: "24.04", DisplayName: "Ubuntu 24.04 LTS"},
 	}
 	var deleted atomic.Bool
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
@@ -353,7 +353,7 @@ resource "asc_virtual_machine" "test" {
 				// No image configured: the default goes in bootDisk only, so an older
 				// gateway keeps choosing its own default.
 				checkCreateBody(environment, "/api/infra-gateway/vms", map[string]any{
-					"bootDisk.attachMode": "create", "bootDisk.image": "ubuntu-24.04-lts", "bootDisk.diskSizeGB": float64(64),
+					"bootDisk.attachMode": "create", "bootDisk.image": "vm-images/ubuntu:24.04", "bootDisk.diskSizeGB": float64(64),
 					"image": nil,
 				}),
 			),

@@ -20,8 +20,8 @@ resource "asc_virtual_machine" "example" {
   sku_id = "gp-2"
   vpc_id = asc_vpc.example.id
 
-  # Optional: ubuntu-24.04-lts when omitted.
-  image = "ubuntu-24.04-lts"
+  # Optional: vm-images/ubuntu:24.04 when omitted.
+  image = "vm-images/ubuntu:24.04"
 
   # Optional: size of the boot disk in GB, 32 when omitted.
   boot_disk_size_gb = 32
@@ -48,7 +48,7 @@ resource "asc_virtual_machine" "example" {
 - `boot_disk_size_gb` (Number) Size in GB of the boot disk created for each machine. Defaults to 32. ASC never returns it, so the configured value is kept in state; state written before this attribute existed counts as 32. Changing it replaces the virtual machine.
 - `customization` (Attributes, Sensitive) First-boot customization of the virtual machine, as cloud-init or Ignition data. Sensitive: ASC never returns it on reads, so the configured value is kept in state and cannot be recovered by import. Changing it replaces the virtual machine. (see [below for nested schema](#nestedatt--customization))
 - `enable_logging` (Boolean) Whether platform logging is enabled for the virtual machine. Keeps its prior value when omitted. Changing the configured value replaces the machine.
-- `image` (String) Identifier of the operating system image, for example ubuntu-24.04-lts. When omitted, the provider requests ubuntu-24.04-lts and the resolved identifier is recorded in state. Changing the configured value replaces the machine.
+- `image` (String) Identifier of the operating system image, for example vm-images/ubuntu:24.04. When omitted, the provider requests vm-images/ubuntu:24.04 and the resolved identifier is recorded in state. Changing the configured value replaces the machine.
 - `tags` (Map of String) Tags applied to the virtual machine. Changing tags updates the machine in place.
 
 ### Read-Only

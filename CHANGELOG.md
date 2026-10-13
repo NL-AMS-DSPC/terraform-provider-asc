@@ -41,7 +41,7 @@ speaks wire protocol 6.0 and therefore requires Terraform 1.0 or later.
 
 - Virtual machine and VM group creates send the boot disk ASC now requires. The new optional
   `boot_disk_size_gb` (default 32) sets its size and `image` becomes `bootDisk.image`, defaulting
-  to `ubuntu-24.04-lts` when omitted. The VM request also keeps the top-level `image` for gateways
+  to `vm-images/ubuntu:24.04` when omitted. The VM request also keeps the top-level `image` for gateways
   built before `bootDisk`. State written without `boot_disk_size_gb` counts as 32, so no existing
   machine or group is replaced. The infra-gateway spec was regenerated from ASC `main`.
 

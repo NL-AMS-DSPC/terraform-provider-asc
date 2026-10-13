@@ -155,8 +155,8 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			},
 			// The gateway never returns image, so it cannot be Computed.
 			"image": schema.StringAttribute{
-				Description: "Identifier of the operating system image, for example ubuntu-24.04-lts. " +
-					"When omitted, the provider requests ubuntu-24.04-lts. The gateway never returns it, so the configured value is kept in state. " +
+				Description: "Identifier of the operating system image, for example vm-images/ubuntu:24.04. " +
+					"When omitted, the provider requests vm-images/ubuntu:24.04. The gateway never returns it, so the configured value is kept in state. " +
 					"Changing it replaces the group.",
 				Optional: true, PlanModifiers: replaceString,
 			},

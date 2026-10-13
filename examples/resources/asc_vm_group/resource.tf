@@ -5,7 +5,7 @@ resource "asc_vm_group" "example" {
   name   = "example-group"
   sku_id = "gp-2"
   vpc_id = asc_vpc.example.id
-  image  = "ubuntu-24.04-lts"
+  image  = "vm-images/ubuntu:24.04"
 
   boot_disk_size_gb = 32
 

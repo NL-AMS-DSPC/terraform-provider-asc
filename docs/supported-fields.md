@@ -66,7 +66,7 @@ Read-only: `urn`, `sku`, `os`, `status`, `last_error`, `attached_volumes`.
 | `name` | Required, same pattern and length as a virtual machine name | Replaces | |
 | `sku_id` | Required | Replaces | |
 | `vpc_id` | Required, UUID v4 | Replaces | |
-| `image` | Optional | Replaces | Configuration-only: the original image cannot be read back. When omitted the provider requests `ubuntu-24.04-lts`, because the gateway requires an image. |
+| `image` | Optional | Replaces | Configuration-only: the original image cannot be read back. When omitted the provider requests `vm-images/ubuntu:24.04`, because the gateway requires an image. |
 | `boot_disk_size_gb` | Optional, Computed, at least 1 | Replaces | Boot disk size of each machine, 32 when omitted, with the same handling of earlier state as on `asc_virtual_machine`. Configuration-only: the gateway never returns it. |
 | `autoscaling` | Required, with `min_replicas` and `max_replicas` between 1 and 100 and `max_replicas` at least `min_replicas`; optional `cron` block with required `timezone`, `start`, `end` and `desired_replicas` between 0 and 100 | Replaces | Changing the scaling policy in place is not supported. |
 | `customization` | Optional, sensitive | Replaces | Never served back. |

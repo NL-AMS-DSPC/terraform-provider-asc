@@ -5,8 +5,8 @@ resource "asc_virtual_machine" "example" {
   sku_id = "gp-2"
   vpc_id = asc_vpc.example.id
 
-  # Optional: ubuntu-24.04-lts when omitted.
-  image = "ubuntu-24.04-lts"
+  # Optional: vm-images/ubuntu:24.04 when omitted.
+  image = "vm-images/ubuntu:24.04"
 
   # Optional: size of the boot disk in GB, 32 when omitted.
   boot_disk_size_gb = 32

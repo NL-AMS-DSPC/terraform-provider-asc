@@ -120,7 +120,7 @@ func infraCustomization(customization *Customization) *infra.Customization {
 
 // DefaultImage is the catalog default from the infra-gateway README. The gateway requires
 // an image on create now, so an omitted one is filled in here.
-const DefaultImage = "ubuntu-24.04-lts"
+const DefaultImage = "vm-images/ubuntu:24.04"
 
 // DefaultBootDiskSizeGB matches the size ASC's own system tests create.
 const DefaultBootDiskSizeGB = 32
