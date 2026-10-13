@@ -26,10 +26,10 @@ resource "asc_subnet" "example" {
 
 ### Required
 
-- `cidr` (String)
-- `name` (String)
-- `vpc_id` (String)
-- `vpc_name` (String)
+- `cidr` (String) CIDR block of the subnet. Changing it replaces the subnet.
+- `name` (String) Name of the subnet. Changing it replaces the subnet.
+- `vpc_id` (String) Identifier of the owning VPC, a UUID version 4. Changing it replaces the subnet.
+- `vpc_name` (String) Name of the VPC that owns the subnet. A subnet is addressed by its VPC name and its own name. Changing it replaces the subnet.
 
 ### Optional
 
@@ -38,7 +38,7 @@ resource "asc_subnet" "example" {
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
-- `last_error` (String)
-- `status` (String)
-- `urn` (String)
+- `id` (String) Identifier of the subnet.
+- `last_error` (String) Last error reported for the subnet, empty when healthy.
+- `status` (String) Current lifecycle status.
+- `urn` (String) URN of the subnet.
