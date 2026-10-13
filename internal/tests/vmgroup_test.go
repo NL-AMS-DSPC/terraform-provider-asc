@@ -81,6 +81,8 @@ func TestVMGroupProvisioning(t *testing.T) {
 				resource.TestCheckResourceAttr("asc_vm_group.test", "vpc_id", "00000000-0000-4000-8000-000000000001"),
 				resource.TestCheckResourceAttr("asc_vm_group.test", "image", "ubuntu-24.04"),
 				resource.TestCheckResourceAttr("asc_vm_group.test", "customization.cloud_init.user_data", "#cloud-config"),
+				resource.TestCheckResourceAttr("asc_vm_group.test", "boot_disk_size_gb", "32"),
+				checkCreateBody(environment, "/api/infra-gateway/vm-groups", map[string]any{"image": "ubuntu-24.04", "diskSizeGB": float64(32)}),
 				// Sorted by the client: the gateway builds this list from a map.
 				resource.TestCheckResourceAttr("asc_vm_group.test", "attached_volumes.0", "data"),
 				resource.TestCheckResourceAttr("asc_vm_group.test", "attached_volumes.1", "logs"),
@@ -91,7 +93,7 @@ func TestVMGroupProvisioning(t *testing.T) {
 			ResourceName: "asc_vm_group.test", ImportState: true, ImportStateId: group.Name,
 			ImportStateVerify: true, ImportStateVerifyIdentifierAttribute: "name",
 			// The gateway cannot recover these write-only fields during import.
-			ImportStateVerifyIgnore: []string{"vpc_id", "image", "customization"},
+			ImportStateVerifyIgnore: []string{"vpc_id", "image", "boot_disk_size_gb", "customization"},
 		},
 	}})
 }

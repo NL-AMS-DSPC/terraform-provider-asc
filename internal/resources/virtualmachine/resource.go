@@ -46,6 +46,7 @@ type Model struct {
 	SKU             types.Object        `tfsdk:"sku"`
 	VPCID           types.String        `tfsdk:"vpc_id"`
 	Image           types.String        `tfsdk:"image"`
+	BootDiskSizeGB  types.Int64         `tfsdk:"boot_disk_size_gb"`
 	Status          types.String        `tfsdk:"status"`
 	LastError       types.String        `tfsdk:"last_error"`
 	Tags            types.Map           `tfsdk:"tags"`
@@ -160,12 +161,13 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			},
 			"image": schema.StringAttribute{
 				Description: "Identifier of the operating system image, for example ubuntu-24.04-lts. " +
-					"When omitted, ASC picks its default image and the resolved identifier is recorded in state. " +
+					"When omitted, the provider requests ubuntu-24.04-lts and the resolved identifier is recorded in state. " +
 					"Changing the configured value replaces the machine.",
 				Optional: true, Computed: true, PlanModifiers: keepOrReplaceString,
 			},
-			"status":     schema.StringAttribute{Description: "Current lifecycle status.", Computed: true},
-			"last_error": schema.StringAttribute{Description: "Last error reported for the virtual machine, empty when healthy.", Computed: true},
+			"boot_disk_size_gb": common.BootDiskSizeAttribute("virtual machine"),
+			"status":            schema.StringAttribute{Description: "Current lifecycle status.", Computed: true},
+			"last_error":        schema.StringAttribute{Description: "Last error reported for the virtual machine, empty when healthy.", Computed: true},
 			"tags": schema.MapAttribute{
 				Description: "Tags applied to the virtual machine. Changing tags updates the machine in place.",
 				Optional:    true, ElementType: types.StringType,
@@ -231,7 +233,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 	created, err := r.client.CreateVM(ctx, client.CreateVMRequest{
 		Name: plan.Name.ValueString(), SKUID: plan.SKUID.ValueString(), VPCID: plan.VPCID.ValueString(),
-		Image: plan.Image.ValueString(), Tags: common.TagsToClient(ctx, plan.Tags, &resp.Diagnostics),
+		Image: plan.Image.ValueString(), BootDiskSizeGB: int(plan.BootDiskSizeGB.ValueInt64()), Tags: common.TagsToClient(ctx, plan.Tags, &resp.Diagnostics),
 		Customization: customizationToClient(plan.Customization), EnableLogging: plan.EnableLogging.ValueBool(),
 	})
 	if err != nil {

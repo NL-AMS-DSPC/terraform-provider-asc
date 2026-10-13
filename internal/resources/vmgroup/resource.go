@@ -47,6 +47,7 @@ type Model struct {
 	SKU             types.Object        `tfsdk:"sku"`
 	VPCID           types.String        `tfsdk:"vpc_id"`
 	Image           types.String        `tfsdk:"image"`
+	BootDiskSizeGB  types.Int64         `tfsdk:"boot_disk_size_gb"`
 	Autoscaling     *AutoscalingModel   `tfsdk:"autoscaling"`
 	Status          types.String        `tfsdk:"status"`
 	LastError       types.String        `tfsdk:"last_error"`
@@ -155,10 +156,11 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			// The gateway never returns image, so it cannot be Computed.
 			"image": schema.StringAttribute{
 				Description: "Identifier of the operating system image, for example ubuntu-24.04-lts. " +
-					"When omitted, the platform default is used. The gateway never returns it, so the configured value is kept in state. " +
+					"When omitted, the provider requests ubuntu-24.04-lts. The gateway never returns it, so the configured value is kept in state. " +
 					"Changing it replaces the group.",
 				Optional: true, PlanModifiers: replaceString,
 			},
+			"boot_disk_size_gb": common.BootDiskSizeAttribute("group"),
 			"autoscaling": schema.SingleNestedAttribute{
 				Description:   "Scaling bounds of the group. Changing the policy replaces the group.",
 				Required:      true,
@@ -245,7 +247,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 	created, err := r.client.CreateVMGroup(ctx, client.CreateVMGroupRequest{
 		Name: plan.Name.ValueString(), SKUID: plan.SKUID.ValueString(), VPCID: plan.VPCID.ValueString(),
-		Image: plan.Image.ValueString(), AutoscalingPolicy: autoscalingToClient(plan.Autoscaling),
+		Image: plan.Image.ValueString(), BootDiskSizeGB: int(plan.BootDiskSizeGB.ValueInt64()), AutoscalingPolicy: autoscalingToClient(plan.Autoscaling),
 		Tags: common.TagsToClient(ctx, plan.Tags, &resp.Diagnostics), Customization: customizationToClient(plan.Customization),
 	})
 	if err != nil {

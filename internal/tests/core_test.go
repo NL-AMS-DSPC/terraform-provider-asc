@@ -100,10 +100,14 @@ type testEnvironment struct {
 	auth     *httptest.Server
 	apiSeen  *routeRecorder
 	authSeen *routeRecorder
+	creates  *createBodies
 }
 
 // Recordings contain sorted, unique METHOD /path entries.
 func (e testEnvironment) recordedRoutes() []string { return e.apiSeen.snapshot() }
+
+// lastCreate returns the last VM or group create body the fake accepted or rejected.
+func (e testEnvironment) lastCreate(path string) (map[string]any, bool) { return e.creates.last(path) }
 
 func (e testEnvironment) recordedAuthRoutes() []string { return e.authSeen.snapshot() }
 
@@ -122,6 +126,7 @@ func newTestEnvironment(t *testing.T, handlers map[string]http.HandlerFunc) test
 func startTestEnvironment(handlers map[string]http.HandlerFunc) testEnvironment {
 	apiSeen := &routeRecorder{}
 	authSeen := &routeRecorder{}
+	creates := &createBodies{}
 	auth := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authSeen.record(r)
 		if r.URL.Path != "/realms/test-realm/protocol/openid-connect/token" {
@@ -137,6 +142,9 @@ func startTestEnvironment(handlers map[string]http.HandlerFunc) testEnvironment 
 			http.Error(w, "missing authentication or tenant", http.StatusUnauthorized)
 			return
 		}
+		if checkCreateContract(w, r, creates) {
+			return
+		}
 		handler, ok := handlers[r.Method+" "+r.URL.Path]
 		if !ok {
 			http.Error(w, "unexpected request", http.StatusNotFound)
@@ -145,7 +153,7 @@ func startTestEnvironment(handlers map[string]http.HandlerFunc) testEnvironment 
 		w.Header().Set("Content-Type", "application/json")
 		handler(w, r)
 	}))
-	return testEnvironment{api: api, auth: auth, apiSeen: apiSeen, authSeen: authSeen}
+	return testEnvironment{api: api, auth: auth, apiSeen: apiSeen, authSeen: authSeen, creates: creates}
 }
 
 func (e testEnvironment) providerConfig() string {
@@ -294,9 +302,63 @@ resource "asc_virtual_machine" "test" {
 				resource.TestCheckResourceAttr("asc_virtual_machine.test", "vpc_id", vm.VPCID),
 				resource.TestCheckResourceAttr("asc_virtual_machine.test", "enable_logging", "true"),
 				resource.TestCheckResourceAttr("asc_virtual_machine.test", "customization.cloud_init.user_data", "#cloud-config"),
+				resource.TestCheckResourceAttr("asc_virtual_machine.test", "boot_disk_size_gb", "32"),
+				// The image goes out as bootDisk.image and, for gateways that predate
+				// bootDisk, as the top-level image.
+				checkCreateBody(environment, "/api/infra-gateway/vms", map[string]any{
+					"bootDisk.attachMode": "create", "bootDisk.image": "ubuntu-24.04", "bootDisk.diskSizeGB": float64(32),
+					"image": "ubuntu-24.04",
+				}),
 			),
 		},
-		{ResourceName: "asc_virtual_machine.test", ImportState: true, ImportStateId: vm.Name, ImportStateVerify: true, ImportStateVerifyIdentifierAttribute: "name", ImportStateVerifyIgnore: []string{"customization"}},
+		{ResourceName: "asc_virtual_machine.test", ImportState: true, ImportStateId: vm.Name, ImportStateVerify: true, ImportStateVerifyIdentifierAttribute: "name", ImportStateVerifyIgnore: []string{"customization", "boot_disk_size_gb"}},
+	}})
+}
+
+func TestVirtualMachineProvisioningSendsTheConfiguredBootDiskSize(t *testing.T) {
+	vm := client.VM{
+		URN: "asc:vm:test-vm", Name: "test-vm", VPCID: "00000000-0000-4000-8000-000000000001",
+		SKU: client.SKU{ID: "gp-2", Name: "general-purpose"}, Status: "active",
+		OS: client.OS{ID: "ubuntu-24.04-lts", Family: "linux", Distribution: "ubuntu", Release: "24.04", DisplayName: "Ubuntu 24.04 LTS"},
+	}
+	var deleted atomic.Bool
+	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
+		"POST /api/infra-gateway/vms": func(w http.ResponseWriter, _ *http.Request) {
+			writeData(w, http.StatusCreated, map[string]string{"created": vm.Name})
+		},
+		"GET /api/infra-gateway/vms/test-vm": func(w http.ResponseWriter, _ *http.Request) {
+			if deleted.Load() {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			writeData(w, http.StatusOK, vm)
+		},
+		"DELETE /api/infra-gateway/vms/test-vm": func(w http.ResponseWriter, _ *http.Request) {
+			deleted.Store(true)
+			writeData(w, http.StatusOK, map[string]string{"deleted": vm.Name})
+		},
+	})
+	config := environment.providerConfig() + `
+resource "asc_virtual_machine" "test" {
+  name = "test-vm"
+  sku_id = "gp-2"
+  vpc_id = "00000000-0000-4000-8000-000000000001"
+  boot_disk_size_gb = 64
+}`
+	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: providerFactories, Steps: []resource.TestStep{
+		{
+			Config: config,
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr("asc_virtual_machine.test", "boot_disk_size_gb", "64"),
+				// No image configured: the default goes in bootDisk only, so an older
+				// gateway keeps choosing its own default.
+				checkCreateBody(environment, "/api/infra-gateway/vms", map[string]any{
+					"bootDisk.attachMode": "create", "bootDisk.image": "ubuntu-24.04-lts", "bootDisk.diskSizeGB": float64(64),
+					"image": nil,
+				}),
+			),
+		},
+		{Config: config, PlanOnly: true},
 	}})
 }
 

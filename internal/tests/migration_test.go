@@ -458,3 +458,74 @@ func TestMigrationLegacyGroupConfigurationRequiresRename(t *testing.T) {
 		t.Fatalf("legacy configuration must fail before planning: %v, %v\n%s", changes, err, output)
 	}
 }
+
+// bootDiskMigrationCases are the fixtures whose resources gained boot_disk_size_gb after
+// their state was written. The state fixtures have no such attribute.
+var bootDiskMigrationCases = map[string]string{
+	"virtual_machine": "asc_virtual_machine.test",
+	"vm_group":        "asc_vm_group.test",
+}
+
+// withBootDiskSize adds boot_disk_size_gb to the first resource block of the workspace.
+func withBootDiskSize(t *testing.T, dir string, size int) {
+	t.Helper()
+	configPath := filepath.Join(dir, "main.tf")
+	config, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	updated := strings.Replace(string(config), "  image ", fmt.Sprintf("  boot_disk_size_gb = %d\n  image ", size), 1)
+	if updated == string(config) {
+		t.Fatal("fixture no longer configures image")
+	}
+	if err := os.WriteFile(configPath, []byte(updated), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// State written before boot_disk_size_gb existed must plan no change, and an explicit 32
+// (the default) must not plan a replacement either.
+func TestMigrationBootDiskSizeAbsentFromStateNeverReplaces(t *testing.T) {
+	for name := range bootDiskMigrationCases {
+		t.Run(name, func(t *testing.T) {
+			environment := newTestEnvironment(t, migrationCases()[name])
+			dir := seedMigrationWorkspace(t, environment, name)
+			changes, output, err := terraformPlan(t, dir)
+			if err != nil {
+				t.Fatalf("terraform plan: %v\n%s", err, output)
+			}
+			assertNoDestructivePlan(t, changes, output)
+			if len(changes) != 0 {
+				t.Errorf("plan proposed %v, want no changes\n%s", changes, output)
+			}
+		})
+		t.Run(name+"-explicit-default", func(t *testing.T) {
+			environment := newTestEnvironment(t, migrationCases()[name])
+			dir := seedMigrationWorkspace(t, environment, name)
+			withBootDiskSize(t, dir, 32)
+			changes, output, err := terraformPlan(t, dir)
+			if err != nil {
+				t.Fatalf("terraform plan: %v\n%s", err, output)
+			}
+			assertNoDestructivePlan(t, changes, output)
+		})
+	}
+}
+
+// A size other than the 32 that absent state stands for is a real change to the boot disk.
+func TestMigrationBootDiskSizeDifferentFromTheDefaultReplaces(t *testing.T) {
+	for name, address := range bootDiskMigrationCases {
+		t.Run(name, func(t *testing.T) {
+			environment := newTestEnvironment(t, migrationCases()[name])
+			dir := seedMigrationWorkspace(t, environment, name)
+			withBootDiskSize(t, dir, 64)
+			changes, output, err := terraformPlan(t, dir)
+			if err != nil {
+				t.Fatalf("terraform plan: %v\n%s", err, output)
+			}
+			if len(changes) != 1 || changes[0].Resource != address || changes[0].Action != "delete_then_create" {
+				t.Errorf("plan proposed %v, want a replacement of %s\n%s", changes, address, output)
+			}
+		})
+	}
+}
