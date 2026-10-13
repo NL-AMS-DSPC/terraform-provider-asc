@@ -175,21 +175,14 @@ func (c *Runtime) DeleteSubnet(ctx context.Context, vpcName, subnetName string) 
 }
 
 func (c *Runtime) CreateVM(ctx context.Context, request CreateVMRequest) (VM, error) {
-	enableLogging := request.EnableLogging
-	body := infra.CreateVMJSONRequestBody{
-		Name:          request.Name,
-		SkuID:         request.SKUID,
-		VpcID:         request.VPCID,
-		Image:         optionalString(request.Image),
-		Tags:          infraTags(request.Tags),
-		Customization: infraCustomization(request.Customization),
-		// The handwritten request always sent enableLogging, including false.
-		EnableLogging: &enableLogging,
-	}
 	return createWithNameReservation(ctx, c, vmKind, request.Name,
 		func(ctx context.Context) error {
 			return callInfra[infra.CreateVMResponse](ctx, func(ctx context.Context) (*http.Response, error) {
-				return c.infraAPI().CreateVM(ctx, &infra.CreateVMParams{XTenant: c.tenant()}, body, c.infraEditor())
+				body, err := createVMBody(request)
+				if err != nil {
+					return nil, err
+				}
+				return c.infraAPI().CreateVMWithBody(ctx, &infra.CreateVMParams{XTenant: c.tenant()}, "application/json", body, c.infraEditor())
 			}, nil)
 		},
 		c.vmReader(request.Name),

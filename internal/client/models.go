@@ -78,13 +78,16 @@ type OS struct {
 }
 
 type CreateVMRequest struct {
-	Name          string
-	SKUID         string
-	VPCID         string
-	Image         string
-	Tags          []Tag
-	Customization *Customization
-	EnableLogging bool
+	Name  string
+	SKUID string
+	VPCID string
+	// Image is the catalog image; empty selects DefaultImage.
+	Image string
+	// BootDiskSizeGB is the boot disk size; zero selects DefaultBootDiskSizeGB.
+	BootDiskSizeGB int
+	Tags           []Tag
+	Customization  *Customization
+	EnableLogging  bool
 }
 
 type Customization struct {

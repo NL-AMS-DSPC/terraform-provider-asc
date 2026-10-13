@@ -42,10 +42,13 @@ type CronRule struct {
 // CreateVMGroupRequest sends the required policy as autoscalers; reads call it
 // autoscalingPolicy.
 type CreateVMGroupRequest struct {
-	Name              string
-	SKUID             string
-	VPCID             string
-	Image             string
+	Name  string
+	SKUID string
+	VPCID string
+	// Image is the catalog image; empty selects DefaultImage.
+	Image string
+	// BootDiskSizeGB is the boot disk size; zero selects DefaultBootDiskSizeGB.
+	BootDiskSizeGB    int
 	AutoscalingPolicy AutoscalingPolicy
 	Tags              []Tag
 	Customization     *Customization
@@ -65,7 +68,9 @@ func (c *Runtime) CreateVMGroup(ctx context.Context, request CreateVMGroupReques
 		Name:  request.Name,
 		SkuID: request.SKUID,
 		VpcID: request.VPCID,
-		Image: optionalString(request.Image),
+		// Current gateways require both the image and the disk size.
+		Image:      orDefaultImage(request.Image),
+		DiskSizeGB: orDefaultBootDiskSize(request.BootDiskSizeGB),
 		// The policy is required, so it is always sent.
 		Autoscalers:   infraAutoscalingPolicy(request.AutoscalingPolicy),
 		Tags:          infraTags(request.Tags),

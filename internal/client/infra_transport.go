@@ -1,6 +1,10 @@
 package client
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
 	"slices"
 
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/asc/infra"
@@ -112,4 +116,62 @@ func infraCustomization(customization *Customization) *infra.Customization {
 		wire.Ignition = &infra.IgnitionCustomization{Format: &format, Config: &config}
 	}
 	return wire
+}
+
+// DefaultImage is the catalog default from the infra-gateway README. The gateway requires
+// an image on create now, so an omitted one is filled in here.
+const DefaultImage = "ubuntu-24.04-lts"
+
+// DefaultBootDiskSizeGB matches the size ASC's own system tests create.
+const DefaultBootDiskSizeGB = 32
+
+func orDefaultImage(image string) string {
+	if image == "" {
+		return DefaultImage
+	}
+	return image
+}
+
+func orDefaultBootDiskSize(sizeGB int) int {
+	if sizeGB <= 0 {
+		return DefaultBootDiskSizeGB
+	}
+	return sizeGB
+}
+
+// createVMWire is the VM create body. Current gateways read bootDisk and reject a create
+// without it, while gateways built before bootDisk existed read only the top-level image
+// and ignore unknown fields. The generated type has only bootDisk, so the image is sent
+// in both places, the top-level one only when the user configured it.
+type createVMWire struct {
+	infra.CreateVMJSONRequestBody
+	Image *string `json:"image,omitempty"`
+}
+
+func createVMBody(request CreateVMRequest) (io.Reader, error) {
+	enableLogging := request.EnableLogging
+	image := orDefaultImage(request.Image)
+	size := orDefaultBootDiskSize(request.BootDiskSizeGB)
+	wire := createVMWire{
+		CreateVMJSONRequestBody: infra.CreateVMJSONRequestBody{
+			Name:  request.Name,
+			SkuID: request.SKUID,
+			VpcID: request.VPCID,
+			BootDisk: infra.BootDisk{
+				AttachMode: infra.Create,
+				DiskSizeGB: &size,
+				Image:      &image,
+			},
+			Tags:          infraTags(request.Tags),
+			Customization: infraCustomization(request.Customization),
+			// The handwritten request always sent enableLogging, including false.
+			EnableLogging: &enableLogging,
+		},
+		Image: optionalString(request.Image),
+	}
+	encoded, err := json.Marshal(wire)
+	if err != nil {
+		return nil, fmt.Errorf("encode VM create request: %w", err)
+	}
+	return bytes.NewReader(encoded), nil
 }

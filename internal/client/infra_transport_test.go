@@ -325,18 +325,22 @@ func TestInfraRequestBodiesMatchTheHandwrittenWire(t *testing.T) {
 		{"create VM minimal", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateVM(context.Background(), CreateVMRequest{Name: "x", SKUID: "sku", VPCID: "id"})
 			return err
-		}, `{"name":"x","skuID":"sku","vpcID":"id","enableLogging":false}`},
+		}, `{"name":"x","skuID":"sku","vpcID":"id","bootDisk":{"attachMode":"create","diskSizeGB":32,"image":"ubuntu-24.04-lts"},"enableLogging":false}`},
+		{"create VM with a configured boot disk size", http.MethodPost, func(c *Runtime) error {
+			_, err := c.CreateVM(context.Background(), CreateVMRequest{Name: "x", SKUID: "sku", VPCID: "id", BootDiskSizeGB: 64})
+			return err
+		}, `{"name":"x","skuID":"sku","vpcID":"id","bootDisk":{"attachMode":"create","diskSizeGB":64,"image":"ubuntu-24.04-lts"},"enableLogging":false}`},
 		{"create VM with cloud-init", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateVM(context.Background(), CreateVMRequest{
 				Name: "x", SKUID: "sku", VPCID: "id", Image: "ubuntu", Tags: []Tag{{Key: "env", Value: "prod"}},
 				Customization: cloudInit, EnableLogging: true,
 			})
 			return err
-		}, `{"name":"x","skuID":"sku","vpcID":"id","image":"ubuntu","tags":[{"key":"env","value":"prod"}],"customization":{"cloudInit":{"userData":"#cloud-config"}},"enableLogging":true}`},
+		}, `{"name":"x","skuID":"sku","vpcID":"id","image":"ubuntu","bootDisk":{"attachMode":"create","diskSizeGB":32,"image":"ubuntu"},"tags":[{"key":"env","value":"prod"}],"customization":{"cloudInit":{"userData":"#cloud-config"}},"enableLogging":true}`},
 		{"create VM with ignition", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateVM(context.Background(), CreateVMRequest{Name: "x", SKUID: "sku", VPCID: "id", Customization: ignition})
 			return err
-		}, `{"name":"x","skuID":"sku","vpcID":"id","customization":{"ignition":{"format":"butane","config":""}},"enableLogging":false}`},
+		}, `{"name":"x","skuID":"sku","vpcID":"id","bootDisk":{"attachMode":"create","diskSizeGB":32,"image":"ubuntu-24.04-lts"},"customization":{"ignition":{"format":"butane","config":""}},"enableLogging":false}`},
 		{"create volume", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateVolume(context.Background(), CreateVolumeRequest{Name: "data", Size: "10Gi", StorageClass: "standard", AccessMode: "ReadWriteOnce"})
 			return err
@@ -352,7 +356,7 @@ func TestInfraRequestBodiesMatchTheHandwrittenWire(t *testing.T) {
 				Name: "g", SKUID: "sku", VPCID: "id", AutoscalingPolicy: AutoscalingPolicy{MinReplicas: 1, MaxReplicas: 2},
 			})
 			return err
-		}, `{"name":"g","skuID":"sku","vpcID":"id","autoscalers":{"min_replicas":1,"max_replicas":2}}`},
+		}, `{"name":"g","skuID":"sku","vpcID":"id","image":"ubuntu-24.04-lts","diskSizeGB":32,"autoscalers":{"min_replicas":1,"max_replicas":2}}`},
 		{"create VM group full", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateVMGroup(context.Background(), CreateVMGroupRequest{
 				Name: "g", SKUID: "sku", VPCID: "id", Image: "ubuntu",
@@ -362,7 +366,7 @@ func TestInfraRequestBodiesMatchTheHandwrittenWire(t *testing.T) {
 				Tags: []Tag{{Key: "env", Value: "prod"}}, Customization: cloudInit,
 			})
 			return err
-		}, `{"name":"g","skuID":"sku","vpcID":"id","image":"ubuntu","autoscalers":{"min_replicas":1,"max_replicas":2,"cron":{"timezone":"UTC","start":"0 8 * * *","end":"0 18 * * *","desiredReplicas":2}},"tags":[{"key":"env","value":"prod"}],"customization":{"cloudInit":{"userData":"#cloud-config"}}}`},
+		}, `{"name":"g","skuID":"sku","vpcID":"id","image":"ubuntu","diskSizeGB":32,"autoscalers":{"min_replicas":1,"max_replicas":2,"cron":{"timezone":"UTC","start":"0 8 * * *","end":"0 18 * * *","desiredReplicas":2}},"tags":[{"key":"env","value":"prod"}],"customization":{"cloudInit":{"userData":"#cloud-config"}}}`},
 		{"resize volume", http.MethodPost, func(c *Runtime) error {
 			_, err := c.ResizeVolume(context.Background(), "data", "20Gi")
 			return err

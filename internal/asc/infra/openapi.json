@@ -66,7 +66,7 @@
               }
             }
           },
-          "description": "Virtual machine group to create (image optional - defaults to ubuntu-24.04-lts)",
+          "description": "Virtual machine group to create",
           "required": true
         },
         "responses": {
@@ -1857,9 +1857,36 @@
           }
         }
       },
+      "BootDisk": {
+        "type": "object",
+        "required": [
+          "attachMode"
+        ],
+        "properties": {
+          "attachMode": {
+            "type": "string",
+            "enum": [
+              "create",
+              "attach"
+            ]
+          },
+          "diskSizeGB": {
+            "type": "integer",
+            "example": 32
+          },
+          "existingDiskName": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string"
+          }
+        }
+      },
       "CreateVMGroupRequest": {
         "type": "object",
         "required": [
+          "diskSizeGB",
+          "image",
           "name",
           "skuID",
           "vpcID"
@@ -1870,6 +1897,10 @@
           },
           "customization": {
             "$ref": "#/components/schemas/Customization"
+          },
+          "diskSizeGB": {
+            "type": "integer",
+            "example": 32
           },
           "image": {
             "type": "string"
@@ -1910,19 +1941,20 @@
       "CreateVMRequest": {
         "type": "object",
         "required": [
+          "bootDisk",
           "name",
           "skuID",
           "vpcID"
         ],
         "properties": {
+          "bootDisk": {
+            "$ref": "#/components/schemas/BootDisk"
+          },
           "customization": {
             "$ref": "#/components/schemas/Customization"
           },
           "enableLogging": {
             "type": "boolean"
-          },
-          "image": {
-            "type": "string"
           },
           "name": {
             "type": "string",

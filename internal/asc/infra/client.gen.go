@@ -16,6 +16,24 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
+// Defines values for BootDiskAttachMode.
+const (
+	Attach BootDiskAttachMode = "attach"
+	Create BootDiskAttachMode = "create"
+)
+
+// Valid indicates whether the value is a known member of the BootDiskAttachMode enum.
+func (e BootDiskAttachMode) Valid() bool {
+	switch e {
+	case Attach:
+		return true
+	case Create:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateVolumeRequestAccessMode.
 const (
 	ReadOnlyMany  CreateVolumeRequestAccessMode = "ReadOnlyMany"
@@ -90,6 +108,19 @@ type AutoscalingPolicy struct {
 	MinReplicas int `json:"min_replicas"`
 }
 
+// BootDisk defines model for BootDisk.
+type BootDisk struct {
+	AttachMode BootDiskAttachMode `json:"attachMode"`
+
+	// DiskSizeGB Example: 32
+	DiskSizeGB       *int    `json:"diskSizeGB,omitempty"`
+	ExistingDiskName *string `json:"existingDiskName,omitempty"`
+	Image            *string `json:"image,omitempty"`
+}
+
+// BootDiskAttachMode defines model for BootDisk.AttachMode.
+type BootDiskAttachMode string
+
 // CloudInitCustomization defines model for CloudInitCustomization.
 type CloudInitCustomization struct {
 	MetaData *string `json:"metaData,omitempty"`
@@ -114,11 +145,14 @@ type CreateSubnetRequest struct {
 type CreateVMGroupRequest struct {
 	Autoscalers   *AutoscalingPolicy `json:"autoscalers,omitempty"`
 	Customization *Customization     `json:"customization,omitempty"`
-	Image         *string            `json:"image,omitempty"`
-	Name          string             `json:"name"`
-	SkuID         string             `json:"skuID"`
-	Tags          *[]Tag             `json:"tags,omitempty"`
-	VpcID         string             `json:"vpcID"`
+
+	// DiskSizeGB Example: 32
+	DiskSizeGB int    `json:"diskSizeGB"`
+	Image      string `json:"image"`
+	Name       string `json:"name"`
+	SkuID      string `json:"skuID"`
+	Tags       *[]Tag `json:"tags,omitempty"`
+	VpcID      string `json:"vpcID"`
 }
 
 // CreateVMGroupResponse defines model for CreateVMGroupResponse.
@@ -130,9 +164,9 @@ type CreateVMGroupResponse struct {
 
 // CreateVMRequest defines model for CreateVMRequest.
 type CreateVMRequest struct {
+	BootDisk      BootDisk       `json:"bootDisk"`
 	Customization *Customization `json:"customization,omitempty"`
 	EnableLogging *bool          `json:"enableLogging,omitempty"`
-	Image         *string        `json:"image,omitempty"`
 	Name          string         `json:"name"`
 	SkuID         string         `json:"skuID"`
 	Tags          *[]Tag         `json:"tags,omitempty"`
