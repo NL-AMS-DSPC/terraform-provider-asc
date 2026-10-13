@@ -87,7 +87,7 @@ make test
 
 `make test` enables Terraform acceptance tests against local mock services.
 
-The build requires Go 1.27.1 or later and a Terraform CLI on `PATH`.
+The build requires Go 1.27.2 or later and a Terraform CLI on `PATH`.
 CI tests Terraform 1.5.7 and 1.16.3. `make test` uses that CLI for both
 acceptance tests and migration fixtures; set `TF_ACC_TERRAFORM_PATH` to select
 another binary. `make check` also checks formatting, module tidiness, workflow
