@@ -58,14 +58,21 @@ func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, res
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	replaceString := []planmodifier.String{stringplanmodifier.RequiresReplace()}
+	const replaces = " Changing it replaces the subnet."
 	resp.Schema = schema.Schema{
 		Description: "Manages an ASC subnet.",
 		Attributes: map[string]schema.Attribute{
-			"id":       schema.StringAttribute{Computed: true},
-			"urn":      schema.StringAttribute{Computed: true},
-			"name":     schema.StringAttribute{Required: true, PlanModifiers: replaceString},
-			"vpc_name": schema.StringAttribute{Required: true, PlanModifiers: replaceString},
+			"id":  schema.StringAttribute{Description: "Identifier of the subnet.", Computed: true},
+			"urn": schema.StringAttribute{Description: "URN of the subnet.", Computed: true},
+			"name": schema.StringAttribute{
+				Description: "Name of the subnet." + replaces, Required: true, PlanModifiers: replaceString,
+			},
+			"vpc_name": schema.StringAttribute{
+				Description: "Name of the VPC that owns the subnet. A subnet is addressed by its VPC name and its own name." + replaces,
+				Required:    true, PlanModifiers: replaceString,
+			},
 			"vpc_id": schema.StringAttribute{
+				Description:   "Identifier of the owning VPC, a UUID version 4." + replaces,
 				Required:      true,
 				PlanModifiers: replaceString,
 				Validators: []validator.String{stringvalidator.RegexMatches(
@@ -73,14 +80,17 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 					"must be a UUID version 4",
 				)},
 			},
-			"cidr": schema.StringAttribute{Required: true, PlanModifiers: replaceString},
+			"cidr": schema.StringAttribute{
+				Description: "CIDR block of the subnet." + replaces, Required: true, PlanModifiers: replaceString,
+			},
 			"type": schema.StringAttribute{
+				Description:   "Subnet type, public or private." + replaces,
 				Required:      true,
 				PlanModifiers: replaceString,
 				Validators:    []validator.String{stringvalidator.OneOf("public", "private")},
 			},
-			"status":     schema.StringAttribute{Computed: true},
-			"last_error": schema.StringAttribute{Computed: true},
+			"status":     schema.StringAttribute{Description: "Current lifecycle status.", Computed: true},
+			"last_error": schema.StringAttribute{Description: "Last error reported for the subnet, empty when healthy.", Computed: true},
 			"tags": schema.MapAttribute{
 				Description: "Tags applied to the subnet. Changing tags updates the subnet in place.",
 				Optional:    true,

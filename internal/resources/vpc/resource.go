@@ -83,24 +83,31 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 	resp.Schema = schema.Schema{
 		Description: "Manages an ASC VPC.",
 		Attributes: map[string]schema.Attribute{
-			"id":         schema.StringAttribute{Computed: true},
-			"urn":        schema.StringAttribute{Computed: true},
-			"name":       schema.StringAttribute{Required: true, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}},
-			"cidr":       schema.StringAttribute{Computed: true},
-			"status":     schema.StringAttribute{Computed: true},
-			"last_error": schema.StringAttribute{Computed: true},
+			"id":  schema.StringAttribute{Description: "Identifier of the VPC.", Computed: true},
+			"urn": schema.StringAttribute{Description: "URN of the VPC.", Computed: true},
+			"name": schema.StringAttribute{
+				Description:   "Name of the VPC. Changing the name replaces the VPC.",
+				Required:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+			},
+			"cidr":       schema.StringAttribute{Description: "CIDR block of the VPC.", Computed: true},
+			"status":     schema.StringAttribute{Description: "Current lifecycle status.", Computed: true},
+			"last_error": schema.StringAttribute{Description: "Last error reported for the VPC, empty when healthy.", Computed: true},
 			"subnets": schema.ListNestedAttribute{
+				Description: "Subnets created together with the VPC; at least one is required. " +
+					"Changing the name, cidr, type or tags of an inline subnet replaces the VPC. " +
+					"Use asc_subnet to add subnets to an existing VPC.",
 				Required: true,
 				NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
-					"id":         schema.StringAttribute{Computed: true},
-					"urn":        schema.StringAttribute{Computed: true},
-					"name":       schema.StringAttribute{Required: true},
-					"vpc_id":     schema.StringAttribute{Computed: true},
-					"cidr":       schema.StringAttribute{Required: true},
-					"type":       schema.StringAttribute{Required: true},
-					"status":     schema.StringAttribute{Computed: true},
-					"last_error": schema.StringAttribute{Computed: true},
-					"tags":       schema.MapAttribute{Optional: true, ElementType: types.StringType},
+					"id":         schema.StringAttribute{Description: "Identifier of the subnet.", Computed: true},
+					"urn":        schema.StringAttribute{Description: "URN of the subnet.", Computed: true},
+					"name":       schema.StringAttribute{Description: "Name of the subnet.", Required: true},
+					"vpc_id":     schema.StringAttribute{Description: "Identifier of the owning VPC.", Computed: true},
+					"cidr":       schema.StringAttribute{Description: "CIDR block of the subnet.", Required: true},
+					"type":       schema.StringAttribute{Description: "Subnet type, public or private.", Required: true},
+					"status":     schema.StringAttribute{Description: "Lifecycle status of the subnet.", Computed: true},
+					"last_error": schema.StringAttribute{Description: "Last error reported for the subnet, empty when healthy.", Computed: true},
+					"tags":       schema.MapAttribute{Description: "Tags applied to the subnet.", Optional: true, ElementType: types.StringType},
 				}},
 				PlanModifiers: []planmodifier.List{listplanmodifier.RequiresReplaceIf(
 					inlineSubnetsRequireReplacement,

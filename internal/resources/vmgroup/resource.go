@@ -112,18 +112,24 @@ func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, res
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	replaceString := []planmodifier.String{stringplanmodifier.RequiresReplace()}
 	computedSKU := map[string]schema.Attribute{
-		"id": schema.StringAttribute{Computed: true}, "name": schema.StringAttribute{Computed: true},
-		"family": schema.StringAttribute{Computed: true}, "threads": schema.Int64Attribute{Computed: true},
-		"cores": schema.Int64Attribute{Computed: true}, "memory_in_mb": schema.Int64Attribute{Computed: true},
-		"storage_in_gb": schema.Int64Attribute{Computed: true}, "storage_type": schema.StringAttribute{Computed: true},
-		"gpu_count": schema.Int64Attribute{Computed: true}, "gpu_type": schema.StringAttribute{Computed: true},
+		"id":            schema.StringAttribute{Description: "Identifier of the SKU.", Computed: true},
+		"name":          schema.StringAttribute{Description: "Name of the SKU.", Computed: true},
+		"family":        schema.StringAttribute{Description: "Instance family of the SKU.", Computed: true},
+		"threads":       schema.Int64Attribute{Description: "Threads per core.", Computed: true},
+		"cores":         schema.Int64Attribute{Description: "Physical cores.", Computed: true},
+		"memory_in_mb":  schema.Int64Attribute{Description: "Memory in MB.", Computed: true},
+		"storage_in_gb": schema.Int64Attribute{Description: "Storage in GB.", Computed: true},
+		"storage_type":  schema.StringAttribute{Description: "Storage type backing the SKU.", Computed: true},
+		"gpu_count":     schema.Int64Attribute{Description: "Number of GPUs, 0 when the SKU has none.", Computed: true},
+		"gpu_type":      schema.StringAttribute{Description: "GPU model, empty when the SKU has none.", Computed: true},
 	}
 
 	resp.Schema = schema.Schema{
 		Description: "Manages an ASC virtual machine group.",
 		Attributes: map[string]schema.Attribute{
-			"urn": schema.StringAttribute{Computed: true},
+			"urn": schema.StringAttribute{Description: "Resource identifier of the group.", Computed: true},
 			"name": schema.StringAttribute{
+				Description:   "Name of the virtual machine group. Must be 1 to 50 characters: a lowercase letter first, then lowercase letters, digits or hyphens, ending with a letter or digit. Changing it replaces the group.",
 				Required:      true,
 				PlanModifiers: replaceString,
 				Validators: []validator.String{
@@ -131,9 +137,14 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 					stringvalidator.LengthBetween(1, 50),
 				},
 			},
-			"sku_id": schema.StringAttribute{Required: true, PlanModifiers: replaceString},
-			"sku":    schema.SingleNestedAttribute{Computed: true, Attributes: computedSKU},
+			"sku_id": schema.StringAttribute{
+				Description: "Identifier of the SKU backing every member of the group; list them with the asc_skus data source. " +
+					"Changing it replaces the group.",
+				Required: true, PlanModifiers: replaceString,
+			},
+			"sku": schema.SingleNestedAttribute{Description: "SKU backing every member of the group.", Computed: true, Attributes: computedSKU},
 			"vpc_id": schema.StringAttribute{
+				Description:   "Identifier of the VPC the group belongs to, a UUID version 4. Changing it replaces the group.",
 				Required:      true,
 				PlanModifiers: replaceString,
 				Validators: []validator.String{stringvalidator.RegexMatches(
@@ -142,58 +153,70 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				)},
 			},
 			// The gateway never returns image, so it cannot be Computed.
-			"image": schema.StringAttribute{Optional: true, PlanModifiers: replaceString},
+			"image": schema.StringAttribute{
+				Description: "Identifier of the operating system image, for example ubuntu-24.04-lts. " +
+					"When omitted, the platform default is used. The gateway never returns it, so the configured value is kept in state. " +
+					"Changing it replaces the group.",
+				Optional: true, PlanModifiers: replaceString,
+			},
 			"autoscaling": schema.SingleNestedAttribute{
 				Description:   "Scaling bounds of the group. Changing the policy replaces the group.",
 				Required:      true,
 				PlanModifiers: []planmodifier.Object{objectplanmodifier.RequiresReplace()},
 				Attributes: map[string]schema.Attribute{
-					"min_replicas": schema.Int64Attribute{Required: true, Validators: []validator.Int64{int64validator.Between(1, 100)}},
+					"min_replicas": schema.Int64Attribute{Description: "Lower replica bound, 1 to 100.", Required: true, Validators: []validator.Int64{int64validator.Between(1, 100)}},
 					"max_replicas": schema.Int64Attribute{
-						Required: true,
+						Description: "Upper replica bound, 1 to 100 and at least min_replicas.",
+						Required:    true,
 						Validators: []validator.Int64{
 							int64validator.Between(1, 100),
 							int64validator.AtLeastSumOf(path.MatchRelative().AtParent().AtName("min_replicas")),
 						},
 					},
 					"cron": schema.SingleNestedAttribute{
-						Optional: true,
+						Description: "Cron window that overrides the replica count while it is open.",
+						Optional:    true,
 						Attributes: map[string]schema.Attribute{
-							"timezone":         schema.StringAttribute{Required: true},
-							"start":            schema.StringAttribute{Required: true},
-							"end":              schema.StringAttribute{Required: true},
-							"desired_replicas": schema.Int64Attribute{Required: true, Validators: []validator.Int64{int64validator.Between(0, 100)}},
+							"timezone":         schema.StringAttribute{Description: "IANA timezone the window is expressed in.", Required: true},
+							"start":            schema.StringAttribute{Description: "Cron expression opening the window.", Required: true},
+							"end":              schema.StringAttribute{Description: "Cron expression closing the window.", Required: true},
+							"desired_replicas": schema.Int64Attribute{Description: "Replica count held while the window is open, 0 to 100.", Required: true, Validators: []validator.Int64{int64validator.Between(0, 100)}},
 						},
 					},
 				},
 			},
-			"status":     schema.StringAttribute{Computed: true},
-			"last_error": schema.StringAttribute{Computed: true},
+			"status":     schema.StringAttribute{Description: "Current lifecycle status.", Computed: true},
+			"last_error": schema.StringAttribute{Description: "Last error reported for the group, empty when there is none.", Computed: true},
 			// The gateway has no group tag-patch route; changes require replacement.
 			"tags": schema.MapAttribute{
-				Optional: true, ElementType: types.StringType,
+				Description: "Tags applied to the group. The gateway cannot patch group tags, so changing them replaces the group.",
+				Optional:    true, ElementType: types.StringType,
 				PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplace()},
 			},
 			"attached_volumes": schema.ListAttribute{
-				Description: "Names of the volumes attached to the group, sorted.",
+				Description: "Names of the volumes attached to the group, sorted; the gateway does not report them in a stable order.",
 				Computed:    true, ElementType: types.StringType,
 			},
 			"customization": schema.SingleNestedAttribute{
+				Description: "First-boot customization of the group, as cloud-init or Ignition data. Sensitive: " +
+					"The gateway never returns it, so the configured value is kept in state. Changing it replaces the group.",
 				Optional: true, Sensitive: true,
 				PlanModifiers: []planmodifier.Object{objectplanmodifier.RequiresReplace()},
 				Attributes: map[string]schema.Attribute{
 					"cloud_init": schema.SingleNestedAttribute{
-						Optional: true, Sensitive: true,
+						Description: "Cloud-init customization.",
+						Optional:    true, Sensitive: true,
 						Attributes: map[string]schema.Attribute{
-							"user_data": schema.StringAttribute{Optional: true, Sensitive: true},
-							"meta_data": schema.StringAttribute{Optional: true, Sensitive: true},
+							"user_data": schema.StringAttribute{Description: "Cloud-init user data.", Optional: true, Sensitive: true},
+							"meta_data": schema.StringAttribute{Description: "Cloud-init meta data.", Optional: true, Sensitive: true},
 						},
 					},
 					"ignition": schema.SingleNestedAttribute{
-						Optional: true, Sensitive: true,
+						Description: "Ignition customization.",
+						Optional:    true, Sensitive: true,
 						Attributes: map[string]schema.Attribute{
-							"format": schema.StringAttribute{Required: true},
-							"config": schema.StringAttribute{Required: true, Sensitive: true},
+							"format": schema.StringAttribute{Description: "Format of the Ignition config.", Required: true},
+							"config": schema.StringAttribute{Description: "Ignition config content.", Required: true, Sensitive: true},
 						},
 					},
 				},
