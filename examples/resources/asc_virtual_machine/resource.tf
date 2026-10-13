@@ -5,8 +5,11 @@ resource "asc_virtual_machine" "example" {
   sku_id = "gp-2"
   vpc_id = asc_vpc.example.id
 
-  # Optional: ASC uses its default image when omitted.
+  # Optional: ubuntu-24.04-lts when omitted.
   image = "ubuntu-24.04-lts"
+
+  # Optional: size of the boot disk in GB, 32 when omitted.
+  boot_disk_size_gb = 32
 
   enable_logging = true
 

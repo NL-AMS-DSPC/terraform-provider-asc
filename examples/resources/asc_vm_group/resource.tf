@@ -7,6 +7,8 @@ resource "asc_vm_group" "example" {
   vpc_id = asc_vpc.example.id
   image  = "ubuntu-24.04-lts"
 
+  boot_disk_size_gb = 32
+
   autoscaling = {
     min_replicas = 2
     max_replicas = 10

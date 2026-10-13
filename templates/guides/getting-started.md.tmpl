@@ -92,7 +92,7 @@ output "vm_urn" {
 ```
 
 Machine and VPC names are 1 to 50 characters: a lowercase letter first, then lowercase letters,
-digits or hyphens, ending with a letter or digit. Omit `image` to get the ASC default image.
+digits or hyphens, ending with a letter or digit. Omit `image` to get `ubuntu-24.04-lts`, and set `boot_disk_size_gb` (default 32) to size the boot disk. Changing either replaces the machine.
 
 ## What apply and destroy do
 
@@ -110,7 +110,7 @@ already gone counts as deleted.
 ## Caveats
 
 - Most arguments cannot be changed on a live resource. Changing a VPC name or inline subnet, or a
-  machine name, `sku_id`, `vpc_id`, `image`, `enable_logging` or `customization`, plans a
+  machine name, `sku_id`, `vpc_id`, `image`, `boot_disk_size_gb`, `enable_logging` or `customization`, plans a
   replacement. `sku_id` replaces because ASC accepts only one resize per machine lifetime. Only
   `tags` update in place on VPCs, subnets and machines.
 - A same-name replacement waits for the old resource to disappear before creating the new one.

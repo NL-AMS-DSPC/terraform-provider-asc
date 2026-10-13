@@ -68,12 +68,20 @@ would not by itself bridge a different source address and resource type.
 | --- | --- | --- | --- | --- |
 | `asc_vpc` | `name` | `name` | 0 | `name`; a change to a configured field of an inline subnet |
 | `asc_subnet` | `vpc_name` + `name` | `vpc-name:subnet-name` | 0 | `name`, `vpc_name`, `vpc_id`, `cidr`, `type` |
-| `asc_virtual_machine` | `name` | `name` | 0 | `name`, `sku_id`, `vpc_id`, `image`, `customization`, `enable_logging` |
-| `asc_vm_group` | `name` | `name` | 0 | `name`, `sku_id`, `vpc_id`, `image`, `autoscaling`, `customization`, `tags` |
+| `asc_virtual_machine` | `name` | `name` | 0 | `name`, `sku_id`, `vpc_id`, `image`, `boot_disk_size_gb`, `customization`, `enable_logging` |
+| `asc_vm_group` | `name` | `name` | 0 | `name`, `sku_id`, `vpc_id`, `image`, `boot_disk_size_gb`, `autoscaling`, `customization`, `tags` |
 | `asc_volume` | `name` | `name` | 0 | `name`, `storage_class`, `access_mode` |
 | `asc_volume_attachment` | `volume_name` + `vm_name` | `volume-name:vm-name` | 0 | `volume_name`, `vm_name` |
 | `asc_role` | `name` | `name` | 0 | `name` |
 | `asc_group` | `name` | `name` | 0 | `name` |
+
+`boot_disk_size_gb` was added to `asc_virtual_machine` and `asc_vm_group` after the first
+state was written, without a schema version bump, because ASC began requiring a boot disk on
+create. State without it holds null, and the attribute's plan modifier counts null as 32: an
+omitted value keeps null and plans nothing, an explicit 32 updates state in place, and only a
+different size plans a replacement. `TestMigrationBootDiskSizeAbsentFromStateNeverReplaces`
+and `TestMigrationBootDiskSizeDifferentFromTheDefaultReplaces` prove both halves against the
+legacy state fixtures, and `TestBootDiskSizePlanModifier` covers each branch of the modifier.
 
 A shrinking `asc_volume` is the one case that resolves to neither a change nor a
 replacement: `ModifyPlan` rejects it at plan time with a "Volume cannot be

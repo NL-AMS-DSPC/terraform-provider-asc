@@ -52,6 +52,7 @@ Read-only: `id`, `urn`, `status`, `last_error`.
 | `sku_id` | Required | Replaces | Changing a machine's SKU in place is not supported by this provider. |
 | `vpc_id` | Required | Replaces | |
 | `image` | Optional, Computed | Replaces | Keeps its prior value when the configuration omits it, so an unrelated change does not look like a new image. |
+| `boot_disk_size_gb` | Optional, Computed, at least 1 | Replaces | Size of the boot disk the gateway creates, 32 when omitted. The gateway never returns it, so the configured value stays in state. State written before the attribute existed counts as 32: omitting it or setting 32 plans no replacement, any other value does. |
 | `enable_logging` | Optional, Computed | Replaces | Same prior-value handling as `image`. |
 | `customization` | Optional, sensitive | Replaces | Write-only; see [what import cannot recover](#what-import-cannot-recover). |
 | `tags` | Optional | In place | Tags can be changed without replacing the machine. |
@@ -65,7 +66,8 @@ Read-only: `urn`, `sku`, `os`, `status`, `last_error`, `attached_volumes`.
 | `name` | Required, same pattern and length as a virtual machine name | Replaces | |
 | `sku_id` | Required | Replaces | |
 | `vpc_id` | Required, UUID v4 | Replaces | |
-| `image` | Optional | Replaces | Configuration-only: the original image cannot be read back. An empty value uses the platform default. |
+| `image` | Optional | Replaces | Configuration-only: the original image cannot be read back. When omitted the provider requests `ubuntu-24.04-lts`, because the gateway requires an image. |
+| `boot_disk_size_gb` | Optional, Computed, at least 1 | Replaces | Boot disk size of each machine, 32 when omitted, with the same handling of earlier state as on `asc_virtual_machine`. Configuration-only: the gateway never returns it. |
 | `autoscaling` | Required, with `min_replicas` and `max_replicas` between 1 and 100 and `max_replicas` at least `min_replicas`; optional `cron` block with required `timezone`, `start`, `end` and `desired_replicas` between 0 and 100 | Replaces | Changing the scaling policy in place is not supported. |
 | `customization` | Optional, sensitive | Replaces | Never served back. |
 | `tags` | Optional | Replaces | Changing group tags in place is not supported. |
@@ -168,8 +170,8 @@ the configuration supplies them.
 
 | Resource | Attributes | Consequence |
 | --- | --- | --- |
-| `asc_vm_group` | `vpc_id`, `image`, `customization` | They must come from the configuration after an import. Each forces replacement, so importing a group whose configuration differs plans a replacement rather than silently adopting it. |
-| `asc_virtual_machine` | `customization` | Write-only. The value in state is the configured one, preserved across reads because it cannot be read back; an import leaves it null. |
+| `asc_vm_group` | `vpc_id`, `image`, `boot_disk_size_gb`, `customization` | They must come from the configuration after an import. Each forces replacement, so importing a group whose configuration differs plans a replacement rather than silently adopting it. |
+| `asc_virtual_machine` | `customization`, `boot_disk_size_gb` | Write-only. The value in state is the configured one, preserved across reads because it cannot be read back; an import leaves it null. A null `boot_disk_size_gb` counts as 32, so a configuration that omits it or sets 32 plans no replacement. |
 
 ## Read behavior and limitations
 
