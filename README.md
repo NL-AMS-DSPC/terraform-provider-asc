@@ -52,13 +52,31 @@ the wrong one can cause unnecessary state removal or replacement plans.
 
 The surface per version is in [CHANGELOG.md](CHANGELOG.md).
 
-Nothing is published yet. No version has been tagged, `nl-ams-dspc/asc` is not on
-the Terraform Registry, and publication -- creating the GitHub repository,
-claiming the registry namespace, adding the signing key and pushing the first
-tag -- is a separately approved step outside the work that produced this
-repository. Until then the provider runs through `dev_overrides` or a filesystem
-mirror; `make release-snapshot` and `make install-check` prove the packaging
-locally with a throwaway key, without publishing.
+## Releasing
+
+Pushing a `v*` tag that points at a commit on `main` publishes a release. The
+`Release` workflow runs `make check`, then GoReleaser builds, checksums and
+signs the six platform archives and attaches them to a GitHub release, and the
+Terraform Registry picks that release up through its webhook.
+
+```sh
+git switch main && git pull
+git tag -a v0.1.0 -m "v0.1.0"
+git push origin v0.1.0
+```
+
+Move the version's `CHANGELOG.md` entry from `unreleased` to the release date
+before tagging. A published version cannot be replaced, so fix forward with a
+new patch version rather than moving a tag.
+
+The workflow needs the `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` repository
+secrets, holding the key whose public half is registered on the `nl-ams-dspc`
+registry namespace. The registry only reads public repositories, so the first
+publication also needs this repository made public and added once through
+"Publish > Provider" on registry.terraform.io. Until then the provider runs
+through `dev_overrides` or a filesystem mirror; `make release-snapshot` and
+`make install-check` prove the packaging locally with a throwaway key, without
+publishing.
 
 ## Development
 
@@ -69,7 +87,7 @@ make test
 
 `make test` enables Terraform acceptance tests against local mock services.
 
-The build requires Go 1.27.1 or later and a Terraform CLI on `PATH`.
+The build requires Go 1.27.2 or later and a Terraform CLI on `PATH`.
 CI tests Terraform 1.5.7 and 1.16.3. `make test` uses that CLI for both
 acceptance tests and migration fixtures; set `TF_ACC_TERRAFORM_PATH` to select
 another binary. `make check` also checks formatting, module tidiness, workflow

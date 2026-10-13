@@ -1,6 +1,6 @@
 .PHONY: build test test-race vet lint check-format check-modules vulncheck generate check-generated check release-snapshot install-check
 
-GOLANGCI_LINT_VERSION := v2.13.2
+GOLANGCI_LINT_VERSION := v2.14.0
 GOVULNCHECK_VERSION := v1.8.0
 ACTIONLINT_VERSION := v1.7.12
 
