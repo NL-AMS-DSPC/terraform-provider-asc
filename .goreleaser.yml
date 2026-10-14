@@ -16,8 +16,11 @@ builds:
       - '-s -w -X main.version={{ .Version }}'
     hooks:
       post:
-        # release.extra_files is not staged during snapshots.
-        - cmd: cp terraform-registry-manifest.json 'dist/{{ .ProjectName }}_{{ .Version }}_manifest.json'
+        # release.extra_files is not staged during snapshots. Builds run in
+        # parallel, so each copies to its own file and renames it into place.
+        - cmd: >-
+            sh -c 'cp terraform-registry-manifest.json "dist/manifest.{{ .Target }}.tmp" &&
+            mv -f "dist/manifest.{{ .Target }}.tmp" "dist/{{ .ProjectName }}_{{ .Version }}_manifest.json"'
     goos:
       - darwin
       - linux
