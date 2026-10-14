@@ -4,11 +4,10 @@ All notable changes to this provider are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] - unreleased
+## [0.1.0] - 2026-10-14
 
-First version of `terraform-provider-asc`. No tag has been pushed and nothing
-has been published to the Terraform Registry, so this entry describes the
-surface as it stands rather than a release that exists.
+First version of `terraform-provider-asc`, and the first published to the
+Terraform Registry as `nl-ams-dspc/asc`.
 
 This is a fresh repository, not a rename of `terraform-provider-dspc`. It keeps
 the Terraform source address `registry.terraform.io/nl-ams-dspc/asc` and the
@@ -18,19 +17,19 @@ speaks wire protocol 6.0 and therefore requires Terraform 1.0 or later.
 
 ### Added
 
-- Eight resources: `asc_vpc`, `asc_subnet`, `asc_virtual_machine`,
-  `asc_vm_group`, `asc_volume`, `asc_volume_attachment`, `asc_role` and
-  `asc_group`. All eight are importable; the identifiers are in
+- Nine resources: `asc_vpc`, `asc_subnet`, `asc_virtual_machine`,
+  `asc_vm_group`, `asc_volume`, `asc_volume_attachment`, `asc_role`,
+  `asc_group` and `asc_ip`. All nine are importable; the identifiers are in
   [supported fields](docs/supported-fields.md#import).
-- Eight data sources: `asc_skus`, `asc_vpc`, `asc_subnet`,
-  `asc_virtual_machine`, `asc_vm_group`, `asc_volume`, `asc_role` and
-  `asc_group`.
-- Two API boundaries, and no others. `/api/infra-gateway` serves the
+- Nine data sources: `asc_skus`, `asc_vpc`, `asc_subnet`,
+  `asc_virtual_machine`, `asc_vm_group`, `asc_volume`, `asc_role`,
+  `asc_group` and `asc_ips`.
+- Three API boundaries, and no others. `/api/infra-gateway` serves the
   infrastructure resources behind a `{"data": ...}` envelope; `/api/uam` serves
-  roles and groups as bare JSON. Those two prefixes plus the realm token path
-  used to obtain a bearer token are the whole of the provider's egress, and the
-  acceptance suite asserts every route the provider sends against that
-  allowlist.
+  roles and groups as bare JSON; `/api/ipam` serves IP reservations. Those
+  three prefixes plus the realm token path used to obtain a bearer token are
+  the whole of the provider's egress, and the acceptance suite asserts every
+  route the provider sends against that allowlist.
 - An upgrade path and the evidence for it:
   [the compatibility matrix](docs/compatibility.md),
   [the upgrade runbook](docs/guides/upgrade-runbook.md) and
