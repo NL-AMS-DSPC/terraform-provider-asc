@@ -32,14 +32,26 @@ func (c *Runtime) CreateVPC(ctx context.Context, request CreateVPCRequest) (VPC,
 			}
 		}
 	}
-	return createWithNameReservation(ctx, c, vpcKind, request.Name,
+	read := c.vpcReader(request.Name)
+	vpc, err := createWithNameReservation(ctx, c, vpcKind, request.Name,
 		func(ctx context.Context) error {
 			return callInfra[infra.CreateVPCResponse](ctx, func(ctx context.Context) (*http.Response, error) {
 				return c.infraAPI().CreateVPC(ctx, &infra.CreateVPCParams{XTenant: c.tenant()}, body, c.infraEditor())
 			}, nil)
 		},
-		c.vpcReader(request.Name),
+		read,
 	)
+	if err != nil || strings.EqualFold(vpc.Status, statusActive) {
+		return vpc, err
+	}
+
+	// infra-gateway rejects a VM in a VPC that is not active yet, so a VPC is only usable
+	// by dependent resources once it is.
+	waitCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
+	defer cancel()
+	return waitUntil(waitCtx, c, vpcKind, request.Name, read, func(current VPC) bool {
+		return strings.EqualFold(current.Status, statusActive)
+	}, "become active")
 }
 
 func (c *Runtime) GetVPC(ctx context.Context, name string) (VPC, error) {
