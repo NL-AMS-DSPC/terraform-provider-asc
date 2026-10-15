@@ -186,11 +186,19 @@ func statusError(resp *http.Response, service string) error {
 		_, _ = io.Copy(io.Discard, resp.Body)
 		return ErrResourceConflict
 	case resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices:
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodyBytes))
 		_, _ = io.Copy(io.Discard, resp.Body)
+		if detail := strings.TrimSpace(string(body)); detail != "" {
+			return fmt.Errorf("%s returned HTTP %d: %s", service, resp.StatusCode, detail)
+		}
 		return fmt.Errorf("%s returned HTTP %d", service, resp.StatusCode)
 	}
 	return nil
 }
+
+// maxErrorBodyBytes caps how much of an error response ends up in a diagnostic; ASC's
+// validation errors fit easily, an HTML error page from a proxy does not need to.
+const maxErrorBodyBytes = 512
 
 // value dereferences an optional generated field; the specs mark almost every response
 // field optional because ASC's validation tags drive required-ness.
