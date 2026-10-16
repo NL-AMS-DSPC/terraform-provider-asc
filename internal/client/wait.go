@@ -10,6 +10,8 @@ import (
 // A deleting projection belongs to the previous resource generation.
 const statusDeleting = "deleting"
 
+const statusActive = "active"
+
 // resourceView provides the fields shared by lifecycle and tag waiters.
 type resourceView interface {
 	lifecycle() (status string, lastError string)

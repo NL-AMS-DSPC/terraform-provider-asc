@@ -45,7 +45,7 @@ func TestInfrastructureContract(t *testing.T) {
 			}
 			w.WriteHeader(http.StatusCreated)
 		case "GET /api/infra-gateway/vpcs/test-vpc":
-			_ = json.NewEncoder(w).Encode(map[string]any{"data": vpcData(VPC{Name: "test-vpc"})})
+			_ = json.NewEncoder(w).Encode(map[string]any{"data": vpcData(VPC{Name: "test-vpc", Status: "active"})})
 		case "POST /api/infra-gateway/vpcs/test-vpc/subnets":
 			w.WriteHeader(http.StatusCreated)
 		case "GET /api/infra-gateway/vpcs/test-vpc/subnets":
