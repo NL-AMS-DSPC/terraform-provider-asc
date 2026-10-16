@@ -11,8 +11,6 @@ resource "asc_virtual_machine" "example" {
   # Optional: size of the boot disk in GB, 32 when omitted.
   boot_disk_size_gb = 32
 
-  enable_logging = true
-
   tags = {
     env = "production"
   }

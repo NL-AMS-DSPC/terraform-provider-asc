@@ -67,11 +67,11 @@ which makes Terraform create the VPC first.
 ```terraform
 resource "asc_vpc" "main" {
   name = "main"
+  cidr = "10.0.0.0/16"
 
   subnets = [{
     name = "private"
     cidr = "10.0.0.0/24"
-    type = "private"
   }]
 }
 
@@ -109,8 +109,8 @@ already gone counts as deleted.
 
 ## Caveats
 
-- Most arguments cannot be changed on a live resource. Changing a VPC name or inline subnet, or a
-  machine name, `sku_id`, `vpc_id`, `image`, `boot_disk_size_gb`, `enable_logging` or `customization`, plans a
+- Most arguments cannot be changed on a live resource. Changing a VPC name, `cidr` or inline subnet, or a
+  machine name, `sku_id`, `vpc_id`, `image`, `boot_disk_size_gb` or `customization`, plans a
   replacement. `sku_id` replaces because ASC accepts only one resize per machine lifetime. Only
   `tags` update in place on VPCs, subnets and machines.
 - A same-name replacement waits for the old resource to disappear before creating the new one.
