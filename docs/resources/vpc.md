@@ -13,9 +13,11 @@ Manages an ASC VPC.
 ## Example Usage
 
 ```terraform
+# A VPC is created together with at least one inline subnet, which must lie
+# within the VPC's CIDR.
 resource "asc_vpc" "example" {
   name = "example-vpc"
-  cidr = "10.0.0.0/16"
+  cidr = "10.0.0.0/24"
 
   subnets = [{
     name = "bootstrap"
@@ -30,8 +32,8 @@ resource "asc_vpc" "example" {
 ### Required
 
 - `cidr` (String) IPv4 CIDR block of the VPC, such as 10.0.0.0/16. Every inline subnet must lie within it. Changing it replaces the VPC.
-- `name` (String)
-- `subnets` (Attributes List) (see [below for nested schema](#nestedatt--subnets))
+- `name` (String) Name of the VPC. Changing the name replaces the VPC.
+- `subnets` (Attributes List) Subnets created together with the VPC; at least one is required. Changing the name, cidr, type or tags of an inline subnet replaces the VPC. Use asc_subnet to add subnets to an existing VPC. (see [below for nested schema](#nestedatt--subnets))
 
 ### Optional
 
@@ -39,28 +41,28 @@ resource "asc_vpc" "example" {
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
-- `last_error` (String)
-- `status` (String)
-- `urn` (String)
+- `id` (String) Identifier of the VPC.
+- `last_error` (String) Last error reported for the VPC, empty when healthy.
+- `status` (String) Current lifecycle status.
+- `urn` (String) URN of the VPC.
 
 <a id="nestedatt--subnets"></a>
 ### Nested Schema for `subnets`
 
 Required:
 
-- `cidr` (String)
-- `name` (String)
+- `cidr` (String) CIDR block of the subnet.
+- `name` (String) Name of the subnet.
 
 Optional:
 
-- `tags` (Map of String)
+- `tags` (Map of String) Tags applied to the subnet.
 - `type` (String, Deprecated) Deprecated: ASC no longer has subnet types. The value is ignored and never sent to ASC.
 
 Read-Only:
 
-- `id` (String)
-- `last_error` (String)
-- `status` (String)
-- `urn` (String)
-- `vpc_id` (String)
+- `id` (String) Identifier of the subnet.
+- `last_error` (String) Last error reported for the subnet, empty when healthy.
+- `status` (String) Lifecycle status of the subnet.
+- `urn` (String) URN of the subnet.
+- `vpc_id` (String) Identifier of the owning VPC.
