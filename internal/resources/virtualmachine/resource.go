@@ -115,7 +115,6 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 	// Preserve omitted computed values before checking replacement, avoiding replacement
 	// during unrelated updates.
 	keepOrReplaceString := []planmodifier.String{stringplanmodifier.UseStateForUnknown(), stringplanmodifier.RequiresReplace()}
-	keepOrReplaceBool := []planmodifier.Bool{boolplanmodifier.UseStateForUnknown(), boolplanmodifier.RequiresReplace()}
 	computedSKU := map[string]schema.Attribute{
 		"id":            schema.StringAttribute{Description: "Identifier of the SKU.", Computed: true},
 		"name":          schema.StringAttribute{Description: "Name of the SKU.", Computed: true},
@@ -204,10 +203,10 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				},
 			},
 			"enable_logging": schema.BoolAttribute{
-				Description: "Whether platform logging is enabled for the virtual machine. " +
-					"Keeps its prior value when omitted. Changing the configured value replaces the machine.",
-				Optional: true, Computed: true,
-				PlanModifiers: keepOrReplaceBool,
+				Description:        "Deprecated: ASC no longer has a logging setting for virtual machines. The value is ignored and never sent to ASC.",
+				DeprecationMessage: "ASC no longer has a logging setting for virtual machines; remove the enable_logging argument. It is ignored.",
+				Optional:           true, Computed: true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 		},
 	}
@@ -234,7 +233,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	created, err := r.client.CreateVM(ctx, client.CreateVMRequest{
 		Name: plan.Name.ValueString(), SKUID: plan.SKUID.ValueString(), VPCID: plan.VPCID.ValueString(),
 		Image: plan.Image.ValueString(), BootDiskSizeGB: int(plan.BootDiskSizeGB.ValueInt64()), Tags: common.TagsToClient(ctx, plan.Tags, &resp.Diagnostics),
-		Customization: customizationToClient(plan.Customization), EnableLogging: plan.EnableLogging.ValueBool(),
+		Customization: customizationToClient(plan.Customization),
 	})
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating virtual machine", err.Error())
@@ -326,7 +325,10 @@ func setFromVM(ctx context.Context, model *Model, value client.VM, diags *diag.D
 	model.Status = types.StringValue(value.Status)
 	model.LastError = types.StringValue(value.LastError)
 	model.Tags = common.TagsToTerraform(ctx, value.Tags, diags)
-	model.EnableLogging = types.BoolValue(value.EnableLogging)
+	// ASC no longer reports a logging setting; keep the configured or stored one.
+	if model.EnableLogging.IsUnknown() {
+		model.EnableLogging = types.BoolNull()
+	}
 
 	sku, skuDiags := types.ObjectValueFrom(ctx, skuTypes, skuModel{
 		ID: types.StringValue(value.SKU.ID), Name: types.StringValue(value.SKU.Name), Family: types.StringValue(value.SKU.Family),

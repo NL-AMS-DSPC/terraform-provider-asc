@@ -73,24 +73,6 @@ func (e IgnitionFormat) Valid() bool {
 	}
 }
 
-// Defines values for SubnetType.
-const (
-	SubnetTypePrivate SubnetType = "private"
-	SubnetTypePublic  SubnetType = "public"
-)
-
-// Valid indicates whether the value is a known member of the SubnetType enum.
-func (e SubnetType) Valid() bool {
-	switch e {
-	case SubnetTypePrivate:
-		return true
-	case SubnetTypePublic:
-		return true
-	default:
-		return false
-	}
-}
-
 // AttachVolumeResponse defines model for AttachVolumeResponse.
 type AttachVolumeResponse struct {
 	VMName     *string `json:"vmName,omitempty"`
@@ -133,12 +115,9 @@ type CreateSubnetRequest struct {
 	Cidr string `json:"cidr"`
 
 	// Name Example: my-vpc-public
-	Name string `json:"name"`
-	Tags *[]Tag `json:"tags,omitempty"`
-
-	// Type Example: public
-	Type  SubnetType `json:"type"`
-	VpcID string     `json:"vpcID"`
+	Name  string `json:"name"`
+	Tags  *[]Tag `json:"tags,omitempty"`
+	VpcID string `json:"vpcID"`
 }
 
 // CreateVMGroupRequest defines model for CreateVMGroupRequest.
@@ -166,7 +145,6 @@ type CreateVMGroupResponse struct {
 type CreateVMRequest struct {
 	BootDisk      BootDisk       `json:"bootDisk"`
 	Customization *Customization `json:"customization,omitempty"`
-	EnableLogging *bool          `json:"enableLogging,omitempty"`
 	Name          string         `json:"name"`
 	SkuID         string         `json:"skuID"`
 	Tags          *[]Tag         `json:"tags,omitempty"`
@@ -182,6 +160,8 @@ type CreateVMResponse struct {
 
 // CreateVPCRequest defines model for CreateVPCRequest.
 type CreateVPCRequest struct {
+	// Cidr Example: 10.0.0.0/16
+	Cidr    string   `json:"cidr"`
 	ID      *string  `json:"id,omitempty"`
 	Name    string   `json:"name"`
 	Subnets []Subnet `json:"subnets"`
@@ -505,11 +485,6 @@ type Subnet struct {
 	// Example: default
 	TenantID *string `json:"tenantID,omitempty"`
 
-	// Type Type indicates whether this is a public or private subnet
-	//
-	// Example: public
-	Type SubnetType `json:"type"`
-
 	// VpcID VPCID is the ID of the parent VPC
 	//
 	// Example: 123e4567-e89b-12d3-a456-426655440000
@@ -534,18 +509,12 @@ type SubnetResponse struct {
 	Status *string `json:"status,omitempty"`
 	Tags   *[]Tag  `json:"tags,omitempty"`
 
-	// Type Example: public
-	Type *string `json:"type,omitempty"`
-
 	// Urn Example: asc:atos:network:my-tenant:subnet:123e4567-e89b-12d3-a456-426655440000
 	Urn *string `json:"urn,omitempty"`
 
 	// VpcID Example: my-vpc
 	VpcID *string `json:"vpcID,omitempty"`
 }
-
-// SubnetType defines model for SubnetType.
-type SubnetType string
 
 // Tag defines model for Tag.
 type Tag struct {
@@ -576,7 +545,6 @@ type VMGroupResponse struct {
 type VMResponse struct {
 	// AttachedVolumes Example: ["[\"vol1\"","\"vol2\"]"]
 	AttachedVolumes *[]string `json:"attachedVolumes,omitempty"`
-	EnableLogging   *bool     `json:"enableLogging,omitempty"`
 	InternalIP      *string   `json:"internalIP,omitempty"`
 
 	// LastError Example: no agent available
@@ -1066,7 +1034,10 @@ type ClientInterface interface {
 
 	// CreateVPCWithBody Create a new VPC
 	//
-	// Creates a VPC with the specified name and CIDR in the given tenant id.
+	// Creates a VPC with the specified name and CIDR in the given tenant id, together with its subnets.
+	// The VPC CIDR and every subnet CIDR must be an IPv4 network address in CIDR notation, with no host bits set
+	// (10.0.0.0/24, not 10.0.0.5/24). Every subnet must be within the VPC CIDR, and subnets must not overlap.
+	// A request that breaks these rules is rejected with 400, naming the subnet that fails.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -1075,7 +1046,10 @@ type ClientInterface interface {
 
 	// CreateVPC Create a new VPC
 	//
-	// Creates a VPC with the specified name and CIDR in the given tenant id.
+	// Creates a VPC with the specified name and CIDR in the given tenant id, together with its subnets.
+	// The VPC CIDR and every subnet CIDR must be an IPv4 network address in CIDR notation, with no host bits set
+	// (10.0.0.0/24, not 10.0.0.5/24). Every subnet must be within the VPC CIDR, and subnets must not overlap.
+	// A request that breaks these rules is rejected with 400, naming the subnet that fails.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -1124,6 +1098,8 @@ type ClientInterface interface {
 	// CreateSubnetWithBody Create a subnet in a VPC
 	//
 	// Creates a new subnet in the specified VPC with CIDR and type validation.
+	// The CIDR must be an IPv4 network address in CIDR notation, with no host bits set, must be within
+	// the VPC CIDR and must not overlap an existing subnet of the VPC. Otherwise the request is rejected with 400.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -1133,6 +1109,8 @@ type ClientInterface interface {
 	// CreateSubnet Create a subnet in a VPC
 	//
 	// Creates a new subnet in the specified VPC with CIDR and type validation.
+	// The CIDR must be an IPv4 network address in CIDR notation, with no host bits set, must be within
+	// the VPC CIDR and must not overlap an existing subnet of the VPC. Otherwise the request is rejected with 400.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -1548,7 +1526,10 @@ func (c *Client) ResizeVolume(ctx context.Context, volumeName string, params *Re
 
 // CreateVPCWithBody Create a new VPC
 //
-// Creates a VPC with the specified name and CIDR in the given tenant id.
+// Creates a VPC with the specified name and CIDR in the given tenant id, together with its subnets.
+// The VPC CIDR and every subnet CIDR must be an IPv4 network address in CIDR notation, with no host bits set
+// (10.0.0.0/24, not 10.0.0.5/24). Every subnet must be within the VPC CIDR, and subnets must not overlap.
+// A request that breaks these rules is rejected with 400, naming the subnet that fails.
 //
 // Takes any type of body and a specified content type.
 //
@@ -1567,7 +1548,10 @@ func (c *Client) CreateVPCWithBody(ctx context.Context, params *CreateVPCParams,
 
 // CreateVPC Create a new VPC
 //
-// Creates a VPC with the specified name and CIDR in the given tenant id.
+// Creates a VPC with the specified name and CIDR in the given tenant id, together with its subnets.
+// The VPC CIDR and every subnet CIDR must be an IPv4 network address in CIDR notation, with no host bits set
+// (10.0.0.0/24, not 10.0.0.5/24). Every subnet must be within the VPC CIDR, and subnets must not overlap.
+// A request that breaks these rules is rejected with 400, naming the subnet that fails.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -1676,6 +1660,8 @@ func (c *Client) ListSubnets(ctx context.Context, vpcName string, params *ListSu
 // CreateSubnetWithBody Create a subnet in a VPC
 //
 // Creates a new subnet in the specified VPC with CIDR and type validation.
+// The CIDR must be an IPv4 network address in CIDR notation, with no host bits set, must be within
+// the VPC CIDR and must not overlap an existing subnet of the VPC. Otherwise the request is rejected with 400.
 //
 // Takes any type of body and a specified content type.
 //
@@ -1695,6 +1681,8 @@ func (c *Client) CreateSubnetWithBody(ctx context.Context, vpcName string, param
 // CreateSubnet Create a subnet in a VPC
 //
 // Creates a new subnet in the specified VPC with CIDR and type validation.
+// The CIDR must be an IPv4 network address in CIDR notation, with no host bits set, must be within
+// the VPC CIDR and must not overlap an existing subnet of the VPC. Otherwise the request is rejected with 400.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -3192,7 +3180,10 @@ type ClientWithResponsesInterface interface {
 
 	// CreateVPCWithBodyWithResponse Create a new VPC
 	//
-	// Creates a VPC with the specified name and CIDR in the given tenant id.
+	// Creates a VPC with the specified name and CIDR in the given tenant id, together with its subnets.
+	// The VPC CIDR and every subnet CIDR must be an IPv4 network address in CIDR notation, with no host bits set
+	// (10.0.0.0/24, not 10.0.0.5/24). Every subnet must be within the VPC CIDR, and subnets must not overlap.
+	// A request that breaks these rules is rejected with 400, naming the subnet that fails.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -3201,7 +3192,10 @@ type ClientWithResponsesInterface interface {
 
 	// CreateVPCWithResponse Create a new VPC
 	//
-	// Creates a VPC with the specified name and CIDR in the given tenant id.
+	// Creates a VPC with the specified name and CIDR in the given tenant id, together with its subnets.
+	// The VPC CIDR and every subnet CIDR must be an IPv4 network address in CIDR notation, with no host bits set
+	// (10.0.0.0/24, not 10.0.0.5/24). Every subnet must be within the VPC CIDR, and subnets must not overlap.
+	// A request that breaks these rules is rejected with 400, naming the subnet that fails.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -3256,6 +3250,8 @@ type ClientWithResponsesInterface interface {
 	// CreateSubnetWithBodyWithResponse Create a subnet in a VPC
 	//
 	// Creates a new subnet in the specified VPC with CIDR and type validation.
+	// The CIDR must be an IPv4 network address in CIDR notation, with no host bits set, must be within
+	// the VPC CIDR and must not overlap an existing subnet of the VPC. Otherwise the request is rejected with 400.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -3265,6 +3261,8 @@ type ClientWithResponsesInterface interface {
 	// CreateSubnetWithResponse Create a subnet in a VPC
 	//
 	// Creates a new subnet in the specified VPC with CIDR and type validation.
+	// The CIDR must be an IPv4 network address in CIDR notation, with no host bits set, must be within
+	// the VPC CIDR and must not overlap an existing subnet of the VPC. Otherwise the request is rejected with 400.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -4972,7 +4970,10 @@ func (c *ClientWithResponses) ResizeVolumeWithResponse(ctx context.Context, volu
 
 // CreateVPCWithBodyWithResponse Create a new VPC
 //
-// Creates a VPC with the specified name and CIDR in the given tenant id.
+// Creates a VPC with the specified name and CIDR in the given tenant id, together with its subnets.
+// The VPC CIDR and every subnet CIDR must be an IPv4 network address in CIDR notation, with no host bits set
+// (10.0.0.0/24, not 10.0.0.5/24). Every subnet must be within the VPC CIDR, and subnets must not overlap.
+// A request that breaks these rules is rejected with 400, naming the subnet that fails.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -4987,7 +4988,10 @@ func (c *ClientWithResponses) CreateVPCWithBodyWithResponse(ctx context.Context,
 
 // CreateVPCWithResponse Create a new VPC
 //
-// Creates a VPC with the specified name and CIDR in the given tenant id.
+// Creates a VPC with the specified name and CIDR in the given tenant id, together with its subnets.
+// The VPC CIDR and every subnet CIDR must be an IPv4 network address in CIDR notation, with no host bits set
+// (10.0.0.0/24, not 10.0.0.5/24). Every subnet must be within the VPC CIDR, and subnets must not overlap.
+// A request that breaks these rules is rejected with 400, naming the subnet that fails.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -5078,6 +5082,8 @@ func (c *ClientWithResponses) ListSubnetsWithResponse(ctx context.Context, vpcNa
 // CreateSubnetWithBodyWithResponse Create a subnet in a VPC
 //
 // Creates a new subnet in the specified VPC with CIDR and type validation.
+// The CIDR must be an IPv4 network address in CIDR notation, with no host bits set, must be within
+// the VPC CIDR and must not overlap an existing subnet of the VPC. Otherwise the request is rejected with 400.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -5093,6 +5099,8 @@ func (c *ClientWithResponses) CreateSubnetWithBodyWithResponse(ctx context.Conte
 // CreateSubnetWithResponse Create a subnet in a VPC
 //
 // Creates a new subnet in the specified VPC with CIDR and type validation.
+// The CIDR must be an IPv4 network address in CIDR notation, with no host bits set, must be within
+// the VPC CIDR and must not overlap an existing subnet of the VPC. Otherwise the request is rejected with 400.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //

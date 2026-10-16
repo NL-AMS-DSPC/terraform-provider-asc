@@ -61,6 +61,8 @@ type inlineSubnetModel struct {
 	Tags      types.Map    `tfsdk:"tags"`
 }
 
+const subnetTypeDeprecation = "ASC no longer has subnet types; remove the type argument. It is ignored."
+
 var inlineSubnetTypes = map[string]attr.Type{
 	"id":         types.StringType,
 	"urn":        types.StringType,
@@ -90,21 +92,31 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				Required:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-			"cidr":       schema.StringAttribute{Description: "CIDR block of the VPC.", Computed: true},
+			"cidr": schema.StringAttribute{
+				Description: "IPv4 CIDR block of the VPC, as a network address such as 10.0.0.0/16. " +
+					"Every inline subnet must lie within it. Changing the CIDR replaces the VPC.",
+				Required:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+			},
 			"status":     schema.StringAttribute{Description: "Current lifecycle status.", Computed: true},
 			"last_error": schema.StringAttribute{Description: "Last error reported for the VPC, empty when healthy.", Computed: true},
 			"subnets": schema.ListNestedAttribute{
 				Description: "Subnets created together with the VPC; at least one is required. " +
-					"Changing the name, cidr, type or tags of an inline subnet replaces the VPC. " +
+					"Changing the name, cidr or tags of an inline subnet replaces the VPC. " +
 					"Use asc_subnet to add subnets to an existing VPC.",
 				Required: true,
 				NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
-					"id":         schema.StringAttribute{Description: "Identifier of the subnet.", Computed: true},
-					"urn":        schema.StringAttribute{Description: "URN of the subnet.", Computed: true},
-					"name":       schema.StringAttribute{Description: "Name of the subnet.", Required: true},
-					"vpc_id":     schema.StringAttribute{Description: "Identifier of the owning VPC.", Computed: true},
-					"cidr":       schema.StringAttribute{Description: "CIDR block of the subnet.", Required: true},
-					"type":       schema.StringAttribute{Description: "Subnet type, public or private.", Required: true},
+					"id":     schema.StringAttribute{Description: "Identifier of the subnet.", Computed: true},
+					"urn":    schema.StringAttribute{Description: "URN of the subnet.", Computed: true},
+					"name":   schema.StringAttribute{Description: "Name of the subnet.", Required: true},
+					"vpc_id": schema.StringAttribute{Description: "Identifier of the owning VPC.", Computed: true},
+					"cidr":   schema.StringAttribute{Description: "CIDR block of the subnet.", Required: true},
+					"type": schema.StringAttribute{
+						Description:        "Deprecated: ASC no longer has subnet types. The value is ignored and never sent to ASC.",
+						DeprecationMessage: subnetTypeDeprecation,
+						Optional:           true, Computed: true,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+					},
 					"status":     schema.StringAttribute{Description: "Lifecycle status of the subnet.", Computed: true},
 					"last_error": schema.StringAttribute{Description: "Last error reported for the subnet, empty when healthy.", Computed: true},
 					"tags":       schema.MapAttribute{Description: "Tags applied to the subnet.", Optional: true, ElementType: types.StringType},
@@ -147,6 +159,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 
 	request := client.CreateVPCRequest{
 		Name:    plan.Name.ValueString(),
+		CIDR:    plan.CIDR.ValueString(),
 		Tags:    common.TagsToClient(ctx, plan.Tags, &resp.Diagnostics),
 		Subnets: inlineSubnetsToClient(ctx, plan.Subnets, &resp.Diagnostics),
 	}
@@ -253,7 +266,7 @@ func configuredInlineSubnets(ctx context.Context, value types.List, diags *diag.
 	}
 	result := make([]string, 0, len(models))
 	for _, model := range models {
-		result = append(result, fmt.Sprintf("%s|%s|%s|%s", model.Name, model.CIDR, model.Type, model.Tags))
+		result = append(result, fmt.Sprintf("%s|%s|%s", model.Name, model.CIDR, model.Tags))
 	}
 	return result
 }
@@ -267,7 +280,7 @@ func inlineSubnetsToClient(ctx context.Context, value types.List, diags *diag.Di
 	result := make([]client.CreateSubnetRequest, 0, len(models))
 	for _, model := range models {
 		result = append(result, client.CreateSubnetRequest{
-			Name: model.Name.ValueString(), CIDR: model.CIDR.ValueString(), Type: model.Type.ValueString(),
+			Name: model.Name.ValueString(), CIDR: model.CIDR.ValueString(),
 			Tags: common.TagsToClient(ctx, model.Tags, diags),
 		})
 	}
@@ -282,16 +295,34 @@ func setFromVPC(ctx context.Context, model *Model, value client.VPC, reconcile b
 	model.Status = types.StringValue(value.Status)
 	model.LastError = types.StringValue(value.LastError)
 	model.Tags = common.TagsToTerraform(ctx, value.Tags, diags)
+	kept := deprecatedSubnetTypes(ctx, model.Subnets, diags)
 	if reconcile {
-		model.Subnets = reconcileInlineSubnets(ctx, model.Subnets, value.Subnets, diags)
+		model.Subnets = reconcileInlineSubnets(ctx, model.Subnets, value.Subnets, kept, diags)
 	} else {
-		model.Subnets = inlineSubnetsToTerraform(ctx, value.Subnets, diags)
+		model.Subnets = inlineSubnetsToTerraform(ctx, value.Subnets, kept, diags)
 	}
 }
 
-func reconcileInlineSubnets(ctx context.Context, prior types.List, actual []client.Subnet, diags *diag.Diagnostics) types.List {
+// deprecatedSubnetTypes keeps each subnet's configured or stored type by name, since
+// ASC no longer reports one. An unset type becomes null.
+func deprecatedSubnetTypes(ctx context.Context, value types.List, diags *diag.Diagnostics) map[string]types.String {
+	kept := map[string]types.String{}
+	if value.IsNull() || value.IsUnknown() {
+		return kept
+	}
+	var models []inlineSubnetModel
+	diags.Append(value.ElementsAs(ctx, &models, false)...)
+	for _, model := range models {
+		if !model.Type.IsUnknown() {
+			kept[model.Name.ValueString()] = model.Type
+		}
+	}
+	return kept
+}
+
+func reconcileInlineSubnets(ctx context.Context, prior types.List, actual []client.Subnet, kept map[string]types.String, diags *diag.Diagnostics) types.List {
 	if prior.IsNull() || prior.IsUnknown() {
-		return inlineSubnetsToTerraform(ctx, actual, diags)
+		return inlineSubnetsToTerraform(ctx, actual, kept, diags)
 	}
 	var owned []inlineSubnetModel
 	diags.Append(prior.ElementsAs(ctx, &owned, false)...)
@@ -308,15 +339,15 @@ func reconcileInlineSubnets(ctx context.Context, prior types.List, actual []clie
 			selected = append(selected, current)
 		}
 	}
-	return inlineSubnetsToTerraform(ctx, selected, diags)
+	return inlineSubnetsToTerraform(ctx, selected, kept, diags)
 }
 
-func inlineSubnetsToTerraform(ctx context.Context, values []client.Subnet, diags *diag.Diagnostics) types.List {
+func inlineSubnetsToTerraform(ctx context.Context, values []client.Subnet, kept map[string]types.String, diags *diag.Diagnostics) types.List {
 	models := make([]inlineSubnetModel, 0, len(values))
 	for _, subnet := range values {
 		models = append(models, inlineSubnetModel{
 			ID: types.StringValue(subnet.ID), URN: types.StringValue(subnet.URN), Name: types.StringValue(subnet.Name),
-			VPCID: types.StringValue(subnet.VPCID), CIDR: types.StringValue(subnet.CIDR), Type: types.StringValue(subnet.Type),
+			VPCID: types.StringValue(subnet.VPCID), CIDR: types.StringValue(subnet.CIDR), Type: keptType(kept, subnet.Name),
 			Status: types.StringValue(subnet.Status), LastError: types.StringValue(subnet.LastError),
 			Tags: common.TagsToTerraform(ctx, subnet.Tags, diags),
 		})
@@ -324,4 +355,11 @@ func inlineSubnetsToTerraform(ctx context.Context, values []client.Subnet, diags
 	result, conversionDiags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: inlineSubnetTypes}, models)
 	diags.Append(conversionDiags...)
 	return result
+}
+
+func keptType(kept map[string]types.String, name string) types.String {
+	if value, ok := kept[name]; ok {
+		return value
+	}
+	return types.StringNull()
 }

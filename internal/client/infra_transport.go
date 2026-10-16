@@ -149,7 +149,6 @@ type createVMWire struct {
 }
 
 func createVMBody(request CreateVMRequest) (io.Reader, error) {
-	enableLogging := request.EnableLogging
 	image := orDefaultImage(request.Image)
 	size := orDefaultBootDiskSize(request.BootDiskSizeGB)
 	wire := createVMWire{
@@ -164,8 +163,6 @@ func createVMBody(request CreateVMRequest) (io.Reader, error) {
 			},
 			Tags:          infraTags(request.Tags),
 			Customization: infraCustomization(request.Customization),
-			// The handwritten request always sent enableLogging, including false.
-			EnableLogging: &enableLogging,
 		},
 		Image: optionalString(request.Image),
 	}

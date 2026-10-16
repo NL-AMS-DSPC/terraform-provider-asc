@@ -1034,7 +1034,7 @@
     },
     "/vpcs": {
       "post": {
-        "description": "Creates a VPC with the specified name and CIDR in the given tenant id.",
+        "description": "Creates a VPC with the specified name and CIDR in the given tenant id, together with its subnets.\nThe VPC CIDR and every subnet CIDR must be an IPv4 network address in CIDR notation, with no host bits set\n(10.0.0.0/24, not 10.0.0.5/24). Every subnet must be within the VPC CIDR, and subnets must not overlap.\nA request that breaks these rules is rejected with 400, naming the subnet that fails.",
         "tags": [
           "vpc"
         ],
@@ -1374,7 +1374,7 @@
         }
       },
       "post": {
-        "description": "Creates a new subnet in the specified VPC with CIDR and type validation.",
+        "description": "Creates a new subnet in the specified VPC with CIDR and type validation.\nThe CIDR must be an IPv4 network address in CIDR notation, with no host bits set, must be within\nthe VPC CIDR and must not overlap an existing subnet of the VPC. Otherwise the request is rejected with 400.",
         "tags": [
           "subnet"
         ],
@@ -1732,8 +1732,7 @@
         "type": "object",
         "required": [
           "cidr",
-          "name",
-          "type"
+          "name"
         ],
         "properties": {
           "cidr": {
@@ -1774,36 +1773,12 @@
             "type": "string",
             "example": "default"
           },
-          "type": {
-            "description": "Type indicates whether this is a public or private subnet",
-            "enum": [
-              "public",
-              "private"
-            ],
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/SubnetType"
-              }
-            ],
-            "example": "public"
-          },
           "vpcID": {
             "description": "VPCID is the ID of the parent VPC",
             "type": "string",
             "example": "123e4567-e89b-12d3-a456-426655440000"
           }
         }
-      },
-      "SubnetType": {
-        "type": "string",
-        "enum": [
-          "public",
-          "private"
-        ],
-        "x-enum-varnames": [
-          "SubnetTypePublic",
-          "SubnetTypePrivate"
-        ]
       },
       "Tag": {
         "type": "object",
@@ -1953,9 +1928,6 @@
           "customization": {
             "$ref": "#/components/schemas/Customization"
           },
-          "enableLogging": {
-            "type": "boolean"
-          },
           "name": {
             "type": "string",
             "maxLength": 50
@@ -1992,10 +1964,15 @@
       "CreateVPCRequest": {
         "type": "object",
         "required": [
+          "cidr",
           "name",
           "subnets"
         ],
         "properties": {
+          "cidr": {
+            "type": "string",
+            "example": "10.0.0.0/16"
+          },
           "id": {
             "type": "string"
           },
@@ -2272,10 +2249,6 @@
               "$ref": "#/components/schemas/Tag"
             }
           },
-          "type": {
-            "type": "string",
-            "example": "public"
-          },
           "urn": {
             "type": "string",
             "example": "asc:atos:network:my-tenant:subnet:123e4567-e89b-12d3-a456-426655440000"
@@ -2335,9 +2308,6 @@
               "[\"vol1\"",
               "\"vol2\"]"
             ]
-          },
-          "enableLogging": {
-            "type": "boolean"
           },
           "internalIP": {
             "type": "string"
@@ -2485,7 +2455,6 @@
         "required": [
           "cidr",
           "name",
-          "type",
           "vpcID"
         ],
         "properties": {
@@ -2505,18 +2474,6 @@
             "items": {
               "$ref": "#/components/schemas/Tag"
             }
-          },
-          "type": {
-            "enum": [
-              "public",
-              "private"
-            ],
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/SubnetType"
-              }
-            ],
-            "example": "public"
           },
           "vpcID": {
             "type": "string"

@@ -84,10 +84,10 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				Description: "CIDR block of the subnet." + replaces, Required: true, PlanModifiers: replaceString,
 			},
 			"type": schema.StringAttribute{
-				Description:   "Subnet type, public or private." + replaces,
-				Required:      true,
-				PlanModifiers: replaceString,
-				Validators:    []validator.String{stringvalidator.OneOf("public", "private")},
+				Description:        "Deprecated: ASC no longer has subnet types. The value is ignored and never sent to ASC.",
+				DeprecationMessage: "ASC no longer has subnet types; remove the type argument. It is ignored.",
+				Optional:           true, Computed: true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"status":     schema.StringAttribute{Description: "Current lifecycle status.", Computed: true},
 			"last_error": schema.StringAttribute{Description: "Last error reported for the subnet, empty when healthy.", Computed: true},
@@ -121,7 +121,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 
 	created, err := r.client.CreateSubnet(ctx, plan.VPCName.ValueString(), client.CreateSubnetRequest{
 		Name: plan.Name.ValueString(), CIDR: plan.CIDR.ValueString(), VPCID: plan.VPCID.ValueString(),
-		Type: plan.Type.ValueString(), Tags: common.TagsToClient(ctx, plan.Tags, &resp.Diagnostics),
+		Tags: common.TagsToClient(ctx, plan.Tags, &resp.Diagnostics),
 	})
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating subnet", err.Error())
@@ -202,7 +202,10 @@ func setFromSubnet(ctx context.Context, model *Model, value client.Subnet, diags
 	model.Name = types.StringValue(value.Name)
 	model.VPCID = types.StringValue(value.VPCID)
 	model.CIDR = types.StringValue(value.CIDR)
-	model.Type = types.StringValue(value.Type)
+	// ASC no longer reports a type; keep the configured or stored one.
+	if model.Type.IsUnknown() {
+		model.Type = types.StringNull()
+	}
 	model.Status = types.StringValue(value.Status)
 	model.LastError = types.StringValue(value.LastError)
 	model.Tags = common.TagsToTerraform(ctx, value.Tags, diags)

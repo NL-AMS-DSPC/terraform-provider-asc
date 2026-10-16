@@ -92,7 +92,7 @@ func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp 
 					"name":       schema.StringAttribute{Description: "Name of the subnet.", Computed: true},
 					"vpc_id":     schema.StringAttribute{Description: "Identifier of the owning VPC.", Computed: true},
 					"cidr":       schema.StringAttribute{Description: "CIDR block of the subnet.", Computed: true},
-					"type":       schema.StringAttribute{Description: "Subnet type, public or private.", Computed: true},
+					"type":       schema.StringAttribute{Description: "Deprecated: ASC no longer has subnet types. Always null.", DeprecationMessage: "ASC no longer has subnet types. Always null.", Computed: true},
 					"status":     schema.StringAttribute{Description: "Lifecycle status of the subnet.", Computed: true},
 					"last_error": schema.StringAttribute{Description: "Last error reported for the subnet, empty when healthy.", Computed: true},
 					"tags":       schema.MapAttribute{Description: "Tags applied to the subnet.", Computed: true, ElementType: types.StringType},
@@ -152,7 +152,7 @@ func inlineSubnetsToTerraform(ctx context.Context, values []client.Subnet, diags
 	for _, subnet := range values {
 		models = append(models, inlineSubnetModel{
 			ID: types.StringValue(subnet.ID), URN: types.StringValue(subnet.URN), Name: types.StringValue(subnet.Name),
-			VPCID: types.StringValue(subnet.VPCID), CIDR: types.StringValue(subnet.CIDR), Type: types.StringValue(subnet.Type),
+			VPCID: types.StringValue(subnet.VPCID), CIDR: types.StringValue(subnet.CIDR), Type: types.StringNull(),
 			Status: types.StringValue(subnet.Status), LastError: types.StringValue(subnet.LastError),
 			Tags: common.TagsToTerraform(ctx, subnet.Tags, diags),
 		})

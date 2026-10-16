@@ -19,7 +19,7 @@ const (
 )
 
 func (c *Runtime) CreateVPC(ctx context.Context, request CreateVPCRequest) (VPC, error) {
-	body := infra.CreateVPCJSONRequestBody{Name: request.Name, Tags: infraTags(request.Tags)}
+	body := infra.CreateVPCJSONRequestBody{Name: request.Name, Cidr: request.CIDR, Tags: infraTags(request.Tags)}
 	if request.Subnets != nil {
 		body.Subnets = make([]infra.Subnet, len(request.Subnets))
 		for i, subnet := range request.Subnets {
@@ -27,7 +27,6 @@ func (c *Runtime) CreateVPC(ctx context.Context, request CreateVPCRequest) (VPC,
 				Name:  subnet.Name,
 				Cidr:  subnet.CIDR,
 				VpcID: optionalString(subnet.VPCID),
-				Type:  infra.SubnetType(subnet.Type),
 				Tags:  infraTags(subnet.Tags),
 			}
 		}
@@ -124,7 +123,6 @@ func createSubnetBody(request CreateSubnetRequest) ([]byte, error) {
 		CreateSubnetJSONRequestBody: infra.CreateSubnetJSONRequestBody{
 			Name: request.Name,
 			Cidr: request.CIDR,
-			Type: infra.SubnetType(request.Type),
 			Tags: infraTags(request.Tags),
 		},
 		VPCID: optionalString(request.VPCID),
@@ -223,7 +221,6 @@ func (c *Runtime) GetVM(ctx context.Context, name string) (VM, error) {
 		Tags:            tagsFromInfra(wire.Tags),
 		AttachedVolumes: sortedStrings(wire.AttachedVolumes),
 		OS:              osFromInfra(wire.Os),
-		EnableLogging:   value(wire.EnableLogging),
 	}, nil
 }
 
@@ -286,7 +283,6 @@ func subnetsFromInfra(wire *[]infra.SubnetResponse) []Subnet {
 			URN:       value(subnet.Urn),
 			Name:      value(subnet.Name),
 			CIDR:      value(subnet.Cidr),
-			Type:      value(subnet.Type),
 			VPCID:     value(subnet.VpcID),
 			Status:    value(subnet.Status),
 			LastError: value(subnet.LastError),

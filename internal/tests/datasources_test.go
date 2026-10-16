@@ -15,7 +15,7 @@ func TestAccVPCDataSource(t *testing.T) {
 		CIDR: "10.0.0.0/24", Status: "active", Tags: []client.Tag{{Key: "env", Value: "test"}},
 		Subnets: []client.Subnet{{
 			ID: "00000000-0000-4000-8000-000000000002", URN: "asc:subnet:bootstrap", Name: "bootstrap",
-			VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.0/25", Type: "private", Status: "active",
+			VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.0/25", Status: "active",
 			Tags: []client.Tag{{Key: "tier", Value: "data"}},
 		}},
 	}
@@ -42,7 +42,7 @@ data "asc_vpc" "test" {
 			resource.TestCheckResourceAttr("data.asc_vpc.test", "subnets.0.name", "bootstrap"),
 			resource.TestCheckResourceAttr("data.asc_vpc.test", "subnets.0.vpc_id", vpc.ID),
 			resource.TestCheckResourceAttr("data.asc_vpc.test", "subnets.0.cidr", "10.0.0.0/25"),
-			resource.TestCheckResourceAttr("data.asc_vpc.test", "subnets.0.type", "private"),
+			resource.TestCheckNoResourceAttr("data.asc_vpc.test", "subnets.0.type"),
 			resource.TestCheckResourceAttr("data.asc_vpc.test", "subnets.0.status", "active"),
 			resource.TestCheckResourceAttr("data.asc_vpc.test", "subnets.0.tags.tier", "data"),
 		),
@@ -66,7 +66,7 @@ data "asc_vpc" "test" {
 func TestAccSubnetDataSource(t *testing.T) {
 	subnet := client.Subnet{
 		ID: "00000000-0000-4000-8000-000000000002", URN: "asc:subnet:test-subnet", Name: "test-subnet",
-		VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.128/25", Type: "public", Status: "active",
+		VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.128/25", Status: "active",
 		Tags: []client.Tag{{Key: "tier", Value: "edge"}},
 	}
 	// infra-gateway has no single-subnet GET route, so the data source reads the
@@ -74,7 +74,7 @@ func TestAccSubnetDataSource(t *testing.T) {
 	// to prove the match is exact rather than positional.
 	other := client.Subnet{
 		ID: "00000000-0000-4000-8000-000000000003", URN: "asc:subnet:other", Name: "other",
-		VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.0/25", Type: "private", Status: "active",
+		VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.0/25", Status: "active",
 	}
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
 		"GET /api/infra-gateway/vpcs/test-vpc/subnets": func(w http.ResponseWriter, _ *http.Request) {
@@ -95,7 +95,7 @@ data "asc_subnet" "test" {
 			resource.TestCheckResourceAttr("data.asc_subnet.test", "vpc_name", "test-vpc"),
 			resource.TestCheckResourceAttr("data.asc_subnet.test", "vpc_id", subnet.VPCID),
 			resource.TestCheckResourceAttr("data.asc_subnet.test", "cidr", "10.0.0.128/25"),
-			resource.TestCheckResourceAttr("data.asc_subnet.test", "type", "public"),
+			resource.TestCheckNoResourceAttr("data.asc_subnet.test", "type"),
 			resource.TestCheckResourceAttr("data.asc_subnet.test", "status", "active"),
 			resource.TestCheckResourceAttr("data.asc_subnet.test", "last_error", ""),
 			resource.TestCheckResourceAttr("data.asc_subnet.test", "tags.tier", "edge"),
@@ -148,7 +148,6 @@ func TestAccVirtualMachineDataSource(t *testing.T) {
 		// ranging over a Go map, so state has to come out sorted regardless.
 		AttachedVolumes: []string{"vol-c", "vol-a", "vol-b"},
 		OS:              client.OS{ID: "ubuntu-24.04", Family: "linux", Distribution: "ubuntu", Release: "24.04", DisplayName: "Ubuntu 24.04"},
-		EnableLogging:   true,
 	}
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
 		"GET /api/infra-gateway/vms/test-vm": func(w http.ResponseWriter, _ *http.Request) { writeData(w, http.StatusOK, vm) },
@@ -165,7 +164,7 @@ data "asc_virtual_machine" "test" {
 			resource.TestCheckResourceAttr("data.asc_virtual_machine.test", "vpc_id", vm.VPCID),
 			resource.TestCheckResourceAttr("data.asc_virtual_machine.test", "status", "active"),
 			resource.TestCheckResourceAttr("data.asc_virtual_machine.test", "last_error", ""),
-			resource.TestCheckResourceAttr("data.asc_virtual_machine.test", "enable_logging", "true"),
+			resource.TestCheckNoResourceAttr("data.asc_virtual_machine.test", "enable_logging"),
 			resource.TestCheckResourceAttr("data.asc_virtual_machine.test", "tags.env", "test"),
 			resource.TestCheckResourceAttr("data.asc_virtual_machine.test", "sku.id", vm.SKU.ID),
 			resource.TestCheckResourceAttr("data.asc_virtual_machine.test", "sku.name", "gp-small"),

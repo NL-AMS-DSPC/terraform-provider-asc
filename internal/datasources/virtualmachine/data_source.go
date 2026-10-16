@@ -121,7 +121,7 @@ func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp 
 				ElementType: types.StringType,
 			},
 			"os":             schema.SingleNestedAttribute{Description: "Operating system image the virtual machine boots.", Computed: true, Attributes: computedOS},
-			"enable_logging": schema.BoolAttribute{Description: "Whether platform logging is enabled for the virtual machine.", Computed: true},
+			"enable_logging": schema.BoolAttribute{Description: "Deprecated: ASC no longer has a logging setting for virtual machines. Always null.", DeprecationMessage: "ASC no longer has a logging setting for virtual machines. Always null.", Computed: true},
 		},
 	}
 }
@@ -193,7 +193,7 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 		Tags:            common.TagsToTerraform(ctx, current.Tags, &resp.Diagnostics),
 		AttachedVolumes: attachedVolumes,
 		OS:              osValue,
-		EnableLogging:   types.BoolValue(current.EnableLogging),
+		EnableLogging:   types.BoolNull(),
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
