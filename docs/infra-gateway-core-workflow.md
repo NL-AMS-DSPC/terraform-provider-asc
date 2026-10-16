@@ -11,7 +11,7 @@ responses are decoded from their `data` envelope.
 | Inline bootstrap subnet | VPC create requires at least one subnet and omits unresolved `vpcID` | Provider-only encoding rule |
 | Standalone subnet create/read/delete | `POST /vpcs/{vpc}/subnets/`, list and exact-name match, `DELETE /vpcs/{vpc}/subnets/{name}` | Existing handler contract |
 | VM create/read/delete | `POST /vms/`, `GET /vms/{name}`, `DELETE /vms/{name}` | Existing handler plus approved GET fields below |
-| Authoritative VM VPC and logging state | GET returns `vpcID` and `enableLogging` | Approved ASC delta in `vms.go` and `vms_test.go` |
+| Authoritative VM VPC | GET returns `vpcID` | Approved ASC delta in `vms.go` and `vms_test.go` |
 | VM customization refresh | Preserve sensitive configured value because GET deliberately does not return it | Provider-only state rule |
 | Missing resources | Only HTTP 404 removes Terraform state or makes delete idempotent | Provider-only typed error rule |
 | Tag updates | `PATCH /vpcs/{name}`, `PATCH /vpcs/{vpc}/subnets/{name}`, `PATCH /vms/{name}`, `PATCH /volumes/{name}` | Existing handler contract |
