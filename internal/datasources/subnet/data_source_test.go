@@ -104,13 +104,13 @@ func TestDataSourceReadMapsTheSubnet(t *testing.T) {
 
 	state, response := read(t, stubClient{subnet: client.Subnet{
 		ID: "00000000-0000-4000-8000-000000000002", URN: "asc:subnet:test-subnet", Name: "test-subnet",
-		VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.128/25", Type: "public", Status: "active",
+		VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.128/25", Status: "active",
 		Tags: []client.Tag{{Key: "env", Value: "test"}},
 	}}, "test-vpc", "test-subnet")
 	if response.Diagnostics.HasError() {
 		t.Fatalf("Read() diagnostics = %v", response.Diagnostics)
 	}
-	if state.ID.ValueString() != "00000000-0000-4000-8000-000000000002" || state.Type.ValueString() != "public" {
+	if state.ID.ValueString() != "00000000-0000-4000-8000-000000000002" || !state.Type.IsNull() {
 		t.Fatalf("state = %#v", state)
 	}
 	// vpc_name is not part of the read model, so it can only come back from the

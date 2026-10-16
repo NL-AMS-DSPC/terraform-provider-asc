@@ -45,7 +45,7 @@ func TestInfrastructureContract(t *testing.T) {
 			}
 			w.WriteHeader(http.StatusCreated)
 		case "GET /api/infra-gateway/vpcs/test-vpc":
-			_ = json.NewEncoder(w).Encode(map[string]any{"data": vpcData(VPC{Name: "test-vpc"})})
+			_ = json.NewEncoder(w).Encode(map[string]any{"data": vpcData(VPC{Name: "test-vpc", Status: "active"})})
 		case "POST /api/infra-gateway/vpcs/test-vpc/subnets":
 			w.WriteHeader(http.StatusCreated)
 		case "GET /api/infra-gateway/vpcs/test-vpc/subnets":
@@ -53,7 +53,7 @@ func TestInfrastructureContract(t *testing.T) {
 		case "POST /api/infra-gateway/vms":
 			w.WriteHeader(http.StatusCreated)
 		case "GET /api/infra-gateway/vms/test-vm":
-			_ = json.NewEncoder(w).Encode(map[string]any{"data": vmData(VM{Name: "test-vm", VPCID: "vpc-id", EnableLogging: true})})
+			_ = json.NewEncoder(w).Encode(map[string]any{"data": vmData(VM{Name: "test-vm", VPCID: "vpc-id"})})
 		case "GET /api/infra-gateway/vms/missing":
 			w.WriteHeader(http.StatusNotFound)
 		default:
@@ -70,17 +70,17 @@ func TestInfrastructureContract(t *testing.T) {
 	runtime := NewRuntime(config)
 	ctx := context.Background()
 
-	if _, err := runtime.CreateVPC(ctx, CreateVPCRequest{Name: "test-vpc", Subnets: []CreateSubnetRequest{{Name: "bootstrap", CIDR: "10.0.0.0/25", Type: "private"}}}); err != nil {
+	if _, err := runtime.CreateVPC(ctx, CreateVPCRequest{Name: "test-vpc", Subnets: []CreateSubnetRequest{{Name: "bootstrap", CIDR: "10.0.0.0/25"}}}); err != nil {
 		t.Fatalf("CreateVPC() error = %v", err)
 	}
-	if _, err := runtime.CreateSubnet(ctx, "test-vpc", CreateSubnetRequest{Name: "test-subnet", CIDR: "10.0.0.128/25", VPCID: "vpc-id", Type: "public"}); err != nil {
+	if _, err := runtime.CreateSubnet(ctx, "test-vpc", CreateSubnetRequest{Name: "test-subnet", CIDR: "10.0.0.128/25", VPCID: "vpc-id"}); err != nil {
 		t.Fatalf("CreateSubnet() error = %v", err)
 	}
 	vm, err := runtime.CreateVM(ctx, CreateVMRequest{Name: "test-vm", SKUID: "sku", VPCID: "vpc-id"})
 	if err != nil {
 		t.Fatalf("CreateVM() error = %v", err)
 	}
-	if vm.VPCID != "vpc-id" || !vm.EnableLogging {
+	if vm.VPCID != "vpc-id" {
 		t.Fatalf("VM = %#v", vm)
 	}
 	if _, err := runtime.GetVM(ctx, "missing"); !errors.Is(err, ErrResourceNotFound) {

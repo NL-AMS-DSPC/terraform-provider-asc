@@ -200,18 +200,18 @@ func migrationCases() map[string]map[string]http.HandlerFunc {
 		CIDR: "10.0.0.0/24", Status: "active", Tags: []client.Tag{{Key: "env", Value: "test"}},
 		Subnets: []client.Subnet{{
 			ID: "00000000-0000-4000-8000-000000000002", URN: "asc:subnet:bootstrap", Name: "bootstrap",
-			VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.0/25", Type: "private", Status: "active",
+			VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.0/25", Status: "active",
 		}},
 	}
 	subnet := client.Subnet{
 		ID: "00000000-0000-4000-8000-000000000002", URN: "asc:subnet:test-subnet", Name: "test-subnet",
-		VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.128/25", Type: "public", Status: "active",
+		VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.128/25", Status: "active",
 	}
 	vm := client.VM{
 		URN: "asc:vm:test-vm", Name: "test-vm", VPCID: "00000000-0000-4000-8000-000000000001",
 		SKU: client.SKU{ID: "gp-2", Name: "general-purpose"}, Status: "active",
 		OS:   client.OS{ID: "ubuntu-24.04", Family: "linux", Distribution: "ubuntu", Release: "24.04", DisplayName: "Ubuntu 24.04"},
-		Tags: []client.Tag{{Key: "env", Value: "test"}}, EnableLogging: true,
+		Tags: []client.Tag{{Key: "env", Value: "test"}},
 	}
 	group := testVMGroup()
 
@@ -251,6 +251,41 @@ func TestMigrationFromLegacySameAddressPlansNothing(t *testing.T) {
 			}
 			if routes := environment.recordedRoutes(); len(routes) == 0 {
 				t.Error("the gateway saw no request, so the plan never refreshed the legacy state")
+			}
+		})
+	}
+}
+
+// ASC dropped subnet types and the VM logging setting. State written before that still
+// holds them; removing the arguments from the configuration must not plan a change.
+func TestDroppingDeprecatedArgumentsPlansNothing(t *testing.T) {
+	cases := migrationCases()
+	for name, dropped := range map[string]string{
+		"vpc":             `, type = "private"`,
+		"subnet":          "  type     = \"public\"\n",
+		"virtual_machine": "  enable_logging = true\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			environment := newTestEnvironment(t, cases[name])
+			dir := seedMigrationWorkspace(t, environment, name)
+			config, err := os.ReadFile(filepath.Join(dir, "main.tf"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(config), dropped) {
+				t.Fatalf("fixture %s no longer sets %q", name, dropped)
+			}
+			trimmed := strings.Replace(string(config), dropped, "", 1)
+			if err := os.WriteFile(filepath.Join(dir, "main.tf"), []byte(trimmed), 0o600); err != nil {
+				t.Fatal(err)
+			}
+
+			changes, output, err := terraformPlan(t, dir)
+			if err != nil {
+				t.Fatalf("terraform plan: %v\n%s", err, output)
+			}
+			if len(changes) != 0 {
+				t.Errorf("plan proposed %v, want no changes\n%s", changes, output)
 			}
 		})
 	}
@@ -383,7 +418,7 @@ func TestMigrationImportAdoptsALiveMachine(t *testing.T) {
 		URN: "asc:vm:test-vm", Name: "test-vm", VPCID: "00000000-0000-4000-8000-000000000001",
 		SKU: client.SKU{ID: "gp-2", Name: "general-purpose"}, Status: "active",
 		OS:   client.OS{ID: "ubuntu-24.04", Family: "linux", Distribution: "ubuntu", Release: "24.04", DisplayName: "Ubuntu 24.04"},
-		Tags: []client.Tag{{Key: "env", Value: "test"}}, EnableLogging: true,
+		Tags: []client.Tag{{Key: "env", Value: "test"}},
 	}
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
 		"GET /api/infra-gateway/vms/test-vm": func(w http.ResponseWriter, _ *http.Request) {

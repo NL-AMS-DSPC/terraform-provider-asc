@@ -4,6 +4,27 @@ All notable changes to this provider are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+This release follows the infra-gateway on ASC main and contains breaking changes.
+
+### Changed
+
+- `asc_vpc` requires `cidr`, and changing it replaces the VPC. Set it to the
+  current CIDR of an existing VPC to keep it.
+- Virtual machines and VM groups are created with a 32 GB boot disk, as the
+  infra-gateway now requires. An omitted `image` requests
+  `vm-images/ubuntu:24.04`, the gateway's former default.
+- Creating a VPC waits until it is active, so a virtual machine can be created
+  in it in the same apply.
+
+### Deprecated
+
+- Subnet `type` on `asc_subnet` and `asc_vpc`, and `enable_logging` on
+  `asc_virtual_machine`. ASC dropped both; the provider ignores them and never
+  sends them, and removing them plans no change. Data sources return them as
+  null.
+
 ## [0.1.0] - 2026-10-14
 
 First version of `terraform-provider-asc`, and the first published to the

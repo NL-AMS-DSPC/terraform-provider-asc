@@ -66,9 +66,9 @@ would not by itself bridge a different source address and resource type.
 
 | Resource | Terraform identity | Import ID | Schema version | Replacement forced by |
 | --- | --- | --- | --- | --- |
-| `asc_vpc` | `name` | `name` | 0 | `name`; a change to a configured field of an inline subnet |
-| `asc_subnet` | `vpc_name` + `name` | `vpc-name:subnet-name` | 0 | `name`, `vpc_name`, `vpc_id`, `cidr`, `type` |
-| `asc_virtual_machine` | `name` | `name` | 0 | `name`, `sku_id`, `vpc_id`, `image`, `customization`, `enable_logging` |
+| `asc_vpc` | `name` | `name` | 0 | `name`, `cidr`; a change to a configured field of an inline subnet |
+| `asc_subnet` | `vpc_name` + `name` | `vpc-name:subnet-name` | 0 | `name`, `vpc_name`, `vpc_id`, `cidr` |
+| `asc_virtual_machine` | `name` | `name` | 0 | `name`, `sku_id`, `vpc_id`, `image`, `customization` |
 | `asc_vm_group` | `name` | `name` | 0 | `name`, `sku_id`, `vpc_id`, `image`, `autoscaling`, `customization`, `tags` |
 | `asc_volume` | `name` | `name` | 0 | `name`, `storage_class`, `access_mode` |
 | `asc_volume_attachment` | `volume_name` + `vm_name` | `volume-name:vm-name` | 0 | `volume_name`, `vm_name` |

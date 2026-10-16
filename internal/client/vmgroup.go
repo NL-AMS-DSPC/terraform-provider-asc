@@ -42,9 +42,10 @@ type CronRule struct {
 // CreateVMGroupRequest sends the required policy as autoscalers; reads call it
 // autoscalingPolicy.
 type CreateVMGroupRequest struct {
-	Name              string
-	SKUID             string
-	VPCID             string
+	Name  string
+	SKUID string
+	VPCID string
+	// Image is the catalog image; empty selects DefaultImage.
 	Image             string
 	AutoscalingPolicy AutoscalingPolicy
 	Tags              []Tag
@@ -62,10 +63,11 @@ func (c *Runtime) CreateVMGroup(ctx context.Context, request CreateVMGroupReques
 	defer cancel()
 
 	body := infra.CreateVMGroupJSONRequestBody{
-		Name:  request.Name,
-		SkuID: request.SKUID,
-		VpcID: request.VPCID,
-		Image: optionalString(request.Image),
+		Name:       request.Name,
+		SkuID:      request.SKUID,
+		VpcID:      request.VPCID,
+		Image:      orDefaultImage(request.Image),
+		DiskSizeGB: DefaultBootDiskSizeGB,
 		// The policy is required, so it is always sent.
 		Autoscalers:   infraAutoscalingPolicy(request.AutoscalingPolicy),
 		Tags:          infraTags(request.Tags),

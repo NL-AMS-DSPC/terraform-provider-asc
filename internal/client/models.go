@@ -19,6 +19,7 @@ type VPC struct {
 
 type CreateVPCRequest struct {
 	Name    string
+	CIDR    string
 	Tags    []Tag
 	Subnets []CreateSubnetRequest
 }
@@ -28,7 +29,6 @@ type Subnet struct {
 	URN       string
 	Name      string
 	CIDR      string
-	Type      string
 	VPCID     string
 	Status    string
 	LastError string
@@ -39,7 +39,6 @@ type CreateSubnetRequest struct {
 	Name  string
 	CIDR  string
 	VPCID string
-	Type  string
 	Tags  []Tag
 }
 
@@ -53,7 +52,6 @@ type VM struct {
 	Tags            []Tag
 	AttachedVolumes []string
 	OS              OS
-	EnableLogging   bool
 }
 
 type SKU struct {
@@ -78,13 +76,13 @@ type OS struct {
 }
 
 type CreateVMRequest struct {
-	Name          string
-	SKUID         string
-	VPCID         string
+	Name  string
+	SKUID string
+	VPCID string
+	// Image is the catalog image; empty selects DefaultImage.
 	Image         string
 	Tags          []Tag
 	Customization *Customization
-	EnableLogging bool
 }
 
 type Customization struct {

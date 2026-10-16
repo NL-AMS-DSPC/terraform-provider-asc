@@ -19,7 +19,7 @@ const (
 )
 
 func (c *Runtime) CreateVPC(ctx context.Context, request CreateVPCRequest) (VPC, error) {
-	body := infra.CreateVPCJSONRequestBody{Name: request.Name, Tags: infraTags(request.Tags)}
+	body := infra.CreateVPCJSONRequestBody{Name: request.Name, Cidr: request.CIDR, Tags: infraTags(request.Tags)}
 	if request.Subnets != nil {
 		body.Subnets = make([]infra.Subnet, len(request.Subnets))
 		for i, subnet := range request.Subnets {
@@ -27,19 +27,29 @@ func (c *Runtime) CreateVPC(ctx context.Context, request CreateVPCRequest) (VPC,
 				Name:  subnet.Name,
 				Cidr:  subnet.CIDR,
 				VpcID: optionalString(subnet.VPCID),
-				Type:  infra.SubnetType(subnet.Type),
 				Tags:  infraTags(subnet.Tags),
 			}
 		}
 	}
-	return createWithNameReservation(ctx, c, vpcKind, request.Name,
+	read := c.vpcReader(request.Name)
+	vpc, err := createWithNameReservation(ctx, c, vpcKind, request.Name,
 		func(ctx context.Context) error {
 			return callInfra[infra.CreateVPCResponse](ctx, func(ctx context.Context) (*http.Response, error) {
 				return c.infraAPI().CreateVPC(ctx, &infra.CreateVPCParams{XTenant: c.tenant()}, body, c.infraEditor())
 			}, nil)
 		},
-		c.vpcReader(request.Name),
+		read,
 	)
+	if err != nil || strings.EqualFold(vpc.Status, statusActive) {
+		return vpc, err
+	}
+
+	// infra-gateway rejects a VM whose VPC is not active ("VPC is not available").
+	waitCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
+	defer cancel()
+	return waitUntil(waitCtx, c, vpcKind, request.Name, read, func(current VPC) bool {
+		return strings.EqualFold(current.Status, statusActive)
+	}, "become active")
 }
 
 func (c *Runtime) GetVPC(ctx context.Context, name string) (VPC, error) {
@@ -112,7 +122,6 @@ func createSubnetBody(request CreateSubnetRequest) ([]byte, error) {
 		CreateSubnetJSONRequestBody: infra.CreateSubnetJSONRequestBody{
 			Name: request.Name,
 			Cidr: request.CIDR,
-			Type: infra.SubnetType(request.Type),
 			Tags: infraTags(request.Tags),
 		},
 		VPCID: optionalString(request.VPCID),
@@ -175,16 +184,19 @@ func (c *Runtime) DeleteSubnet(ctx context.Context, vpcName, subnetName string) 
 }
 
 func (c *Runtime) CreateVM(ctx context.Context, request CreateVMRequest) (VM, error) {
-	enableLogging := request.EnableLogging
+	image := orDefaultImage(request.Image)
+	diskSizeGB := DefaultBootDiskSizeGB
 	body := infra.CreateVMJSONRequestBody{
-		Name:          request.Name,
-		SkuID:         request.SKUID,
-		VpcID:         request.VPCID,
-		Image:         optionalString(request.Image),
+		Name:  request.Name,
+		SkuID: request.SKUID,
+		VpcID: request.VPCID,
+		BootDisk: infra.BootDisk{
+			AttachMode: infra.Create,
+			DiskSizeGB: &diskSizeGB,
+			Image:      &image,
+		},
 		Tags:          infraTags(request.Tags),
 		Customization: infraCustomization(request.Customization),
-		// The handwritten request always sent enableLogging, including false.
-		EnableLogging: &enableLogging,
 	}
 	return createWithNameReservation(ctx, c, vmKind, request.Name,
 		func(ctx context.Context) error {
@@ -218,7 +230,6 @@ func (c *Runtime) GetVM(ctx context.Context, name string) (VM, error) {
 		Tags:            tagsFromInfra(wire.Tags),
 		AttachedVolumes: sortedStrings(wire.AttachedVolumes),
 		OS:              osFromInfra(wire.Os),
-		EnableLogging:   value(wire.EnableLogging),
 	}, nil
 }
 
@@ -281,7 +292,6 @@ func subnetsFromInfra(wire *[]infra.SubnetResponse) []Subnet {
 			URN:       value(subnet.Urn),
 			Name:      value(subnet.Name),
 			CIDR:      value(subnet.Cidr),
-			Type:      value(subnet.Type),
 			VPCID:     value(subnet.VpcID),
 			Status:    value(subnet.Status),
 			LastError: value(subnet.LastError),

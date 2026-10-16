@@ -15,11 +15,11 @@ Manages an ASC VPC.
 ```terraform
 resource "asc_vpc" "example" {
   name = "example-vpc"
+  cidr = "10.0.0.0/16"
 
   subnets = [{
     name = "bootstrap"
     cidr = "10.0.0.0/25"
-    type = "private"
   }]
 }
 ```
@@ -29,6 +29,7 @@ resource "asc_vpc" "example" {
 
 ### Required
 
+- `cidr` (String) IPv4 CIDR block of the VPC, such as 10.0.0.0/16. Every inline subnet must lie within it. Changing it replaces the VPC.
 - `name` (String)
 - `subnets` (Attributes List) (see [below for nested schema](#nestedatt--subnets))
 
@@ -38,7 +39,6 @@ resource "asc_vpc" "example" {
 
 ### Read-Only
 
-- `cidr` (String)
 - `id` (String) The ID of this resource.
 - `last_error` (String)
 - `status` (String)
@@ -51,11 +51,11 @@ Required:
 
 - `cidr` (String)
 - `name` (String)
-- `type` (String)
 
 Optional:
 
 - `tags` (Map of String)
+- `type` (String, Deprecated) Deprecated: ASC no longer has subnet types. The value is ignored and never sent to ASC.
 
 Read-Only:
 
