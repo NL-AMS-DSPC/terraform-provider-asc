@@ -29,13 +29,13 @@ resource "asc_subnet" "example" {
 
 - `cidr` (String)
 - `name` (String)
-- `type` (String)
 - `vpc_id` (String)
 - `vpc_name` (String)
 
 ### Optional
 
 - `tags` (Map of String) Tags applied to the subnet. Changing tags updates the subnet in place.
+- `type` (String, Deprecated) Deprecated: ASC no longer has subnet types. The value is ignored and never sent to ASC.
 
 ### Read-Only
 

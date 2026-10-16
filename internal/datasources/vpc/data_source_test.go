@@ -120,7 +120,7 @@ func TestDataSourceReadMapsTheVPC(t *testing.T) {
 		CIDR: "10.0.0.0/24", Status: "active", Tags: []client.Tag{{Key: "env", Value: "test"}},
 		Subnets: []client.Subnet{{
 			ID: "00000000-0000-4000-8000-000000000002", URN: "asc:subnet:bootstrap", Name: "bootstrap",
-			VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.0/25", Type: "private", Status: "active",
+			VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.0/25", Status: "active",
 		}},
 	}}, "test-vpc")
 	if response.Diagnostics.HasError() {

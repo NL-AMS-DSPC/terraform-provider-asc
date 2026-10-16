@@ -43,7 +43,7 @@ func TestCreateVMGroupSendsTheGatewayRequestShape(t *testing.T) {
 	if got := path.Load(); got != "/api/infra-gateway/vm-groups" {
 		t.Fatalf("create path = %v", got)
 	}
-	for key, want := range map[string]any{"name": "test-group", "skuID": "gp-2", "vpcID": "00000000-0000-4000-8000-000000000001", "image": "ubuntu-24.04"} {
+	for key, want := range map[string]any{"name": "test-group", "skuID": "gp-2", "vpcID": "00000000-0000-4000-8000-000000000001", "image": "ubuntu-24.04", "diskSizeGB": float64(32)} {
 		if body[key] != want {
 			t.Errorf("body[%q] = %v, want %v", key, body[key], want)
 		}

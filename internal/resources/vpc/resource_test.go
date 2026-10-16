@@ -29,8 +29,8 @@ func TestInlineSubnetRequestOmitsParentID(t *testing.T) {
 	}
 	// The client leaves an empty VPCID out of the request body; see
 	// TestInfraRequestBodiesMatchTheHandwrittenWire in internal/client.
-	want := client.CreateSubnetRequest{Name: "bootstrap", CIDR: "10.0.0.0/25", Type: "private"}
-	if got := requests[0]; got.Name != want.Name || got.CIDR != want.CIDR || got.Type != want.Type || got.VPCID != "" || len(got.Tags) != 0 {
+	want := client.CreateSubnetRequest{Name: "bootstrap", CIDR: "10.0.0.0/25"}
+	if got := requests[0]; got.Name != want.Name || got.CIDR != want.CIDR || got.VPCID != "" || len(got.Tags) != 0 {
 		t.Fatalf("request = %#v, want %#v", got, want)
 	}
 }

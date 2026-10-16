@@ -39,7 +39,7 @@ func skuData(sku SKU) map[string]any {
 
 func subnetData(subnet Subnet) map[string]any {
 	return map[string]any{
-		"id": subnet.ID, "urn": subnet.URN, "name": subnet.Name, "cidr": subnet.CIDR, "type": subnet.Type,
+		"id": subnet.ID, "urn": subnet.URN, "name": subnet.Name, "cidr": subnet.CIDR,
 		"vpcID": subnet.VPCID, "status": subnet.Status, "lastError": subnet.LastError, "tags": tagsData(subnet.Tags),
 	}
 }
@@ -70,7 +70,6 @@ func vmData(vm VM) map[string]any {
 			"id": vm.OS.ID, "family": vm.OS.Family, "distribution": vm.OS.Distribution,
 			"release": vm.OS.Release, "displayName": vm.OS.DisplayName,
 		},
-		"enableLogging": vm.EnableLogging,
 	}
 }
 
@@ -295,48 +294,48 @@ func TestInfraRequestBodiesMatchTheHandwrittenWire(t *testing.T) {
 		want   string
 	}{
 		{"create VPC without tags", http.MethodPost, func(c *Runtime) error {
-			_, err := c.CreateVPC(context.Background(), CreateVPCRequest{Name: "v", Tags: []Tag{}, Subnets: []CreateSubnetRequest{
-				{Name: "s", CIDR: "10.0.0.0/25", Type: "private"},
+			_, err := c.CreateVPC(context.Background(), CreateVPCRequest{Name: "v", CIDR: "10.0.0.0/24", Tags: []Tag{}, Subnets: []CreateSubnetRequest{
+				{Name: "s", CIDR: "10.0.0.0/25"},
 			}})
 			return err
-		}, `{"name":"v","subnets":[{"name":"s","cidr":"10.0.0.0/25","type":"private"}]}`},
+		}, `{"name":"v","cidr":"10.0.0.0/24","subnets":[{"name":"s","cidr":"10.0.0.0/25"}]}`},
 		{"create VPC with nil subnets", http.MethodPost, func(c *Runtime) error {
-			_, err := c.CreateVPC(context.Background(), CreateVPCRequest{Name: "v"})
+			_, err := c.CreateVPC(context.Background(), CreateVPCRequest{Name: "v", CIDR: "10.0.0.0/24"})
 			return err
-		}, `{"name":"v","subnets":null}`},
+		}, `{"name":"v","cidr":"10.0.0.0/24","subnets":null}`},
 		{"create VPC with tags", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateVPC(context.Background(), CreateVPCRequest{
-				Name: "v", Tags: []Tag{{Key: "env", Value: "prod"}}, Subnets: []CreateSubnetRequest{
-					{Name: "s", CIDR: "10.0.0.0/25", VPCID: "id", Type: "public", Tags: []Tag{{Key: "a", Value: "b"}}},
+				Name: "v", CIDR: "10.0.0.0/24", Tags: []Tag{{Key: "env", Value: "prod"}}, Subnets: []CreateSubnetRequest{
+					{Name: "s", CIDR: "10.0.0.0/25", VPCID: "id", Tags: []Tag{{Key: "a", Value: "b"}}},
 				},
 			})
 			return err
-		}, `{"name":"v","tags":[{"key":"env","value":"prod"}],"subnets":[{"name":"s","cidr":"10.0.0.0/25","vpcID":"id","type":"public","tags":[{"key":"a","value":"b"}]}]}`},
+		}, `{"name":"v","cidr":"10.0.0.0/24","tags":[{"key":"env","value":"prod"}],"subnets":[{"name":"s","cidr":"10.0.0.0/25","vpcID":"id","tags":[{"key":"a","value":"b"}]}]}`},
 		{"create subnet", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateSubnet(context.Background(), "v", CreateSubnetRequest{
-				Name: "s", CIDR: "10.0.0.0/25", VPCID: "id", Type: "public", Tags: []Tag{{Key: "env", Value: "prod"}},
+				Name: "s", CIDR: "10.0.0.0/25", VPCID: "id", Tags: []Tag{{Key: "env", Value: "prod"}},
 			})
 			return err
-		}, `{"name":"s","cidr":"10.0.0.0/25","vpcID":"id","type":"public","tags":[{"key":"env","value":"prod"}]}`},
+		}, `{"name":"s","cidr":"10.0.0.0/25","vpcID":"id","tags":[{"key":"env","value":"prod"}]}`},
 		{"create subnet without VPC ID", http.MethodPost, func(c *Runtime) error {
-			_, err := c.CreateSubnet(context.Background(), "v", CreateSubnetRequest{Name: "s", CIDR: "10.0.0.0/25", Type: "private"})
+			_, err := c.CreateSubnet(context.Background(), "v", CreateSubnetRequest{Name: "s", CIDR: "10.0.0.0/25"})
 			return err
-		}, `{"name":"s","cidr":"10.0.0.0/25","type":"private"}`},
+		}, `{"name":"s","cidr":"10.0.0.0/25"}`},
 		{"create VM minimal", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateVM(context.Background(), CreateVMRequest{Name: "x", SKUID: "sku", VPCID: "id"})
 			return err
-		}, `{"name":"x","skuID":"sku","vpcID":"id","enableLogging":false}`},
+		}, `{"name":"x","skuID":"sku","vpcID":"id","bootDisk":{"attachMode":"create","diskSizeGB":32,"image":"vm-images/ubuntu:24.04"}}`},
 		{"create VM with cloud-init", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateVM(context.Background(), CreateVMRequest{
 				Name: "x", SKUID: "sku", VPCID: "id", Image: "ubuntu", Tags: []Tag{{Key: "env", Value: "prod"}},
-				Customization: cloudInit, EnableLogging: true,
+				Customization: cloudInit,
 			})
 			return err
-		}, `{"name":"x","skuID":"sku","vpcID":"id","image":"ubuntu","tags":[{"key":"env","value":"prod"}],"customization":{"cloudInit":{"userData":"#cloud-config"}},"enableLogging":true}`},
+		}, `{"name":"x","skuID":"sku","vpcID":"id","bootDisk":{"attachMode":"create","diskSizeGB":32,"image":"ubuntu"},"tags":[{"key":"env","value":"prod"}],"customization":{"cloudInit":{"userData":"#cloud-config"}}}`},
 		{"create VM with ignition", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateVM(context.Background(), CreateVMRequest{Name: "x", SKUID: "sku", VPCID: "id", Customization: ignition})
 			return err
-		}, `{"name":"x","skuID":"sku","vpcID":"id","customization":{"ignition":{"format":"butane","config":""}},"enableLogging":false}`},
+		}, `{"name":"x","skuID":"sku","vpcID":"id","bootDisk":{"attachMode":"create","diskSizeGB":32,"image":"vm-images/ubuntu:24.04"},"customization":{"ignition":{"format":"butane","config":""}}}`},
 		{"create volume", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateVolume(context.Background(), CreateVolumeRequest{Name: "data", Size: "10Gi", StorageClass: "standard", AccessMode: "ReadWriteOnce"})
 			return err
@@ -352,7 +351,7 @@ func TestInfraRequestBodiesMatchTheHandwrittenWire(t *testing.T) {
 				Name: "g", SKUID: "sku", VPCID: "id", AutoscalingPolicy: AutoscalingPolicy{MinReplicas: 1, MaxReplicas: 2},
 			})
 			return err
-		}, `{"name":"g","skuID":"sku","vpcID":"id","autoscalers":{"min_replicas":1,"max_replicas":2}}`},
+		}, `{"name":"g","skuID":"sku","vpcID":"id","image":"vm-images/ubuntu:24.04","diskSizeGB":32,"autoscalers":{"min_replicas":1,"max_replicas":2}}`},
 		{"create VM group full", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateVMGroup(context.Background(), CreateVMGroupRequest{
 				Name: "g", SKUID: "sku", VPCID: "id", Image: "ubuntu",
@@ -362,7 +361,7 @@ func TestInfraRequestBodiesMatchTheHandwrittenWire(t *testing.T) {
 				Tags: []Tag{{Key: "env", Value: "prod"}}, Customization: cloudInit,
 			})
 			return err
-		}, `{"name":"g","skuID":"sku","vpcID":"id","image":"ubuntu","autoscalers":{"min_replicas":1,"max_replicas":2,"cron":{"timezone":"UTC","start":"0 8 * * *","end":"0 18 * * *","desiredReplicas":2}},"tags":[{"key":"env","value":"prod"}],"customization":{"cloudInit":{"userData":"#cloud-config"}}}`},
+		}, `{"name":"g","skuID":"sku","vpcID":"id","image":"ubuntu","diskSizeGB":32,"autoscalers":{"min_replicas":1,"max_replicas":2,"cron":{"timezone":"UTC","start":"0 8 * * *","end":"0 18 * * *","desiredReplicas":2}},"tags":[{"key":"env","value":"prod"}],"customization":{"cloudInit":{"userData":"#cloud-config"}}}`},
 		{"resize volume", http.MethodPost, func(c *Runtime) error {
 			_, err := c.ResizeVolume(context.Background(), "data", "20Gi")
 			return err
@@ -427,10 +426,9 @@ func TestInfraReadsMapEveryField(t *testing.T) {
 	vm := VM{
 		URN: "urn:vm", Name: "vm", VPCID: "vpc-id", SKU: sku, Status: "active", LastError: "none",
 		Tags: []Tag{{Key: "env", Value: "prod"}}, AttachedVolumes: []string{"b", "a"},
-		OS:            OS{ID: "os", Family: "linux", Distribution: "ubuntu", Release: "24.04", DisplayName: "Ubuntu"},
-		EnableLogging: true,
+		OS: OS{ID: "os", Family: "linux", Distribution: "ubuntu", Release: "24.04", DisplayName: "Ubuntu"},
 	}
-	subnet := Subnet{ID: "s-id", URN: "urn:s", Name: "s", CIDR: "10.0.0.0/25", Type: "public", VPCID: "vpc-id",
+	subnet := Subnet{ID: "s-id", URN: "urn:s", Name: "s", CIDR: "10.0.0.0/25", VPCID: "vpc-id",
 		Status: "active", LastError: "none", Tags: []Tag{}}
 	vpc := VPC{ID: "vpc-id", URN: "urn:vpc", Name: "vpc", CIDR: "10.0.0.0/24", Status: "active", LastError: "none",
 		Subnets: []Subnet{subnet}, Tags: []Tag{{Key: "env", Value: "prod"}}}

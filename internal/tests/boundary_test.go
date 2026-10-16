@@ -111,7 +111,7 @@ func TestBoundaryProviderStaysOnAllowedRoutes(t *testing.T) {
 		CIDR: "10.0.0.0/24", Status: "active",
 		Subnets: []client.Subnet{{
 			ID: "00000000-0000-4000-8000-000000000002", URN: "asc:subnet:bootstrap", Name: "bootstrap",
-			VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.0/25", Type: "private", Status: "active",
+			VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.0/25", Status: "active",
 		}},
 	}
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
@@ -135,7 +135,8 @@ func TestBoundaryProviderStaysOnAllowedRoutes(t *testing.T) {
 		Config: environment.providerConfig() + `
 resource "asc_vpc" "test" {
   name = "test-vpc"
-  subnets = [{ name = "bootstrap", cidr = "10.0.0.0/25", type = "private" }]
+  cidr = "10.0.0.0/24"
+  subnets = [{ name = "bootstrap", cidr = "10.0.0.0/25" }]
 }`,
 		Check: resource.TestCheckResourceAttr("asc_vpc.test", "id", vpc.ID),
 	}}})
