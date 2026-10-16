@@ -4,6 +4,34 @@ All notable changes to this provider are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Version 0.1.0 cannot create VPCs or virtual machines against ASC since ASC PRs #1193 and
+#1194 (2026-10-16); this release restores both.
+
+### Changed
+
+- **Breaking:** `asc_vpc` requires `cidr`, the IPv4 network of the VPC (for example
+  `10.0.0.0/16`). ASC rejects a VPC without one, every inline subnet must lie within it and
+  subnets must not overlap. Changing `cidr` replaces the VPC. Existing VPCs keep their state;
+  set `cidr` to the value `terraform state show` reports for them.
+- Virtual machine and VM group creates send the boot disk ASC now requires. The new optional
+  `boot_disk_size_gb` (default 32) sets its size and `image` becomes `bootDisk.image`, defaulting
+  to `vm-images/ubuntu:24.04` when omitted. The VM request also keeps the top-level `image` for gateways
+  built before `bootDisk`. State written without `boot_disk_size_gb` counts as 32, so no existing
+  machine or group is replaced. The infra-gateway spec was regenerated from ASC `main`.
+
+### Deprecated
+
+- `type` on `asc_subnet`, on `asc_vpc` inline subnets and on the `asc_vpc` and `asc_subnet`
+  data sources. ASC no longer has subnet types. The argument is accepted, ignored and never
+  sent; data sources return null. Removing it from a configuration plans no change.
+- `enable_logging` on `asc_virtual_machine` and its data source. ASC no longer has the setting.
+  The argument is accepted and ignored; changing it no longer replaces the machine.
+
+Both stay in the schema so state written by 0.1.0 and the legacy build still reads with
+`terraform state show` before its first refresh. They will be removed in a later release.
+
 ## [0.1.0] - 2026-10-14
 
 First version of `terraform-provider-asc`, and the first published to the
@@ -38,12 +66,6 @@ speaks wire protocol 6.0 and therefore requires Terraform 1.0 or later.
   httptest gateway and asserts that an unchanged object plans nothing.
 
 ### Changed
-
-- Virtual machine and VM group creates send the boot disk ASC now requires. The new optional
-  `boot_disk_size_gb` (default 32) sets its size and `image` becomes `bootDisk.image`, defaulting
-  to `vm-images/ubuntu:24.04` when omitted. The VM request also keeps the top-level `image` for gateways
-  built before `bootDisk`. State written without `boot_disk_size_gb` counts as 32, so no existing
-  machine or group is replaced. The infra-gateway spec was regenerated from ASC `main`.
 
 Against the unreleased legacy build at `main`, which wrote state at this same
 source address:
