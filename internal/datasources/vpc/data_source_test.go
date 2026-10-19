@@ -98,7 +98,7 @@ func TestDataSourceSchemaMirrorsTheResource(t *testing.T) {
 	if !ok {
 		t.Fatalf("subnets = %T, want schema.ListNestedAttribute", attributes["subnets"])
 	}
-	for _, attribute := range []string{"id", "urn", "name", "vpc_id", "cidr", "type", "status", "last_error", "tags"} {
+	for _, attribute := range []string{"id", "urn", "name", "vpc_id", "cidr", "status", "last_error", "tags"} {
 		found, ok := nested.NestedObject.Attributes[attribute]
 		if !ok {
 			t.Fatalf("subnets.%s is missing", attribute)
@@ -107,8 +107,8 @@ func TestDataSourceSchemaMirrorsTheResource(t *testing.T) {
 			t.Errorf("subnets.%s is not computed", attribute)
 		}
 	}
-	if len(nested.NestedObject.Attributes) != 9 {
-		t.Fatalf("subnets attributes = %d, want 9", len(nested.NestedObject.Attributes))
+	if len(nested.NestedObject.Attributes) != 8 {
+		t.Fatalf("subnets attributes = %d, want 8", len(nested.NestedObject.Attributes))
 	}
 }
 

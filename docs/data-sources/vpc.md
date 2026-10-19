@@ -50,6 +50,5 @@ Read-Only:
 - `name` (String) Name of the subnet.
 - `status` (String) Lifecycle status of the subnet.
 - `tags` (Map of String) Tags applied to the subnet.
-- `type` (String, Deprecated) Deprecated: ASC no longer has subnet types. Always null.
 - `urn` (String) URN of the subnet.
 - `vpc_id` (String) Identifier of the owning VPC.

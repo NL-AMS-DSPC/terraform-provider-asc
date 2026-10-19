@@ -484,8 +484,6 @@ read cannot recover — in place of a path that does nothing.
      patches in place.
    - `asc_vpc` requires `cidr`. Set it to the VPC's current CIDR, which
      `terraform state show` prints; any other value replaces the VPC.
-   - Subnet `type` and `asc_virtual_machine`'s `enable_logging` are deprecated
-     and ignored. Remove them; removing them plans no change.
    - Attributes origin B wrote that this provider does not declare are dropped
      silently rather than erroring, and attributes this provider declares that
      prior state lacks arrive null.

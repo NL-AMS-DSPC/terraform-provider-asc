@@ -12,18 +12,15 @@ This release follows the infra-gateway on ASC main and contains breaking changes
 
 - `asc_vpc` requires `cidr`, and changing it replaces the VPC. Set it to the
   current CIDR of an existing VPC to keep it.
-- Virtual machines and VM groups are created with a 32 GB boot disk, as the
-  infra-gateway now requires. An omitted `image` requests
-  `vm-images/ubuntu:24.04`, the gateway's former default.
+- Virtual machines and VM groups are created with a 32 GB boot disk. An
+  omitted `image` requests `vm-images/ubuntu:24.04`.
 - Creating a VPC waits until it is active, so a virtual machine can be created
   in it in the same apply.
 
-### Deprecated
+### Removed
 
 - Subnet `type` on `asc_subnet` and `asc_vpc`, and `enable_logging` on
-  `asc_virtual_machine`. ASC dropped both; the provider ignores them and never
-  sends them, and removing them plans no change. Data sources return them as
-  null.
+  `asc_virtual_machine`, which ASC no longer has.
 
 ## [0.1.0] - 2026-10-14
 

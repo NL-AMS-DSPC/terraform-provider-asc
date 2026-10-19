@@ -16,7 +16,7 @@ func TestInlineSubnetRequestOmitsParentID(t *testing.T) {
 
 	input, conversionDiags := types.ListValueFrom(context.Background(), types.ObjectType{AttrTypes: inlineSubnetTypes}, []inlineSubnetModel{{
 		ID: types.StringUnknown(), URN: types.StringUnknown(), Name: types.StringValue("bootstrap"),
-		VPCID: types.StringUnknown(), CIDR: types.StringValue("10.0.0.0/25"), Type: types.StringValue("private"),
+		VPCID: types.StringUnknown(), CIDR: types.StringValue("10.0.0.0/25"),
 		Status: types.StringUnknown(), LastError: types.StringUnknown(), Tags: types.MapNull(types.StringType),
 	}})
 	if conversionDiags.HasError() {

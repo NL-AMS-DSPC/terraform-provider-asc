@@ -33,7 +33,7 @@ resource "asc_vpc" "example" {
 
 - `cidr` (String) IPv4 CIDR block of the VPC, such as 10.0.0.0/16. Every inline subnet must lie within it. Changing it replaces the VPC.
 - `name` (String) Name of the VPC. Changing the name replaces the VPC.
-- `subnets` (Attributes List) Subnets created together with the VPC; at least one is required. Changing the name, cidr, type or tags of an inline subnet replaces the VPC. Use asc_subnet to add subnets to an existing VPC. (see [below for nested schema](#nestedatt--subnets))
+- `subnets` (Attributes List) Subnets created together with the VPC; at least one is required. Changing the name, cidr or tags of an inline subnet replaces the VPC. Use asc_subnet to add subnets to an existing VPC. (see [below for nested schema](#nestedatt--subnets))
 
 ### Optional
 
@@ -57,7 +57,6 @@ Required:
 Optional:
 
 - `tags` (Map of String) Tags applied to the subnet.
-- `type` (String, Deprecated) Deprecated: ASC no longer has subnet types. The value is ignored and never sent to ASC.
 
 Read-Only:
 

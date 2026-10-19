@@ -76,10 +76,9 @@ type OS struct {
 }
 
 type CreateVMRequest struct {
-	Name  string
-	SKUID string
-	VPCID string
-	// Image is the catalog image; empty selects DefaultImage.
+	Name          string
+	SKUID         string
+	VPCID         string
 	Image         string
 	Tags          []Tag
 	Customization *Customization

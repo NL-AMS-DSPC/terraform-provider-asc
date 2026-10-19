@@ -41,7 +41,6 @@ resource "asc_virtual_machine" "example" {
 ### Optional
 
 - `customization` (Attributes, Sensitive) First-boot customization of the virtual machine, as cloud-init or Ignition data. Sensitive: ASC never returns it on reads, so the configured value is kept in state and cannot be recovered by import. Changing it replaces the virtual machine. (see [below for nested schema](#nestedatt--customization))
-- `enable_logging` (Boolean, Deprecated) Deprecated: ASC no longer has a logging setting for virtual machines. The value is ignored and never sent to ASC.
 - `image` (String) Identifier of the operating system image, for example vm-images/ubuntu:24.04, which is also the default. Changing the configured value replaces the machine.
 - `tags` (Map of String) Tags applied to the virtual machine. Changing tags updates the machine in place.
 

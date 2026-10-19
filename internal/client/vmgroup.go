@@ -42,10 +42,9 @@ type CronRule struct {
 // CreateVMGroupRequest sends the required policy as autoscalers; reads call it
 // autoscalingPolicy.
 type CreateVMGroupRequest struct {
-	Name  string
-	SKUID string
-	VPCID string
-	// Image is the catalog image; empty selects DefaultImage.
+	Name              string
+	SKUID             string
+	VPCID             string
 	Image             string
 	AutoscalingPolicy AutoscalingPolicy
 	Tags              []Tag

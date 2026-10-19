@@ -256,41 +256,6 @@ func TestMigrationFromLegacySameAddressPlansNothing(t *testing.T) {
 	}
 }
 
-// ASC dropped subnet types and the VM logging setting. State written before that still
-// holds them; removing the arguments from the configuration must not plan a change.
-func TestDroppingDeprecatedArgumentsPlansNothing(t *testing.T) {
-	cases := migrationCases()
-	for name, dropped := range map[string]string{
-		"vpc":             `, type = "private"`,
-		"subnet":          "  type     = \"public\"\n",
-		"virtual_machine": "  enable_logging = true\n",
-	} {
-		t.Run(name, func(t *testing.T) {
-			environment := newTestEnvironment(t, cases[name])
-			dir := seedMigrationWorkspace(t, environment, name)
-			config, err := os.ReadFile(filepath.Join(dir, "main.tf"))
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !strings.Contains(string(config), dropped) {
-				t.Fatalf("fixture %s no longer sets %q", name, dropped)
-			}
-			trimmed := strings.Replace(string(config), dropped, "", 1)
-			if err := os.WriteFile(filepath.Join(dir, "main.tf"), []byte(trimmed), 0o600); err != nil {
-				t.Fatal(err)
-			}
-
-			changes, output, err := terraformPlan(t, dir)
-			if err != nil {
-				t.Fatalf("terraform plan: %v\n%s", err, output)
-			}
-			if len(changes) != 0 {
-				t.Errorf("plan proposed %v, want no changes\n%s", changes, output)
-			}
-		})
-	}
-}
-
 func TestMigrationAssertionDetectsAReplacement(t *testing.T) {
 	group := testVMGroup()
 	group.SKU = client.SKU{ID: "gp-4", Name: "general-purpose"}
