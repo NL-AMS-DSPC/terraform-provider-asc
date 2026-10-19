@@ -152,7 +152,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			},
 			"sku": schema.SingleNestedAttribute{Description: "SKU the virtual machine runs on.", Computed: true, Attributes: computedSKU},
 			"vpc_id": schema.StringAttribute{
-				Description: "Identifier of the VPC the virtual machine belongs to. Changing it replaces the machine.",
+				Description: "Identifier of the VPC the virtual machine is attached to. Changing it replaces the machine.",
 				Required:    true, PlanModifiers: replaceString,
 			},
 			"image": schema.StringAttribute{

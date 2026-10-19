@@ -144,7 +144,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			},
 			"sku": schema.SingleNestedAttribute{Description: "SKU backing every member of the group.", Computed: true, Attributes: computedSKU},
 			"vpc_id": schema.StringAttribute{
-				Description:   "Identifier of the VPC the group belongs to, a UUID version 4. Changing it replaces the group.",
+				Description:   "Identifier of the VPC the group is attached to, a UUID version 4. Changing it replaces the group.",
 				Required:      true,
 				PlanModifiers: replaceString,
 				Validators: []validator.String{stringvalidator.RegexMatches(

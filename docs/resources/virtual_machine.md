@@ -13,7 +13,7 @@ Manages an ASC virtual machine.
 ## Example Usage
 
 ```terraform
-# A virtual machine inside the VPC from the asc_vpc example. List valid
+# A virtual machine attached to the VPC from the asc_vpc example. List valid
 # sku_id values with the asc_skus data source.
 resource "asc_virtual_machine" "example" {
   name   = "example-vm"
@@ -36,7 +36,7 @@ resource "asc_virtual_machine" "example" {
 
 - `name` (String) Name of the virtual machine. Must be 1 to 50 characters: a lowercase letter first, then lowercase letters, digits or hyphens, ending with a letter or digit. Changing it replaces the machine.
 - `sku_id` (String) Identifier of the SKU to run on; list them with the asc_skus data source. Changing it replaces the machine.
-- `vpc_id` (String) Identifier of the VPC the virtual machine belongs to. Changing it replaces the machine.
+- `vpc_id` (String) Identifier of the VPC the virtual machine is attached to. Changing it replaces the machine.
 
 ### Optional
 

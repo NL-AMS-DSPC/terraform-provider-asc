@@ -48,7 +48,7 @@ resource "asc_vm_group" "example" {
 - `autoscaling` (Attributes) Scaling bounds of the group. Changing the policy replaces the group. (see [below for nested schema](#nestedatt--autoscaling))
 - `name` (String) Name of the virtual machine group. Must be 1 to 50 characters: a lowercase letter first, then lowercase letters, digits or hyphens, ending with a letter or digit. Changing it replaces the group.
 - `sku_id` (String) Identifier of the SKU backing every member of the group; list them with the asc_skus data source. Changing it replaces the group.
-- `vpc_id` (String) Identifier of the VPC the group belongs to, a UUID version 4. Changing it replaces the group.
+- `vpc_id` (String) Identifier of the VPC the group is attached to, a UUID version 4. Changing it replaces the group.
 
 ### Optional
 

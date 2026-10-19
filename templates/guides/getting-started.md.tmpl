@@ -2,13 +2,13 @@
 page_title: "Getting started"
 subcategory: ""
 description: |-
-  Configure the provider, pick a SKU, and create a VPC with a subnet and a virtual machine in it.
+  Configure the provider, pick a SKU, and create a VPC with a subnet and a virtual machine attached to it.
 ---
 
 # Getting started
 
 This guide takes an empty tenant to a running virtual machine: configure the provider, look up a
-SKU, create a VPC with an inline subnet, and create a machine in it. For a complete end-to-end
+SKU, create a VPC with an inline subnet, and create a machine attached to it. For a complete end-to-end
 configuration, see the README of the
 [terraform-template-demo](https://github.com/NL-AMS-DSPC/terraform-template-demo) repository.
 
@@ -100,7 +100,7 @@ resource that reports the `error` status fails the apply with its `last_error`. 
 `status` can still be `pending` right after apply; run `terraform apply -refresh-only` later to see
 the settled value.
 
-Destroy removes the machine before the VPC it belongs to.
+Destroy removes the machine before the VPC it is attached to.
 
 ## Caveats
 
