@@ -51,7 +51,6 @@ type Model struct {
 	AttachedVolumes types.List          `tfsdk:"attached_volumes"`
 	OS              types.Object        `tfsdk:"os"`
 	Customization   *CustomizationModel `tfsdk:"customization"`
-	EnableLogging   types.Bool          `tfsdk:"enable_logging"`
 }
 
 type CustomizationModel struct {
@@ -175,12 +174,6 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 					},
 				},
 			},
-			"enable_logging": schema.BoolAttribute{
-				Description:        "Deprecated: ASC no longer has a logging setting for virtual machines. The value is ignored and never sent to ASC.",
-				DeprecationMessage: common.EnableLoggingDeprecation,
-				Optional:           true, Computed: true,
-				PlanModifiers: []planmodifier.Bool{common.IgnoredBool()},
-			},
 		},
 	}
 }
@@ -298,10 +291,6 @@ func setFromVM(ctx context.Context, model *Model, value client.VM, diags *diag.D
 	model.Status = types.StringValue(value.Status)
 	model.LastError = types.StringValue(value.LastError)
 	model.Tags = common.TagsToTerraform(ctx, value.Tags, diags)
-	// ASC no longer reports a logging setting; keep the configured or stored one.
-	if model.EnableLogging.IsUnknown() {
-		model.EnableLogging = types.BoolNull()
-	}
 
 	sku, skuDiags := types.ObjectValueFrom(ctx, skuTypes, skuModel{
 		ID: types.StringValue(value.SKU.ID), Name: types.StringValue(value.SKU.Name), Family: types.StringValue(value.SKU.Family),

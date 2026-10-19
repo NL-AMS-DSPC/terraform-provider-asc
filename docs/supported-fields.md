@@ -40,7 +40,6 @@ Read-only: `id`, `urn`, `status`, `last_error`, and the `id`, `urn`, `vpc_id`, `
 | `vpc_name` | Required | Replaces | A subnet is addressed by the VPC and subnet name pair. |
 | `vpc_id` | Required, UUID v4 | Replaces | |
 | `cidr` | Required | Replaces | |
-| `type` | Optional, deprecated | Never | ASC no longer has subnet types; the value is kept in state and never sent. |
 | `tags` | Optional | In place | Tags can be changed without replacing the subnet. |
 
 Read-only: `id`, `urn`, `status`, `last_error`.
@@ -53,7 +52,6 @@ Read-only: `id`, `urn`, `status`, `last_error`.
 | `sku_id` | Required | Replaces | Changing a machine's SKU in place is not supported by this provider. |
 | `vpc_id` | Required | Replaces | |
 | `image` | Optional, Computed | Replaces | Omitted, it requests `vm-images/ubuntu:24.04`. Keeps its prior value when the configuration omits it, so an unrelated change does not look like a new image. |
-| `enable_logging` | Optional, deprecated | Never | ASC no longer has a logging setting; the value is kept in state and never sent. |
 | `customization` | Optional, sensitive | Replaces | Write-only; see [what import cannot recover](#what-import-cannot-recover). |
 | `tags` | Optional | In place | Tags can be changed without replacing the machine. |
 

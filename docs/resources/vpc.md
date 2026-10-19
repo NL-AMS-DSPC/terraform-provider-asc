@@ -55,7 +55,6 @@ Required:
 Optional:
 
 - `tags` (Map of String)
-- `type` (String, Deprecated) Deprecated: ASC no longer has subnet types. The value is ignored and never sent to ASC.
 
 Read-Only:
 

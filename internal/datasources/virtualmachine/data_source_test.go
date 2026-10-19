@@ -78,7 +78,7 @@ func TestDataSourceSchemaMirrorsTheReadableResource(t *testing.T) {
 	// name identifies the machine to look up; everything else is served by
 	// infra-gateway and may never be set in a configuration.
 	required := map[string]bool{"name": true}
-	for _, attribute := range []string{"urn", "name", "sku", "vpc_id", "status", "last_error", "tags", "attached_volumes", "os", "enable_logging"} {
+	for _, attribute := range []string{"urn", "name", "sku", "vpc_id", "status", "last_error", "tags", "attached_volumes", "os"} {
 		found, ok := attributes[attribute]
 		if !ok {
 			t.Fatalf("attribute %q is missing", attribute)
@@ -90,8 +90,8 @@ func TestDataSourceSchemaMirrorsTheReadableResource(t *testing.T) {
 			t.Errorf("attribute %q is optional, which would let a configuration override a served value", attribute)
 		}
 	}
-	if len(attributes) != 10 {
-		t.Fatalf("attributes = %d, want 10", len(attributes))
+	if len(attributes) != 9 {
+		t.Fatalf("attributes = %d, want 9", len(attributes))
 	}
 	// image and sku_id would only repeat os.id and sku.id, and customization is
 	// write-only, so none of them belong on a read-only view.
@@ -148,7 +148,7 @@ func TestDataSourceReadMapsTheVirtualMachine(t *testing.T) {
 	if response.Diagnostics.HasError() {
 		t.Fatalf("Read() diagnostics = %v", response.Diagnostics)
 	}
-	if state.URN.ValueString() != "asc:vm:test-vm" || !state.EnableLogging.IsNull() {
+	if state.URN.ValueString() != "asc:vm:test-vm" {
 		t.Fatalf("state = %#v", state)
 	}
 	if state.SKU.IsNull() || state.OS.IsNull() {

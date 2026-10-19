@@ -18,12 +18,10 @@ This release follows the infra-gateway on ASC main and contains breaking changes
 - Creating a VPC waits until it is active, so a virtual machine can be created
   in it in the same apply.
 
-### Deprecated
+### Removed
 
 - Subnet `type` on `asc_subnet` and `asc_vpc`, and `enable_logging` on
-  `asc_virtual_machine`. ASC dropped both; the provider ignores them and never
-  sends them, and removing them plans no change. Data sources return them as
-  null.
+  `asc_virtual_machine`, which ASC no longer has.
 
 ## [0.1.0] - 2026-10-14
 

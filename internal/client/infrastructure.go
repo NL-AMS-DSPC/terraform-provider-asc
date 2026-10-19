@@ -44,7 +44,7 @@ func (c *Runtime) CreateVPC(ctx context.Context, request CreateVPCRequest) (VPC,
 		return vpc, err
 	}
 
-	// infra-gateway rejects a VM whose VPC is not active ("VPC is not available").
+	// Wait for the VPC to be active in ASC.
 	waitCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
 	defer cancel()
 	return waitUntil(waitCtx, c, vpcKind, request.Name, read, func(current VPC) bool {

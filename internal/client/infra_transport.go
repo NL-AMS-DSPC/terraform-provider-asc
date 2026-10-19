@@ -114,11 +114,8 @@ func infraCustomization(customization *Customization) *infra.Customization {
 	return wire
 }
 
-// DefaultImage is infra-gateway's domain.DefaultImageID, which it used when a create
-// named no image, so configurations without an image keep the same operating system.
 const DefaultImage = "vm-images/ubuntu:24.04"
 
-// DefaultBootDiskSizeGB is the boot disk size the infra-gateway documents as its example.
 const DefaultBootDiskSizeGB = 32
 
 func orDefaultImage(image string) string {

@@ -33,7 +33,6 @@ resource "asc_virtual_machine" "example" {
 ### Optional
 
 - `customization` (Attributes, Sensitive) (see [below for nested schema](#nestedatt--customization))
-- `enable_logging` (Boolean, Deprecated) Deprecated: ASC no longer has a logging setting for virtual machines. The value is ignored and never sent to ASC.
 - `image` (String)
 - `tags` (Map of String) Tags applied to the virtual machine. Changing tags updates the machine in place.
 

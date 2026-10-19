@@ -18,7 +18,7 @@ func TestResourceIdentity(t *testing.T) {
 	}
 	var schemaResponse resource.SchemaResponse
 	implementation.Schema(context.Background(), resource.SchemaRequest{}, &schemaResponse)
-	if schemaResponse.Diagnostics.HasError() || len(schemaResponse.Schema.Attributes) != 10 {
+	if schemaResponse.Diagnostics.HasError() || len(schemaResponse.Schema.Attributes) != 9 {
 		t.Fatalf("schema attributes = %d, diagnostics = %v", len(schemaResponse.Schema.Attributes), schemaResponse.Diagnostics)
 	}
 }

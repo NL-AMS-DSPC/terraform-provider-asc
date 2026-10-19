@@ -36,7 +36,6 @@ type Model struct {
 	VPCName   types.String `tfsdk:"vpc_name"`
 	VPCID     types.String `tfsdk:"vpc_id"`
 	CIDR      types.String `tfsdk:"cidr"`
-	Type      types.String `tfsdk:"type"`
 	Status    types.String `tfsdk:"status"`
 	LastError types.String `tfsdk:"last_error"`
 	Tags      types.Map    `tfsdk:"tags"`
@@ -59,7 +58,6 @@ func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp 
 			"vpc_name":   schema.StringAttribute{Description: "Name of the VPC that owns the subnet.", Required: true},
 			"vpc_id":     schema.StringAttribute{Description: "Identifier of the owning VPC.", Computed: true},
 			"cidr":       schema.StringAttribute{Description: "CIDR block of the subnet.", Computed: true},
-			"type":       schema.StringAttribute{Description: "Deprecated: ASC no longer has subnet types. Always null.", DeprecationMessage: "ASC no longer has subnet types. Always null.", Computed: true},
 			"status":     schema.StringAttribute{Description: "Current lifecycle status.", Computed: true},
 			"last_error": schema.StringAttribute{Description: "Last error reported for the subnet, empty when healthy.", Computed: true},
 			"tags":       schema.MapAttribute{Description: "Tags applied to the subnet.", Computed: true, ElementType: types.StringType},
@@ -105,7 +103,6 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 		VPCName:   config.VPCName,
 		VPCID:     types.StringValue(current.VPCID),
 		CIDR:      types.StringValue(current.CIDR),
-		Type:      types.StringNull(),
 		Status:    types.StringValue(current.Status),
 		LastError: types.StringValue(current.LastError),
 		Tags:      common.TagsToTerraform(ctx, current.Tags, &resp.Diagnostics),

@@ -44,7 +44,6 @@ type Model struct {
 	VPCName   types.String `tfsdk:"vpc_name"`
 	VPCID     types.String `tfsdk:"vpc_id"`
 	CIDR      types.String `tfsdk:"cidr"`
-	Type      types.String `tfsdk:"type"`
 	Status    types.String `tfsdk:"status"`
 	LastError types.String `tfsdk:"last_error"`
 	Tags      types.Map    `tfsdk:"tags"`
@@ -73,13 +72,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 					"must be a UUID version 4",
 				)},
 			},
-			"cidr": schema.StringAttribute{Required: true, PlanModifiers: replaceString},
-			"type": schema.StringAttribute{
-				Description:        "Deprecated: ASC no longer has subnet types. The value is ignored and never sent to ASC.",
-				DeprecationMessage: common.SubnetTypeDeprecation,
-				Optional:           true, Computed: true,
-				PlanModifiers: []planmodifier.String{common.IgnoredString()},
-			},
+			"cidr":       schema.StringAttribute{Required: true, PlanModifiers: replaceString},
 			"status":     schema.StringAttribute{Computed: true},
 			"last_error": schema.StringAttribute{Computed: true},
 			"tags": schema.MapAttribute{
@@ -193,10 +186,6 @@ func setFromSubnet(ctx context.Context, model *Model, value client.Subnet, diags
 	model.Name = types.StringValue(value.Name)
 	model.VPCID = types.StringValue(value.VPCID)
 	model.CIDR = types.StringValue(value.CIDR)
-	// ASC no longer reports a type; keep the configured or stored one.
-	if model.Type.IsUnknown() {
-		model.Type = types.StringNull()
-	}
 	model.Status = types.StringValue(value.Status)
 	model.LastError = types.StringValue(value.LastError)
 	model.Tags = common.TagsToTerraform(ctx, value.Tags, diags)
