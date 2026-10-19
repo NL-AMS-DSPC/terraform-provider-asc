@@ -35,12 +35,12 @@ resource "asc_virtual_machine" "example" {
 ### Required
 
 - `name` (String) Name of the virtual machine. Must be 1 to 50 characters: a lowercase letter first, then lowercase letters, digits or hyphens, ending with a letter or digit. Changing it replaces the machine.
-- `sku_id` (String) Identifier of the SKU to run on; list them with the asc_skus data source. Changing it replaces the machine, because ASC accepts only one resize per machine lifetime.
+- `sku_id` (String) Identifier of the SKU to run on; list them with the asc_skus data source. Changing it replaces the machine.
 - `vpc_id` (String) Identifier of the VPC the virtual machine belongs to. Changing it replaces the machine.
 
 ### Optional
 
-- `customization` (Attributes, Sensitive) First-boot customization of the virtual machine, as cloud-init or Ignition data. Sensitive: ASC never returns it on reads, so the configured value is kept in state and cannot be recovered by import. Changing it replaces the virtual machine. (see [below for nested schema](#nestedatt--customization))
+- `customization` (Attributes, Sensitive) First-boot customization of the virtual machine, as cloud-init or Ignition data. Sensitive, and cannot be recovered by import. Changing it replaces the virtual machine. (see [below for nested schema](#nestedatt--customization))
 - `image` (String) Identifier of the operating system image, for example vm-images/ubuntu:24.04, which is also the default. Changing the configured value replaces the machine.
 - `tags` (Map of String) Tags applied to the virtual machine. Changing tags updates the machine in place.
 

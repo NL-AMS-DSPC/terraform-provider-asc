@@ -155,7 +155,6 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			// The gateway never returns image, so it cannot be Computed.
 			"image": schema.StringAttribute{
 				Description: "Identifier of the operating system image, for example vm-images/ubuntu:24.04, which is also the default. " +
-					"ASC never returns it, so the configured value is kept in state. " +
 					"Changing it replaces the group.",
 				Optional: true, PlanModifiers: replaceString,
 			},
@@ -189,17 +188,17 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"last_error": schema.StringAttribute{Description: "Last error reported for the group, empty when there is none.", Computed: true},
 			// The gateway has no group tag-patch route; changes require replacement.
 			"tags": schema.MapAttribute{
-				Description: "Tags applied to the group. ASC cannot update group tags, so changing them replaces the group.",
+				Description: "Tags applied to the group. Changing them replaces the group.",
 				Optional:    true, ElementType: types.StringType,
 				PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplace()},
 			},
 			"attached_volumes": schema.ListAttribute{
-				Description: "Names of the volumes attached to the group, sorted; ASC does not report them in a stable order.",
+				Description: "Names of the volumes attached to the group, sorted.",
 				Computed:    true, ElementType: types.StringType,
 			},
 			"customization": schema.SingleNestedAttribute{
-				Description: "First-boot customization of the group, as cloud-init or Ignition data. Sensitive: " +
-					"ASC never returns it, so the configured value is kept in state. Changing it replaces the group.",
+				Description: "First-boot customization of the group, as cloud-init or Ignition data. Sensitive. " +
+					"Changing it replaces the group.",
 				Optional: true, Sensitive: true,
 				PlanModifiers: []planmodifier.Object{objectplanmodifier.RequiresReplace()},
 				Attributes: map[string]schema.Attribute{

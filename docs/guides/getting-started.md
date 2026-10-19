@@ -15,9 +15,8 @@ configuration, see the README of the
 ## Configure the provider and credentials
 
 The provider authenticates with the OAuth client-credentials grant. `username` is the client ID and
-`password` is the client secret. `org` is the realm the client belongs to, so the provider requests
-its token from `<auth_url>/realms/<org>/protocol/openid-connect/token`. `namespace` is the tenant
-to manage and is sent on every request as the `X-Tenant` header.
+`password` is the client secret. `org` is the realm the client belongs to, and `namespace` is the
+tenant to manage.
 
 ```terraform
 terraform {
@@ -96,26 +95,19 @@ digits or hyphens, ending with a letter or digit. Omit `image` to get `vm-images
 
 ## What apply and destroy do
 
-ASC provisions asynchronously: a create call is only an acknowledgement. After each create the
-provider polls the resource until it can be read and is not a leftover of an earlier resource with
-the same name still being deleted; a VPC is also waited on until it is active, because ASC accepts
-no machine in a VPC before that. It fails immediately if the resource reports the `error` status,
-and includes the reported `last_error` in the message. The whole wait is bounded at 10 minutes.
-A machine's `status` is whatever ASC reports at that moment, so it can still be `pending` right after apply;
-run `terraform apply -refresh-only` later to see the settled value.
+Apply waits until each new resource exists, and until a new VPC is active, for up to 10 minutes. A
+resource that reports the `error` status fails the apply with its `last_error`. A machine's
+`status` can still be `pending` right after apply; run `terraform apply -refresh-only` later to see
+the settled value.
 
-On destroy the provider deletes the machine and polls it until ASC answers 404, and only then
-deletes the VPC, so the VPC is never removed while a machine is still using it. A resource that is
-already gone counts as deleted.
+Destroy removes the machine before the VPC it belongs to.
 
 ## Caveats
 
 - Most arguments cannot be changed on a live resource. Changing a VPC name, CIDR or inline subnet, or a
-  machine name, `sku_id`, `vpc_id`, `image` or `customization`, plans a replacement. `sku_id` replaces because ASC accepts only one resize per machine lifetime. Only
-  `tags` update in place on VPCs, subnets and machines.
-- A same-name replacement waits for the old resource to disappear before creating the new one.
-- `customization` is sensitive and ASC never returns it, so the configured value is kept in state
-  and cannot be recovered by import.
+  machine name, `sku_id`, `vpc_id`, `image` or `customization`, plans a replacement. Only `tags`
+  update in place on VPCs, subnets and machines.
+- `customization` is sensitive and cannot be recovered by import.
 - Read the plan before applying: the full list of which attribute updates in place and which
   replaces is in
   [supported fields](https://github.com/NL-AMS-DSPC/terraform-provider-asc/blob/main/docs/supported-fields.md).

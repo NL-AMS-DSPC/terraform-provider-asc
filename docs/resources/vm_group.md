@@ -52,13 +52,13 @@ resource "asc_vm_group" "example" {
 
 ### Optional
 
-- `customization` (Attributes, Sensitive) First-boot customization of the group, as cloud-init or Ignition data. Sensitive: ASC never returns it, so the configured value is kept in state. Changing it replaces the group. (see [below for nested schema](#nestedatt--customization))
-- `image` (String) Identifier of the operating system image, for example vm-images/ubuntu:24.04, which is also the default. ASC never returns it, so the configured value is kept in state. Changing it replaces the group.
-- `tags` (Map of String) Tags applied to the group. ASC cannot update group tags, so changing them replaces the group.
+- `customization` (Attributes, Sensitive) First-boot customization of the group, as cloud-init or Ignition data. Sensitive. Changing it replaces the group. (see [below for nested schema](#nestedatt--customization))
+- `image` (String) Identifier of the operating system image, for example vm-images/ubuntu:24.04, which is also the default. Changing it replaces the group.
+- `tags` (Map of String) Tags applied to the group. Changing them replaces the group.
 
 ### Read-Only
 
-- `attached_volumes` (List of String) Names of the volumes attached to the group, sorted; ASC does not report them in a stable order.
+- `attached_volumes` (List of String) Names of the volumes attached to the group, sorted.
 - `last_error` (String) Last error reported for the group, empty when there is none.
 - `sku` (Attributes) SKU backing every member of the group. (see [below for nested schema](#nestedatt--sku))
 - `status` (String) Current lifecycle status.

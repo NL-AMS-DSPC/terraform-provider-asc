@@ -147,7 +147,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			},
 			"sku_id": schema.StringAttribute{
 				Description: "Identifier of the SKU to run on; list them with the asc_skus data source. " +
-					"Changing it replaces the machine, because ASC accepts only one resize per machine lifetime.",
+					"Changing it replaces the machine.",
 				Required: true, PlanModifiers: replaceString,
 			},
 			"sku": schema.SingleNestedAttribute{Description: "SKU the virtual machine runs on.", Computed: true, Attributes: computedSKU},
@@ -174,8 +174,8 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				Description: "Operating system image the virtual machine boots.", Computed: true, Attributes: computedOS,
 			},
 			"customization": schema.SingleNestedAttribute{
-				Description: "First-boot customization of the virtual machine, as cloud-init or Ignition data. Sensitive: " +
-					"ASC never returns it on reads, so the configured value is kept in state and cannot be recovered by import. Changing it replaces the virtual machine.",
+				Description: "First-boot customization of the virtual machine, as cloud-init or Ignition data. Sensitive, " +
+					"and cannot be recovered by import. Changing it replaces the virtual machine.",
 				Optional: true, Sensitive: true,
 				PlanModifiers: []planmodifier.Object{objectplanmodifier.RequiresReplace()},
 				Attributes: map[string]schema.Attribute{
