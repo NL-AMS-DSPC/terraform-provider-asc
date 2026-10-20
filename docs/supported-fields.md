@@ -79,8 +79,6 @@ Every configurable attribute of a VM group requires replacement when changed.
 | --- | --- | --- | --- |
 | `name` | Required, 1-50 characters | Replaces | |
 | `size` | Required | In place, growth only | Capacity can be increased repeatedly. A smaller value is rejected at plan time with the current and requested byte counts; shrinking requires replacing the volume. |
-| `storage_class` | Required | Replaces | |
-| `access_mode` | Required, `ReadWriteOnce`, `ReadWriteMany` or `ReadOnlyMany` | Replaces | |
 | `tags` | Optional | In place | Tags can be changed without replacing the volume. |
 
 Read-only: `size_bytes`, `volume_mode`, `urn`, `status`, `last_error`, `attached_to_vm`, `labels`,

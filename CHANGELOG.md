@@ -21,6 +21,8 @@ This release follows the infra-gateway on ASC main and contains breaking changes
 
 - Subnet `type` on `asc_subnet` and `asc_vpc`, and `enable_logging` on
   `asc_virtual_machine`, which ASC no longer has.
+- `storage_class` and `access_mode` on `asc_volume` and the `asc_volume` data
+  source, which ASC ignores. Remove them from your configuration.
 
 ## [0.1.0] - 2026-10-14
 

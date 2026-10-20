@@ -15,10 +15,8 @@ Manages an ASC block volume.
 ```terraform
 # A 10 GiB block volume. size takes a Kubernetes quantity and can only grow.
 resource "asc_volume" "example" {
-  name          = "example-data"
-  size          = "10Gi"
-  storage_class = "standard"
-  access_mode   = "ReadWriteOnce" # or ReadWriteMany, ReadOnlyMany
+  name = "example-data"
+  size = "10Gi"
 
   tags = {
     env = "production"
@@ -31,10 +29,8 @@ resource "asc_volume" "example" {
 
 ### Required
 
-- `access_mode` (String) Access mode of the volume.
 - `name` (String) Name of the volume.
 - `size` (String) Requested capacity as a Kubernetes quantity, for example "10Gi". Increasing the capacity resizes the volume in place. Shrinking is not supported.
-- `storage_class` (String) Storage class backing the volume.
 
 ### Optional
 

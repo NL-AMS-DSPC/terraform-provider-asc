@@ -5,12 +5,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -33,8 +31,6 @@ func TestSchemaAttributes(t *testing.T) {
 		{name: "name", required: true},
 		{name: "size", required: true},
 		{name: "size_bytes", computed: true},
-		{name: "storage_class", required: true},
-		{name: "access_mode", required: true},
 		{name: "volume_mode", computed: true},
 		{name: "urn", computed: true},
 		{name: "status", computed: true},
@@ -68,26 +64,13 @@ func TestSchemaAttributes(t *testing.T) {
 	}
 
 	for name, wantReplace := range map[string]bool{
-		"name": true, "storage_class": true, "access_mode": true,
+		"name": true,
 		// A resize is an in-place update, so size must never force replacement.
 		"size": false,
 	} {
 		if got := stringRequiresReplace(ctx, t, volumeSchema, name); got != wantReplace {
 			t.Errorf("attribute %q requires replacement = %t, want %t", name, got, wantReplace)
 		}
-	}
-
-	accessMode, exists := volumeSchema.Attributes["access_mode"].(schema.StringAttribute)
-	if !exists {
-		t.Fatal("access_mode is not a string attribute")
-	}
-	for _, value := range []string{"ReadWriteOnce", "ReadWriteMany", "ReadOnlyMany"} {
-		if diags := validateString(ctx, accessMode.Validators, value); diags.HasError() {
-			t.Errorf("access_mode %q rejected: %v", value, diags)
-		}
-	}
-	if diags := validateString(ctx, accessMode.Validators, "ReadWriteEveryone"); !diags.HasError() {
-		t.Error("access_mode accepted a value infra-gateway does not allow")
 	}
 }
 
@@ -206,7 +189,6 @@ func testSchema(t *testing.T) schema.Schema {
 func testModel(size string, sizeBytes int64) Model {
 	return Model{
 		Name: types.StringValue("data"), Size: types.StringValue(size), SizeBytes: types.Int64Value(sizeBytes),
-		StorageClass: types.StringValue("standard"), AccessMode: types.StringValue("ReadWriteOnce"),
 		VolumeMode: types.StringValue("Filesystem"), URN: types.StringValue("asc:block_volume:data"),
 		Status: types.StringValue("detached"), LastError: types.StringValue(""), AttachedToVM: types.StringValue(""),
 		Tags: types.MapNull(types.StringType), Labels: types.MapNull(types.StringType), Annotations: types.MapNull(types.StringType),
@@ -253,12 +235,4 @@ func stringRequiresReplace(ctx context.Context, t *testing.T, volumeSchema schem
 		}
 	}
 	return false
-}
-
-func validateString(ctx context.Context, validators []validator.String, value string) diag.Diagnostics {
-	response := &validator.StringResponse{}
-	for _, candidate := range validators {
-		candidate.ValidateString(ctx, validator.StringRequest{Path: path.Root("access_mode"), ConfigValue: types.StringValue(value)}, response)
-	}
-	return response.Diagnostics
 }

@@ -23,8 +23,6 @@ type Volume struct {
 	URN          string
 	Name         string
 	Size         string
-	StorageClass string
-	AccessMode   string
 	VolumeMode   string
 	Status       string
 	LastError    string
@@ -37,16 +35,21 @@ type Volume struct {
 
 // CreateVolumeRequest describes a volume to create with POST /volumes.
 type CreateVolumeRequest struct {
-	Name         string
-	Size         string
-	StorageClass string
-	AccessMode   string
-	Tags         []Tag
+	Name string
+	Size string
+	Tags []Tag
 }
 
 func (v Volume) lifecycle() (string, string) { return v.Status, v.LastError }
 
 func (v Volume) tags() []Tag { return v.Tags }
+
+// The gateway requires a storage class and access mode but ASC ignores both, so every
+// volume is created with these fixed values.
+const (
+	volumeStorageClass = "standard"
+	volumeAccessMode   = infra.ReadWriteOnce
+)
 
 // CreateVolume waits for provisioning. Duplicate names return an untyped 500, which cannot
 // safely be retried because the create may have partially succeeded.
@@ -57,8 +60,8 @@ func (c *Runtime) CreateVolume(ctx context.Context, request CreateVolumeRequest)
 	body := infra.CreateVolumeJSONRequestBody{
 		Name:         request.Name,
 		Size:         request.Size,
-		StorageClass: request.StorageClass,
-		AccessMode:   infra.CreateVolumeRequestAccessMode(request.AccessMode),
+		StorageClass: volumeStorageClass,
+		AccessMode:   volumeAccessMode,
 		Tags:         infraTags(request.Tags),
 	}
 	err := callInfra[infra.CreateVolumeResponse](operationCtx, func(ctx context.Context) (*http.Response, error) {
@@ -88,8 +91,6 @@ func (c *Runtime) GetVolume(ctx context.Context, name string) (Volume, error) {
 		URN:          value(wire.Urn),
 		Name:         value(wire.Name),
 		Size:         value(wire.Size),
-		StorageClass: value(wire.StorageClass),
-		AccessMode:   value(wire.AccessMode),
 		VolumeMode:   value(wire.VolumeMode),
 		Status:       value(wire.Status),
 		LastError:    value(wire.LastError),

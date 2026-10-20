@@ -38,8 +38,8 @@ func wire(value any) any {
 		return skus
 	case client.Volume:
 		return map[string]any{
-			"urn": v.URN, "name": v.Name, "size": v.Size, "storageClass": v.StorageClass,
-			"accessMode": v.AccessMode, "volumeMode": v.VolumeMode, "status": v.Status,
+			"urn": v.URN, "name": v.Name, "size": v.Size,
+			"volumeMode": v.VolumeMode, "status": v.Status,
 			"lastError": v.LastError, "tenantId": v.TenantID, "attachedToVM": v.AttachedToVM,
 			"tags": wireTags(v.Tags), "labels": v.Labels, "annotations": v.Annotations,
 		}
