@@ -78,7 +78,7 @@ resource "asc_virtual_machine" "web" {
   name   = "web"
   sku_id = "gp-2"
   vpc_id = asc_vpc.main.id
-  image  = "vm-images/ubuntu:24.04"
+  image  = "ubuntu-24.04-lts"
 }
 
 output "vm_status" {
@@ -91,7 +91,7 @@ output "vm_urn" {
 ```
 
 Machine and VPC names are 1 to 50 characters: a lowercase letter first, then lowercase letters,
-digits or hyphens, ending with a letter or digit. Omit `image` to get `vm-images/ubuntu:24.04`.
+digits or hyphens, ending with a letter or digit. Omit `image` to get `ubuntu-24.04-lts`.
 
 ## What apply and destroy do
 

@@ -5,8 +5,8 @@ resource "asc_virtual_machine" "example" {
   sku_id = "gp-2"
   vpc_id = asc_vpc.example.id
 
-  # Optional: vm-images/ubuntu:24.04 when omitted.
-  image = "vm-images/ubuntu:24.04"
+  # Optional: ubuntu-24.04-lts when omitted.
+  image = "ubuntu-24.04-lts"
 
   tags = {
     env = "production"

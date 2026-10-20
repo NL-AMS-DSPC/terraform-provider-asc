@@ -20,7 +20,7 @@ resource "asc_vm_group" "example" {
   name   = "example-group"
   sku_id = "gp-2"
   vpc_id = asc_vpc.example.id
-  image  = "vm-images/ubuntu:24.04"
+  image  = "ubuntu-24.04-lts"
 
   autoscaling = {
     min_replicas = 2
@@ -53,7 +53,7 @@ resource "asc_vm_group" "example" {
 ### Optional
 
 - `customization` (Attributes, Sensitive) First-boot customization of the group, as cloud-init or Ignition data. Sensitive. Changing it replaces the group. (see [below for nested schema](#nestedatt--customization))
-- `image` (String) Identifier of the operating system image, for example vm-images/ubuntu:24.04, which is also the default. Changing it replaces the group.
+- `image` (String) Identifier of the operating system image, for example ubuntu-24.04-lts, which is also the default. Changing it replaces the group.
 - `tags` (Map of String) Tags applied to the group. Changing them replaces the group.
 
 ### Read-Only

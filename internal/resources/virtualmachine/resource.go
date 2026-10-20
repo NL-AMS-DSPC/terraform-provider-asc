@@ -156,7 +156,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				Required:    true, PlanModifiers: replaceString,
 			},
 			"image": schema.StringAttribute{
-				Description: "Identifier of the operating system image, for example vm-images/ubuntu:24.04, which is also the default. " +
+				Description: "Identifier of the operating system image, for example ubuntu-24.04-lts, which is also the default. " +
 					"Changing the configured value replaces the machine.",
 				Optional: true, Computed: true, PlanModifiers: keepOrReplaceString,
 			},

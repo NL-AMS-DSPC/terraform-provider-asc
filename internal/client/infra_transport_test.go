@@ -324,7 +324,7 @@ func TestInfraRequestBodiesMatchTheHandwrittenWire(t *testing.T) {
 		{"create VM minimal", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateVM(context.Background(), CreateVMRequest{Name: "x", SKUID: "sku", VPCID: "id"})
 			return err
-		}, `{"name":"x","skuID":"sku","vpcID":"id","bootDisk":{"attachMode":"create","diskSizeGB":32,"image":"vm-images/ubuntu:24.04"}}`},
+		}, `{"name":"x","skuID":"sku","vpcID":"id","bootDisk":{"attachMode":"create","diskSizeGB":32,"image":"ubuntu-24.04-lts"}}`},
 		{"create VM with cloud-init", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateVM(context.Background(), CreateVMRequest{
 				Name: "x", SKUID: "sku", VPCID: "id", Image: "ubuntu", Tags: []Tag{{Key: "env", Value: "prod"}},
@@ -335,7 +335,7 @@ func TestInfraRequestBodiesMatchTheHandwrittenWire(t *testing.T) {
 		{"create VM with ignition", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateVM(context.Background(), CreateVMRequest{Name: "x", SKUID: "sku", VPCID: "id", Customization: ignition})
 			return err
-		}, `{"name":"x","skuID":"sku","vpcID":"id","bootDisk":{"attachMode":"create","diskSizeGB":32,"image":"vm-images/ubuntu:24.04"},"customization":{"ignition":{"format":"butane","config":""}}}`},
+		}, `{"name":"x","skuID":"sku","vpcID":"id","bootDisk":{"attachMode":"create","diskSizeGB":32,"image":"ubuntu-24.04-lts"},"customization":{"ignition":{"format":"butane","config":""}}}`},
 		{"create volume", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateVolume(context.Background(), CreateVolumeRequest{Name: "data", Size: "10Gi", StorageClass: "standard", AccessMode: "ReadWriteOnce"})
 			return err
@@ -351,7 +351,7 @@ func TestInfraRequestBodiesMatchTheHandwrittenWire(t *testing.T) {
 				Name: "g", SKUID: "sku", VPCID: "id", AutoscalingPolicy: AutoscalingPolicy{MinReplicas: 1, MaxReplicas: 2},
 			})
 			return err
-		}, `{"name":"g","skuID":"sku","vpcID":"id","image":"vm-images/ubuntu:24.04","diskSizeGB":32,"autoscalers":{"min_replicas":1,"max_replicas":2}}`},
+		}, `{"name":"g","skuID":"sku","vpcID":"id","image":"ubuntu-24.04-lts","diskSizeGB":32,"autoscalers":{"min_replicas":1,"max_replicas":2}}`},
 		{"create VM group full", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateVMGroup(context.Background(), CreateVMGroupRequest{
 				Name: "g", SKUID: "sku", VPCID: "id", Image: "ubuntu",

@@ -20,8 +20,8 @@ resource "asc_virtual_machine" "example" {
   sku_id = "gp-2"
   vpc_id = asc_vpc.example.id
 
-  # Optional: vm-images/ubuntu:24.04 when omitted.
-  image = "vm-images/ubuntu:24.04"
+  # Optional: ubuntu-24.04-lts when omitted.
+  image = "ubuntu-24.04-lts"
 
   tags = {
     env = "production"
@@ -41,7 +41,7 @@ resource "asc_virtual_machine" "example" {
 ### Optional
 
 - `customization` (Attributes, Sensitive) First-boot customization of the virtual machine, as cloud-init or Ignition data. Sensitive, and cannot be recovered by import. Changing it replaces the virtual machine. (see [below for nested schema](#nestedatt--customization))
-- `image` (String) Identifier of the operating system image, for example vm-images/ubuntu:24.04, which is also the default. Changing the configured value replaces the machine.
+- `image` (String) Identifier of the operating system image, for example ubuntu-24.04-lts, which is also the default. Changing the configured value replaces the machine.
 - `tags` (Map of String) Tags applied to the virtual machine. Changing tags updates the machine in place.
 
 ### Read-Only
