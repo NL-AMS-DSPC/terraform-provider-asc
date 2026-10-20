@@ -2,7 +2,7 @@ resource "asc_vm_group" "example" {
   name   = "example-group"
   sku_id = "gp-2"
   vpc_id = asc_vpc.example.id
-  image  = "ubuntu-24.04"
+  image  = "vm-images/ubuntu:24.04"
 
   autoscaling = {
     min_replicas = 2

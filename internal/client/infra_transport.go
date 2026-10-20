@@ -113,3 +113,14 @@ func infraCustomization(customization *Customization) *infra.Customization {
 	}
 	return wire
 }
+
+const DefaultImage = "vm-images/ubuntu:24.04"
+
+const DefaultBootDiskSizeGB = 32
+
+func orDefaultImage(image string) string {
+	if image == "" {
+		return DefaultImage
+	}
+	return image
+}

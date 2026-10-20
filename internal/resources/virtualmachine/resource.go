@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -52,7 +51,6 @@ type Model struct {
 	AttachedVolumes types.List          `tfsdk:"attached_volumes"`
 	OS              types.Object        `tfsdk:"os"`
 	Customization   *CustomizationModel `tfsdk:"customization"`
-	EnableLogging   types.Bool          `tfsdk:"enable_logging"`
 }
 
 type CustomizationModel struct {
@@ -114,7 +112,6 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 	// Preserve omitted computed values before checking replacement, avoiding replacement
 	// during unrelated updates.
 	keepOrReplaceString := []planmodifier.String{stringplanmodifier.UseStateForUnknown(), stringplanmodifier.RequiresReplace()}
-	keepOrReplaceBool := []planmodifier.Bool{boolplanmodifier.UseStateForUnknown(), boolplanmodifier.RequiresReplace()}
 	computedSKU := map[string]schema.Attribute{
 		"id": schema.StringAttribute{Computed: true}, "name": schema.StringAttribute{Computed: true},
 		"family": schema.StringAttribute{Computed: true}, "threads": schema.Int64Attribute{Computed: true},
@@ -177,10 +174,6 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 					},
 				},
 			},
-			"enable_logging": schema.BoolAttribute{
-				Optional: true, Computed: true,
-				PlanModifiers: keepOrReplaceBool,
-			},
 		},
 	}
 }
@@ -206,7 +199,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	created, err := r.client.CreateVM(ctx, client.CreateVMRequest{
 		Name: plan.Name.ValueString(), SKUID: plan.SKUID.ValueString(), VPCID: plan.VPCID.ValueString(),
 		Image: plan.Image.ValueString(), Tags: common.TagsToClient(ctx, plan.Tags, &resp.Diagnostics),
-		Customization: customizationToClient(plan.Customization), EnableLogging: plan.EnableLogging.ValueBool(),
+		Customization: customizationToClient(plan.Customization),
 	})
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating virtual machine", err.Error())
@@ -298,7 +291,6 @@ func setFromVM(ctx context.Context, model *Model, value client.VM, diags *diag.D
 	model.Status = types.StringValue(value.Status)
 	model.LastError = types.StringValue(value.LastError)
 	model.Tags = common.TagsToTerraform(ctx, value.Tags, diags)
-	model.EnableLogging = types.BoolValue(value.EnableLogging)
 
 	sku, skuDiags := types.ObjectValueFrom(ctx, skuTypes, skuModel{
 		ID: types.StringValue(value.SKU.ID), Name: types.StringValue(value.SKU.Name), Family: types.StringValue(value.SKU.Family),

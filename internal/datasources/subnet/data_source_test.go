@@ -82,7 +82,7 @@ func TestDataSourceSchemaMirrorsTheResource(t *testing.T) {
 	// infra-gateway only serves the VPC's subnet listing. Everything else is
 	// served and may never be set in a configuration.
 	required := map[string]bool{"name": true, "vpc_name": true}
-	for _, attribute := range []string{"id", "urn", "name", "vpc_name", "vpc_id", "cidr", "type", "status", "last_error", "tags"} {
+	for _, attribute := range []string{"id", "urn", "name", "vpc_name", "vpc_id", "cidr", "status", "last_error", "tags"} {
 		found, ok := attributes[attribute]
 		if !ok {
 			t.Fatalf("attribute %q is missing", attribute)
@@ -94,8 +94,8 @@ func TestDataSourceSchemaMirrorsTheResource(t *testing.T) {
 			t.Errorf("attribute %q is optional, which would let a configuration override a served value", attribute)
 		}
 	}
-	if len(attributes) != 10 {
-		t.Fatalf("attributes = %d, want 10", len(attributes))
+	if len(attributes) != 9 {
+		t.Fatalf("attributes = %d, want 9", len(attributes))
 	}
 }
 
@@ -104,13 +104,13 @@ func TestDataSourceReadMapsTheSubnet(t *testing.T) {
 
 	state, response := read(t, stubClient{subnet: client.Subnet{
 		ID: "00000000-0000-4000-8000-000000000002", URN: "asc:subnet:test-subnet", Name: "test-subnet",
-		VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.128/25", Type: "public", Status: "active",
+		VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.128/25", Status: "active",
 		Tags: []client.Tag{{Key: "env", Value: "test"}},
 	}}, "test-vpc", "test-subnet")
 	if response.Diagnostics.HasError() {
 		t.Fatalf("Read() diagnostics = %v", response.Diagnostics)
 	}
-	if state.ID.ValueString() != "00000000-0000-4000-8000-000000000002" || state.Type.ValueString() != "public" {
+	if state.ID.ValueString() != "00000000-0000-4000-8000-000000000002" {
 		t.Fatalf("state = %#v", state)
 	}
 	// vpc_name is not part of the read model, so it can only come back from the

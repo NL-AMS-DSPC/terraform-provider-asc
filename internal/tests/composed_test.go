@@ -61,7 +61,7 @@ func (g *composedGateway) handlers() map[string]http.HandlerFunc {
 				ID: vpcID, URN: "asc:vpc:composed-vpc", Name: "composed-vpc", CIDR: "10.0.0.0/24", Status: "active",
 				Subnets: []client.Subnet{{
 					ID: "00000000-0000-4000-8000-000000000002", URN: "asc:subnet:bootstrap", Name: "bootstrap",
-					VPCID: vpcID, CIDR: "10.0.0.0/25", Type: "private", Status: "active",
+					VPCID: vpcID, CIDR: "10.0.0.0/25", Status: "active",
 				}},
 			})
 		},
@@ -168,7 +168,8 @@ func composedConfig(environment testEnvironment) string {
 	return environment.providerConfig() + `
 resource "asc_vpc" "test" {
   name    = "composed-vpc"
-  subnets = [{ name = "bootstrap", cidr = "10.0.0.0/25", type = "private" }]
+  cidr    = "10.0.0.0/24"
+  subnets = [{ name = "bootstrap", cidr = "10.0.0.0/25" }]
 }
 
 resource "asc_virtual_machine" "test" {

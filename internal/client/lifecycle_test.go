@@ -61,6 +61,36 @@ func TestCreateVPCRetriesTypedStaleReservation(t *testing.T) {
 	}
 }
 
+func TestCreateVPCWaitsUntilActive(t *testing.T) {
+	t.Parallel()
+	var gets atomic.Int64
+	runtime := newLifecycleRuntime(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			w.WriteHeader(http.StatusCreated)
+		case http.MethodGet:
+			status := "pending"
+			if gets.Add(1) > 2 {
+				status = "active"
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"data": vpcData(VPC{Name: "test-vpc", Status: status})})
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
+	created, err := runtime.CreateVPC(context.Background(), CreateVPCRequest{Name: "test-vpc"})
+	if err != nil {
+		t.Fatalf("CreateVPC() error = %v", err)
+	}
+	if created.Status != "active" {
+		t.Fatalf("CreateVPC() status = %q, want active", created.Status)
+	}
+	if got := gets.Load(); got != 3 {
+		t.Fatalf("GET count = %d, want 3", got)
+	}
+}
+
 func TestCreateVMRetriesTypedStaleReservationAndIgnoresDeletingProjection(t *testing.T) {
 	t.Parallel()
 	var posts atomic.Int64

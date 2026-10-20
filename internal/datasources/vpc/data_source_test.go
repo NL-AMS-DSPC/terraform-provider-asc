@@ -98,7 +98,7 @@ func TestDataSourceSchemaMirrorsTheResource(t *testing.T) {
 	if !ok {
 		t.Fatalf("subnets = %T, want schema.ListNestedAttribute", attributes["subnets"])
 	}
-	for _, attribute := range []string{"id", "urn", "name", "vpc_id", "cidr", "type", "status", "last_error", "tags"} {
+	for _, attribute := range []string{"id", "urn", "name", "vpc_id", "cidr", "status", "last_error", "tags"} {
 		found, ok := nested.NestedObject.Attributes[attribute]
 		if !ok {
 			t.Fatalf("subnets.%s is missing", attribute)
@@ -107,8 +107,8 @@ func TestDataSourceSchemaMirrorsTheResource(t *testing.T) {
 			t.Errorf("subnets.%s is not computed", attribute)
 		}
 	}
-	if len(nested.NestedObject.Attributes) != 9 {
-		t.Fatalf("subnets attributes = %d, want 9", len(nested.NestedObject.Attributes))
+	if len(nested.NestedObject.Attributes) != 8 {
+		t.Fatalf("subnets attributes = %d, want 8", len(nested.NestedObject.Attributes))
 	}
 }
 
@@ -120,7 +120,7 @@ func TestDataSourceReadMapsTheVPC(t *testing.T) {
 		CIDR: "10.0.0.0/24", Status: "active", Tags: []client.Tag{{Key: "env", Value: "test"}},
 		Subnets: []client.Subnet{{
 			ID: "00000000-0000-4000-8000-000000000002", URN: "asc:subnet:bootstrap", Name: "bootstrap",
-			VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.0/25", Type: "private", Status: "active",
+			VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.0/25", Status: "active",
 		}},
 	}}, "test-vpc")
 	if response.Diagnostics.HasError() {

@@ -40,6 +40,5 @@ resource "asc_virtual_machine" "edge" {
 - `last_error` (String) Last error reported for the subnet, empty when healthy.
 - `status` (String) Current lifecycle status.
 - `tags` (Map of String) Tags applied to the subnet.
-- `type` (String) Subnet type, public or private.
 - `urn` (String) URN of the subnet.
 - `vpc_id` (String) Identifier of the owning VPC.

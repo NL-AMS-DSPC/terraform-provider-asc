@@ -18,7 +18,6 @@ resource "asc_subnet" "example" {
   vpc_name = asc_vpc.example.name
   vpc_id   = asc_vpc.example.id
   cidr     = "10.0.0.128/25"
-  type     = "public"
 }
 ```
 
@@ -29,7 +28,6 @@ resource "asc_subnet" "example" {
 
 - `cidr` (String)
 - `name` (String)
-- `type` (String)
 - `vpc_id` (String)
 - `vpc_name` (String)
 

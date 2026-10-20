@@ -24,7 +24,6 @@ func wire(value any) any {
 				"id": v.OS.ID, "family": v.OS.Family, "distribution": v.OS.Distribution,
 				"release": v.OS.Release, "displayName": v.OS.DisplayName,
 			},
-			"enableLogging": v.EnableLogging,
 		}
 	case client.SKU:
 		return wireSKU(v)
@@ -66,7 +65,7 @@ func wire(value any) any {
 
 func wireSubnet(v client.Subnet) map[string]any {
 	return map[string]any{
-		"id": v.ID, "urn": v.URN, "name": v.Name, "cidr": v.CIDR, "type": v.Type, "vpcID": v.VPCID,
+		"id": v.ID, "urn": v.URN, "name": v.Name, "cidr": v.CIDR, "vpcID": v.VPCID,
 		"status": v.Status, "lastError": v.LastError, "tags": wireTags(v.Tags),
 	}
 }

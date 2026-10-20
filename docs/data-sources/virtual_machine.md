@@ -32,7 +32,6 @@ output "bastion_cores" {
 ### Read-Only
 
 - `attached_volumes` (List of String) Names of the attached volumes, sorted.
-- `enable_logging` (Boolean) Whether platform logging is enabled for the virtual machine.
 - `last_error` (String) Last error reported for the virtual machine, empty when healthy.
 - `os` (Attributes) Operating system image the virtual machine boots. (see [below for nested schema](#nestedatt--os))
 - `sku` (Attributes) SKU the virtual machine runs on. (see [below for nested schema](#nestedatt--sku))

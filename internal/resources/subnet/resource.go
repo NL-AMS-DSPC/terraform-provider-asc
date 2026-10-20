@@ -44,7 +44,6 @@ type Model struct {
 	VPCName   types.String `tfsdk:"vpc_name"`
 	VPCID     types.String `tfsdk:"vpc_id"`
 	CIDR      types.String `tfsdk:"cidr"`
-	Type      types.String `tfsdk:"type"`
 	Status    types.String `tfsdk:"status"`
 	LastError types.String `tfsdk:"last_error"`
 	Tags      types.Map    `tfsdk:"tags"`
@@ -73,12 +72,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 					"must be a UUID version 4",
 				)},
 			},
-			"cidr": schema.StringAttribute{Required: true, PlanModifiers: replaceString},
-			"type": schema.StringAttribute{
-				Required:      true,
-				PlanModifiers: replaceString,
-				Validators:    []validator.String{stringvalidator.OneOf("public", "private")},
-			},
+			"cidr":       schema.StringAttribute{Required: true, PlanModifiers: replaceString},
 			"status":     schema.StringAttribute{Computed: true},
 			"last_error": schema.StringAttribute{Computed: true},
 			"tags": schema.MapAttribute{
@@ -111,7 +105,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 
 	created, err := r.client.CreateSubnet(ctx, plan.VPCName.ValueString(), client.CreateSubnetRequest{
 		Name: plan.Name.ValueString(), CIDR: plan.CIDR.ValueString(), VPCID: plan.VPCID.ValueString(),
-		Type: plan.Type.ValueString(), Tags: common.TagsToClient(ctx, plan.Tags, &resp.Diagnostics),
+		Tags: common.TagsToClient(ctx, plan.Tags, &resp.Diagnostics),
 	})
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating subnet", err.Error())
@@ -192,7 +186,6 @@ func setFromSubnet(ctx context.Context, model *Model, value client.Subnet, diags
 	model.Name = types.StringValue(value.Name)
 	model.VPCID = types.StringValue(value.VPCID)
 	model.CIDR = types.StringValue(value.CIDR)
-	model.Type = types.StringValue(value.Type)
 	model.Status = types.StringValue(value.Status)
 	model.LastError = types.StringValue(value.LastError)
 	model.Tags = common.TagsToTerraform(ctx, value.Tags, diags)

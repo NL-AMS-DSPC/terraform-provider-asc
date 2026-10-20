@@ -62,10 +62,11 @@ func (c *Runtime) CreateVMGroup(ctx context.Context, request CreateVMGroupReques
 	defer cancel()
 
 	body := infra.CreateVMGroupJSONRequestBody{
-		Name:  request.Name,
-		SkuID: request.SKUID,
-		VpcID: request.VPCID,
-		Image: optionalString(request.Image),
+		Name:       request.Name,
+		SkuID:      request.SKUID,
+		VpcID:      request.VPCID,
+		Image:      orDefaultImage(request.Image),
+		DiskSizeGB: DefaultBootDiskSizeGB,
 		// The policy is required, so it is always sent.
 		Autoscalers:   infraAutoscalingPolicy(request.AutoscalingPolicy),
 		Tags:          infraTags(request.Tags),

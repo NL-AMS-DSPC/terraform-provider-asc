@@ -17,9 +17,7 @@ resource "asc_virtual_machine" "example" {
   name     = "example-vm"
   sku_id   = "gp-2"
   vpc_id   = asc_vpc.example.id
-  image    = "ubuntu-24.04"
-
-  enable_logging = true
+  image    = "vm-images/ubuntu:24.04"
 }
 ```
 
@@ -35,7 +33,6 @@ resource "asc_virtual_machine" "example" {
 ### Optional
 
 - `customization` (Attributes, Sensitive) (see [below for nested schema](#nestedatt--customization))
-- `enable_logging` (Boolean)
 - `image` (String)
 - `tags` (Map of String) Tags applied to the virtual machine. Changing tags updates the machine in place.
 

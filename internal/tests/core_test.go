@@ -180,7 +180,7 @@ func TestVPCProvisioning(t *testing.T) {
 		CIDR: "10.0.0.0/24", Status: "active", Tags: []client.Tag{{Key: "env", Value: "test"}},
 		Subnets: []client.Subnet{{
 			ID: "00000000-0000-4000-8000-000000000002", URN: "asc:subnet:bootstrap", Name: "bootstrap",
-			VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.0/25", Type: "private", Status: "active",
+			VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.0/25", Status: "active",
 		}},
 	}
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
@@ -205,7 +205,8 @@ func TestVPCProvisioning(t *testing.T) {
 			Config: environment.providerConfig() + `
 resource "asc_vpc" "test" {
   name = "test-vpc"
-  subnets = [{ name = "bootstrap", cidr = "10.0.0.0/25", type = "private" }]
+  cidr = "10.0.0.0/24"
+  subnets = [{ name = "bootstrap", cidr = "10.0.0.0/25" }]
   tags = { env = "test" }
 }`,
 			Check: resource.ComposeAggregateTestCheckFunc(
@@ -221,7 +222,7 @@ resource "asc_vpc" "test" {
 func TestSubnetProvisioning(t *testing.T) {
 	subnet := client.Subnet{
 		ID: "00000000-0000-4000-8000-000000000002", URN: "asc:subnet:test-subnet", Name: "test-subnet",
-		VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.128/25", Type: "public", Status: "active",
+		VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.128/25", Status: "active",
 	}
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
 		"POST /api/infra-gateway/vpcs/test-vpc/subnets": func(w http.ResponseWriter, _ *http.Request) {
@@ -241,7 +242,6 @@ resource "asc_subnet" "test" {
   vpc_name = "test-vpc"
   vpc_id = "00000000-0000-4000-8000-000000000001"
   cidr = "10.0.0.128/25"
-  type = "public"
 }`,
 			Check: resource.ComposeAggregateTestCheckFunc(
 				resource.TestCheckResourceAttr("asc_subnet.test", "id", subnet.ID),
@@ -258,7 +258,7 @@ func TestVirtualMachineProvisioning(t *testing.T) {
 		URN: "asc:vm:test-vm", Name: "test-vm", VPCID: "00000000-0000-4000-8000-000000000001",
 		SKU: client.SKU{ID: "gp-2", Name: "general-purpose"}, Status: "active",
 		OS:   client.OS{ID: "ubuntu-24.04", Family: "linux", Distribution: "ubuntu", Release: "24.04", DisplayName: "Ubuntu 24.04"},
-		Tags: []client.Tag{{Key: "env", Value: "test"}}, EnableLogging: true,
+		Tags: []client.Tag{{Key: "env", Value: "test"}},
 	}
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
 		"POST /api/infra-gateway/vms": func(w http.ResponseWriter, _ *http.Request) {
@@ -285,14 +285,12 @@ resource "asc_virtual_machine" "test" {
   sku_id = "gp-2"
   vpc_id = "00000000-0000-4000-8000-000000000001"
   image = "ubuntu-24.04"
-  enable_logging = true
   tags = { env = "test" }
   customization = { cloud_init = { user_data = "#cloud-config" } }
 }`,
 			Check: resource.ComposeAggregateTestCheckFunc(
 				resource.TestCheckResourceAttr("asc_virtual_machine.test", "urn", vm.URN),
 				resource.TestCheckResourceAttr("asc_virtual_machine.test", "vpc_id", vm.VPCID),
-				resource.TestCheckResourceAttr("asc_virtual_machine.test", "enable_logging", "true"),
 				resource.TestCheckResourceAttr("asc_virtual_machine.test", "customization.cloud_init.user_data", "#cloud-config"),
 			),
 		},
@@ -334,7 +332,7 @@ func TestVPCProvisioningReplacementWaitsForNameRelease(t *testing.T) {
 			CIDR: "10.0.0.0/24", Status: "active",
 			Subnets: []client.Subnet{{
 				ID: "00000000-0000-4000-8000-000000000002", URN: "asc:subnet:bootstrap", Name: "bootstrap",
-				VPCID: "00000000-0000-4000-8000-000000000001", CIDR: cidr, Type: "private", Status: "active",
+				VPCID: "00000000-0000-4000-8000-000000000001", CIDR: cidr, Status: "active",
 			}},
 		}
 	}
@@ -384,7 +382,8 @@ func TestVPCProvisioningReplacementWaitsForNameRelease(t *testing.T) {
 		return environment.providerConfig() + fmt.Sprintf(`
 resource "asc_vpc" "test" {
   name = "test-vpc"
-  subnets = [{ name = "bootstrap", cidr = %q, type = "private" }]
+  cidr = "10.0.0.0/24"
+  subnets = [{ name = "bootstrap", cidr = %q }]
 }`, cidr)
 	}
 	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: providerFactories, Steps: []resource.TestStep{
@@ -540,7 +539,7 @@ func TestVPCTagsUpdateInPlace(t *testing.T) {
 				CIDR: "10.0.0.0/24", Status: "active", Tags: tags(),
 				Subnets: []client.Subnet{{
 					ID: "00000000-0000-4000-8000-000000000002", URN: "asc:subnet:bootstrap", Name: "bootstrap",
-					VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.0/25", Type: "private", Status: "active",
+					VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.0/25", Status: "active",
 				}},
 			})
 		},
@@ -555,7 +554,8 @@ func TestVPCTagsUpdateInPlace(t *testing.T) {
 		return environment.providerConfig() + fmt.Sprintf(`
 resource "asc_vpc" "test" {
   name = "test-vpc"
-  subnets = [{ name = "bootstrap", cidr = "10.0.0.0/25", type = "private" }]
+  cidr = "10.0.0.0/24"
+  subnets = [{ name = "bootstrap", cidr = "10.0.0.0/25" }]
   tags = %s
 }`, tags)
 	}
@@ -582,6 +582,67 @@ resource "asc_vpc" "test" {
 	}})
 }
 
+func TestVPCCIDRChangeReplacesTheVPC(t *testing.T) {
+	var (
+		mu      sync.Mutex
+		cidr    string
+		deleted bool
+	)
+	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
+		"POST /api/infra-gateway/vpcs": func(w http.ResponseWriter, r *http.Request) {
+			var body struct {
+				CIDR string `json:"cidr"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			mu.Lock()
+			cidr, deleted = body.CIDR, false
+			mu.Unlock()
+			writeData(w, http.StatusCreated, map[string]string{"created": "test-vpc"})
+		},
+		"GET /api/infra-gateway/vpcs/test-vpc": func(w http.ResponseWriter, _ *http.Request) {
+			mu.Lock()
+			defer mu.Unlock()
+			if deleted {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			writeData(w, http.StatusOK, client.VPC{
+				ID: "00000000-0000-4000-8000-000000000001", URN: "asc:vpc:test-vpc", Name: "test-vpc",
+				CIDR: cidr, Status: "active",
+				Subnets: []client.Subnet{{
+					ID: "00000000-0000-4000-8000-000000000002", URN: "asc:subnet:bootstrap", Name: "bootstrap",
+					VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.0/25", Status: "active",
+				}},
+			})
+		},
+		"DELETE /api/infra-gateway/vpcs/test-vpc": func(w http.ResponseWriter, _ *http.Request) {
+			mu.Lock()
+			deleted = true
+			mu.Unlock()
+			writeData(w, http.StatusOK, map[string]string{"deleted": "test-vpc"})
+		},
+	})
+
+	config := func(cidr string) string {
+		return environment.providerConfig() + fmt.Sprintf(`
+resource "asc_vpc" "test" {
+  name = "test-vpc"
+  cidr = %q
+  subnets = [{ name = "bootstrap", cidr = "10.0.0.0/25" }]
+}`, cidr)
+	}
+	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: providerFactories, Steps: []resource.TestStep{
+		{Config: config("10.0.0.0/24")},
+		{
+			Config: config("10.0.0.0/16"),
+			ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+				plancheck.ExpectResourceAction("asc_vpc.test", plancheck.ResourceActionDestroyBeforeCreate),
+			}},
+			Check: resource.TestCheckResourceAttr("asc_vpc.test", "cidr", "10.0.0.0/16"),
+		},
+	}})
+}
+
 func TestSubnetTagsUpdateInPlace(t *testing.T) {
 	var deleted atomic.Bool
 	tags, patch := taggedTagStore(map[string]string{"env": "test"})
@@ -596,7 +657,7 @@ func TestSubnetTagsUpdateInPlace(t *testing.T) {
 			}
 			writeData(w, http.StatusOK, []client.Subnet{{
 				ID: "00000000-0000-4000-8000-000000000002", URN: "asc:subnet:test-subnet", Name: "test-subnet",
-				VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.128/25", Type: "public",
+				VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.128/25",
 				Status: "active", Tags: tags(),
 			}})
 		},
@@ -614,7 +675,6 @@ resource "asc_subnet" "test" {
   vpc_name = "test-vpc"
   vpc_id = "00000000-0000-4000-8000-000000000001"
   cidr = "10.0.0.128/25"
-  type = "public"
   tags = %s
 }`, tags)
 	}

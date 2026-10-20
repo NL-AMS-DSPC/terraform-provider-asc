@@ -482,6 +482,8 @@ read cannot recover — in place of a path that does nothing.
    - `tags` no longer forces replacement on `asc_vpc` or
      `asc_virtual_machine`. A tag edit that used to destroy and recreate now
      patches in place.
+   - `asc_vpc` requires `cidr`. Set it to the VPC's current CIDR, which
+     `terraform state show` prints; any other value replaces the VPC.
    - Attributes origin B wrote that this provider does not declare are dropped
      silently rather than erroring, and attributes this provider declares that
      prior state lacks arrive null.

@@ -55,7 +55,6 @@ type inlineSubnetModel struct {
 	Name      types.String `tfsdk:"name"`
 	VPCID     types.String `tfsdk:"vpc_id"`
 	CIDR      types.String `tfsdk:"cidr"`
-	Type      types.String `tfsdk:"type"`
 	Status    types.String `tfsdk:"status"`
 	LastError types.String `tfsdk:"last_error"`
 	Tags      types.Map    `tfsdk:"tags"`
@@ -67,7 +66,6 @@ var inlineSubnetTypes = map[string]attr.Type{
 	"name":       types.StringType,
 	"vpc_id":     types.StringType,
 	"cidr":       types.StringType,
-	"type":       types.StringType,
 	"status":     types.StringType,
 	"last_error": types.StringType,
 	"tags":       types.MapType{ElemType: types.StringType},
@@ -83,10 +81,14 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 	resp.Schema = schema.Schema{
 		Description: "Manages an ASC VPC.",
 		Attributes: map[string]schema.Attribute{
-			"id":         schema.StringAttribute{Computed: true},
-			"urn":        schema.StringAttribute{Computed: true},
-			"name":       schema.StringAttribute{Required: true, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}},
-			"cidr":       schema.StringAttribute{Computed: true},
+			"id":   schema.StringAttribute{Computed: true},
+			"urn":  schema.StringAttribute{Computed: true},
+			"name": schema.StringAttribute{Required: true, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}},
+			"cidr": schema.StringAttribute{
+				Description:   "IPv4 CIDR block of the VPC, such as 10.0.0.0/16. Every inline subnet must lie within it. Changing it replaces the VPC.",
+				Required:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+			},
 			"status":     schema.StringAttribute{Computed: true},
 			"last_error": schema.StringAttribute{Computed: true},
 			"subnets": schema.ListNestedAttribute{
@@ -97,7 +99,6 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 					"name":       schema.StringAttribute{Required: true},
 					"vpc_id":     schema.StringAttribute{Computed: true},
 					"cidr":       schema.StringAttribute{Required: true},
-					"type":       schema.StringAttribute{Required: true},
 					"status":     schema.StringAttribute{Computed: true},
 					"last_error": schema.StringAttribute{Computed: true},
 					"tags":       schema.MapAttribute{Optional: true, ElementType: types.StringType},
@@ -140,6 +141,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 
 	request := client.CreateVPCRequest{
 		Name:    plan.Name.ValueString(),
+		CIDR:    plan.CIDR.ValueString(),
 		Tags:    common.TagsToClient(ctx, plan.Tags, &resp.Diagnostics),
 		Subnets: inlineSubnetsToClient(ctx, plan.Subnets, &resp.Diagnostics),
 	}
@@ -246,7 +248,7 @@ func configuredInlineSubnets(ctx context.Context, value types.List, diags *diag.
 	}
 	result := make([]string, 0, len(models))
 	for _, model := range models {
-		result = append(result, fmt.Sprintf("%s|%s|%s|%s", model.Name, model.CIDR, model.Type, model.Tags))
+		result = append(result, fmt.Sprintf("%s|%s|%s", model.Name, model.CIDR, model.Tags))
 	}
 	return result
 }
@@ -260,7 +262,7 @@ func inlineSubnetsToClient(ctx context.Context, value types.List, diags *diag.Di
 	result := make([]client.CreateSubnetRequest, 0, len(models))
 	for _, model := range models {
 		result = append(result, client.CreateSubnetRequest{
-			Name: model.Name.ValueString(), CIDR: model.CIDR.ValueString(), Type: model.Type.ValueString(),
+			Name: model.Name.ValueString(), CIDR: model.CIDR.ValueString(),
 			Tags: common.TagsToClient(ctx, model.Tags, diags),
 		})
 	}
@@ -309,7 +311,7 @@ func inlineSubnetsToTerraform(ctx context.Context, values []client.Subnet, diags
 	for _, subnet := range values {
 		models = append(models, inlineSubnetModel{
 			ID: types.StringValue(subnet.ID), URN: types.StringValue(subnet.URN), Name: types.StringValue(subnet.Name),
-			VPCID: types.StringValue(subnet.VPCID), CIDR: types.StringValue(subnet.CIDR), Type: types.StringValue(subnet.Type),
+			VPCID: types.StringValue(subnet.VPCID), CIDR: types.StringValue(subnet.CIDR),
 			Status: types.StringValue(subnet.Status), LastError: types.StringValue(subnet.LastError),
 			Tags: common.TagsToTerraform(ctx, subnet.Tags, diags),
 		})

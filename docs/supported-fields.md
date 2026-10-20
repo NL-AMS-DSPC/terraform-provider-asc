@@ -25,10 +25,11 @@ destroys and recreates it.
 | Attribute | Schema | Change | Why |
 | --- | --- | --- | --- |
 | `name` | Required | Replaces | Renaming requires a new VPC. |
-| `subnets` | Required, at least one | Replaces when a configured field of an inline subnet changes | Inline subnets cannot be changed in place. Only `name`, `cidr`, `type` and `tags` of each element are compared; the computed nested fields are ignored so that an unrelated edit does not replace the VPC. |
+| `cidr` | Required | Replaces | Every inline subnet must lie within it. |
+| `subnets` | Required, at least one | Replaces when a configured field of an inline subnet changes | Inline subnets cannot be changed in place. Only `name`, `cidr` and `tags` of each element are compared; the computed nested fields are ignored so that an unrelated edit does not replace the VPC. |
 | `tags` | Optional | In place | Tags can be changed without replacing the VPC. |
 
-Read-only: `id`, `urn`, `cidr`, `status`, `last_error`, and the `id`, `urn`, `vpc_id`, `status` and
+Read-only: `id`, `urn`, `status`, `last_error`, and the `id`, `urn`, `vpc_id`, `status` and
 `last_error` of every element of `subnets`.
 
 ### asc_subnet
@@ -39,7 +40,6 @@ Read-only: `id`, `urn`, `cidr`, `status`, `last_error`, and the `id`, `urn`, `vp
 | `vpc_name` | Required | Replaces | A subnet is addressed by the VPC and subnet name pair. |
 | `vpc_id` | Required, UUID v4 | Replaces | |
 | `cidr` | Required | Replaces | |
-| `type` | Required, `public` or `private` | Replaces | |
 | `tags` | Optional | In place | Tags can be changed without replacing the subnet. |
 
 Read-only: `id`, `urn`, `status`, `last_error`.
@@ -51,8 +51,7 @@ Read-only: `id`, `urn`, `status`, `last_error`.
 | `name` | Required, 1-50 characters, lowercase letter first, then lowercase letters, digits or hyphens, alphanumeric last | Replaces | |
 | `sku_id` | Required | Replaces | Changing a machine's SKU in place is not supported by this provider. |
 | `vpc_id` | Required | Replaces | |
-| `image` | Optional, Computed | Replaces | Keeps its prior value when the configuration omits it, so an unrelated change does not look like a new image. |
-| `enable_logging` | Optional, Computed | Replaces | Same prior-value handling as `image`. |
+| `image` | Optional, Computed | Replaces | Omitted, it requests `vm-images/ubuntu:24.04`. Keeps its prior value when the configuration omits it, so an unrelated change does not look like a new image. |
 | `customization` | Optional, sensitive | Replaces | Write-only; see [what import cannot recover](#what-import-cannot-recover). |
 | `tags` | Optional | In place | Tags can be changed without replacing the machine. |
 
@@ -65,7 +64,7 @@ Read-only: `urn`, `sku`, `os`, `status`, `last_error`, `attached_volumes`.
 | `name` | Required, same pattern and length as a virtual machine name | Replaces | |
 | `sku_id` | Required | Replaces | |
 | `vpc_id` | Required, UUID v4 | Replaces | |
-| `image` | Optional | Replaces | Configuration-only: the original image cannot be read back. An empty value uses the platform default. |
+| `image` | Optional | Replaces | Configuration-only: the original image cannot be read back. An empty value requests `vm-images/ubuntu:24.04`. |
 | `autoscaling` | Required, with `min_replicas` and `max_replicas` between 1 and 100 and `max_replicas` at least `min_replicas`; optional `cron` block with required `timezone`, `start`, `end` and `desired_replicas` between 0 and 100 | Replaces | Changing the scaling policy in place is not supported. |
 | `customization` | Optional, sensitive | Replaces | Never served back. |
 | `tags` | Optional | Replaces | Changing group tags in place is not supported. |

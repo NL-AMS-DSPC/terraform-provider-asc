@@ -4,11 +4,13 @@
 edit it by hand; regenerate it in ASC and copy it here.
 
 - ASC target: `//clients/infra-gateway:openapi3_terraform` (`bazel-bin/clients/infra-gateway/openapi3.terraform.json`)
-- ASC revision: branch `terraform-provider-openapi-contract`, commit [`4f2818c2f34c22eb504d81c53c85472e7fdc63a7`](https://github.com/NL-AMS-DSPC/asc/commit/4f2818c2f34c22eb504d81c53c85472e7fdc63a7)
-- sha256: `e1abced89b42ec7c7da86277eaf50ad2bf9a6c8782fa3fc3efe3529149b259e3`
+- ASC revision: `main`, commit `e3802ca9dd54139f0f4a752f5ce481b489ba1e67`
+- sha256: `1bd58396a87dd8bfeeda412e98c87ab5f4eb006270c16e57a12671902bf22bb0`
 
-This revision is available in [ASC PR #1074](https://github.com/NL-AMS-DSPC/asc/pull/1074)
-and is not yet merged into upstream `main`.
+The Terraform spec targets from ASC PR #1076 are merged into `main`, so this is a plain build of
+`main`. It includes the required `bootDisk` object on `CreateVMRequest` (ASC commit `12e151d01`),
+the required VPC `cidr` and the removal of subnet `type` (ASC PRs #1193 and #1194), and the
+removal of `enableLogging` from virtual machines.
 
 The allowlist in ASC's `clients/infra-gateway/terraform-operations.json` decides which operations
 the spec holds. After copying a new spec, update the revision and sha256 above and run
