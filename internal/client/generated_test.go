@@ -150,6 +150,22 @@ func TestGeneratedCallStatusClassification(t *testing.T) {
 	}
 }
 
+func TestGeneratedCallErrorIncludesResponseBody(t *testing.T) {
+	t.Parallel()
+
+	runtime := newGeneratedTestRuntime(t, "", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"error":"bad_request","message":"bootDisk.image is required"}` + "\n"))
+	})
+	err := callUAM[uam.GroupListResponse](context.Background(), func(ctx context.Context) (*http.Response, error) {
+		return runtime.uamAPI().ListTenantGroups(ctx, runtime.uamEditor())
+	}, nil)
+	want := `uam returned HTTP 400: {"error":"bad_request","message":"bootDisk.image is required"}`
+	if err == nil || err.Error() != want {
+		t.Errorf("error = %v, want %s", err, want)
+	}
+}
+
 func TestGeneratedCallAuthenticationFailure(t *testing.T) {
 	t.Parallel()
 
