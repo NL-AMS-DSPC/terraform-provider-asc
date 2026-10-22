@@ -4,7 +4,7 @@ All notable changes to this provider are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.0] - 2026-10-22
 
 This release follows the infra-gateway on ASC main and contains breaking changes.
 
@@ -16,6 +16,8 @@ This release follows the infra-gateway on ASC main and contains breaking changes
   omitted `image` requests `ubuntu-24.04-lts`.
 - Creating a VPC waits until it is active, so a virtual machine can be created
   in it in the same apply.
+- API error diagnostics quote the response body, capped at 512 bytes, for
+  example `infra-gateway returned HTTP 400: {"cidr":"required"}`.
 
 ### Removed
 
