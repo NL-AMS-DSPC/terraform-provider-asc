@@ -31,7 +31,6 @@ output "volume_size_bytes" {
 
 ### Read-Only
 
-- `access_mode` (String) Access mode of the volume.
 - `annotations` (Map of String) Annotations of the volume.
 - `attached_to_vm` (String) UUID of the virtual machine the volume is attached to, empty when detached.
 - `labels` (Map of String) Labels of the volume.
@@ -39,7 +38,6 @@ output "volume_size_bytes" {
 - `size` (String) Reported capacity, for example "10Gi".
 - `size_bytes` (Number) Capacity in bytes. The reported size may use equivalent spellings between reads, so this is the value to compare against.
 - `status` (String) Current lifecycle status.
-- `storage_class` (String) Storage class backing the volume.
 - `tags` (Map of String) Tags applied to the volume.
 - `urn` (String) URN of the volume, which carries its uuid.
 - `volume_mode` (String) Volume mode.

@@ -38,7 +38,7 @@ func TestCreateVolumeWaitsUntilProvisioningSettles(t *testing.T) {
 	})
 
 	created, err := runtime.CreateVolume(context.Background(), CreateVolumeRequest{
-		Name: "data", Size: "10Gi", StorageClass: "standard", AccessMode: "ReadWriteOnce",
+		Name: "data", Size: "10Gi",
 		Tags: []Tag{{Key: "env", Value: "test"}},
 	})
 	if err != nil {
@@ -69,7 +69,7 @@ func TestCreateVolumeReportsUntypedConflictWithoutRetrying(t *testing.T) {
 		w.WriteHeader(http.StatusInternalServerError)
 	})
 
-	_, err := runtime.CreateVolume(context.Background(), CreateVolumeRequest{Name: "data", Size: "10Gi", StorageClass: "standard", AccessMode: "ReadWriteOnce"})
+	_, err := runtime.CreateVolume(context.Background(), CreateVolumeRequest{Name: "data", Size: "10Gi"})
 	if err == nil || !strings.Contains(err.Error(), "HTTP 500") {
 		t.Fatalf("CreateVolume() error = %v, want the verbatim HTTP 500", err)
 	}

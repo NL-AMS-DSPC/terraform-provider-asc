@@ -75,8 +75,8 @@ func vmData(vm VM) map[string]any {
 
 func volumeData(volume Volume) map[string]any {
 	return map[string]any{
-		"urn": volume.URN, "name": volume.Name, "size": volume.Size, "storageClass": volume.StorageClass,
-		"accessMode": volume.AccessMode, "volumeMode": volume.VolumeMode, "status": volume.Status,
+		"urn": volume.URN, "name": volume.Name, "size": volume.Size,
+		"volumeMode": volume.VolumeMode, "status": volume.Status,
 		"lastError": volume.LastError, "tenantId": volume.TenantID, "attachedToVM": volume.AttachedToVM,
 		"tags": tagsData(volume.Tags), "labels": volume.Labels, "annotations": volume.Annotations,
 	}
@@ -324,7 +324,7 @@ func TestInfraRequestBodiesMatchTheHandwrittenWire(t *testing.T) {
 		{"create VM minimal", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateVM(context.Background(), CreateVMRequest{Name: "x", SKUID: "sku", VPCID: "id"})
 			return err
-		}, `{"name":"x","skuID":"sku","vpcID":"id","bootDisk":{"attachMode":"create","diskSizeGB":32,"image":"vm-images/ubuntu:24.04"}}`},
+		}, `{"name":"x","skuID":"sku","vpcID":"id","bootDisk":{"attachMode":"create","diskSizeGB":32,"image":"ubuntu-24.04-lts"}}`},
 		{"create VM with cloud-init", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateVM(context.Background(), CreateVMRequest{
 				Name: "x", SKUID: "sku", VPCID: "id", Image: "ubuntu", Tags: []Tag{{Key: "env", Value: "prod"}},
@@ -335,14 +335,14 @@ func TestInfraRequestBodiesMatchTheHandwrittenWire(t *testing.T) {
 		{"create VM with ignition", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateVM(context.Background(), CreateVMRequest{Name: "x", SKUID: "sku", VPCID: "id", Customization: ignition})
 			return err
-		}, `{"name":"x","skuID":"sku","vpcID":"id","bootDisk":{"attachMode":"create","diskSizeGB":32,"image":"vm-images/ubuntu:24.04"},"customization":{"ignition":{"format":"butane","config":""}}}`},
+		}, `{"name":"x","skuID":"sku","vpcID":"id","bootDisk":{"attachMode":"create","diskSizeGB":32,"image":"ubuntu-24.04-lts"},"customization":{"ignition":{"format":"butane","config":""}}}`},
 		{"create volume", http.MethodPost, func(c *Runtime) error {
-			_, err := c.CreateVolume(context.Background(), CreateVolumeRequest{Name: "data", Size: "10Gi", StorageClass: "standard", AccessMode: "ReadWriteOnce"})
+			_, err := c.CreateVolume(context.Background(), CreateVolumeRequest{Name: "data", Size: "10Gi"})
 			return err
 		}, `{"name":"data","size":"10Gi","storageClass":"standard","accessMode":"ReadWriteOnce"}`},
 		{"create volume with tags", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateVolume(context.Background(), CreateVolumeRequest{
-				Name: "data", Size: "10Gi", StorageClass: "standard", AccessMode: "ReadWriteOnce", Tags: []Tag{{Key: "env", Value: "prod"}},
+				Name: "data", Size: "10Gi", Tags: []Tag{{Key: "env", Value: "prod"}},
 			})
 			return err
 		}, `{"name":"data","size":"10Gi","storageClass":"standard","accessMode":"ReadWriteOnce","tags":[{"key":"env","value":"prod"}]}`},
@@ -351,7 +351,7 @@ func TestInfraRequestBodiesMatchTheHandwrittenWire(t *testing.T) {
 				Name: "g", SKUID: "sku", VPCID: "id", AutoscalingPolicy: AutoscalingPolicy{MinReplicas: 1, MaxReplicas: 2},
 			})
 			return err
-		}, `{"name":"g","skuID":"sku","vpcID":"id","image":"vm-images/ubuntu:24.04","diskSizeGB":32,"autoscalers":{"min_replicas":1,"max_replicas":2}}`},
+		}, `{"name":"g","skuID":"sku","vpcID":"id","image":"ubuntu-24.04-lts","diskSizeGB":32,"autoscalers":{"min_replicas":1,"max_replicas":2}}`},
 		{"create VM group full", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateVMGroup(context.Background(), CreateVMGroupRequest{
 				Name: "g", SKUID: "sku", VPCID: "id", Image: "ubuntu",
@@ -432,7 +432,7 @@ func TestInfraReadsMapEveryField(t *testing.T) {
 		Status: "active", LastError: "none", Tags: []Tag{}}
 	vpc := VPC{ID: "vpc-id", URN: "urn:vpc", Name: "vpc", CIDR: "10.0.0.0/24", Status: "active", LastError: "none",
 		Subnets: []Subnet{subnet}, Tags: []Tag{{Key: "env", Value: "prod"}}}
-	volume := Volume{URN: "urn:vol", Name: "data", Size: "10Gi", StorageClass: "standard", AccessMode: "ReadWriteOnce",
+	volume := Volume{URN: "urn:vol", Name: "data", Size: "10Gi",
 		VolumeMode: "Filesystem", Status: "attached", LastError: "none", TenantID: "t", AttachedToVM: "vm",
 		Tags: []Tag{{Key: "env", Value: "prod"}}, Labels: map[string]string{"l": "1"}, Annotations: map[string]string{"a": "2"}}
 	group := VMGroup{URN: "urn:g", Name: "g", SKU: sku, Status: "active", LastError: "none", Tags: nil,

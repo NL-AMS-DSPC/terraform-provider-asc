@@ -124,8 +124,8 @@ func (g *composedGateway) handlers() map[string]http.HandlerFunc {
 			}
 			writeData(w, http.StatusOK, client.Volume{
 				URN: "asc:volume:composed-volume", Name: "composed-volume", Size: "10Gi",
-				StorageClass: "standard", AccessMode: "ReadWriteOnce", VolumeMode: "Filesystem",
-				Status: status, AttachedToVM: g.attachedToVM,
+				VolumeMode: "Filesystem",
+				Status:     status, AttachedToVM: g.attachedToVM,
 			})
 		},
 		// Deletion must follow detachment.
@@ -179,10 +179,8 @@ resource "asc_virtual_machine" "test" {
 }
 
 resource "asc_volume" "test" {
-  name          = "composed-volume"
-  size          = "10Gi"
-  storage_class = "standard"
-  access_mode   = "ReadWriteOnce"
+  name = "composed-volume"
+  size = "10Gi"
 }
 
 resource "asc_volume_attachment" "test" {

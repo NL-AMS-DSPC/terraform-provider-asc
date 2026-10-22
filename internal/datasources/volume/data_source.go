@@ -29,8 +29,6 @@ type Model struct {
 	Name         types.String `tfsdk:"name"`
 	Size         types.String `tfsdk:"size"`
 	SizeBytes    types.Int64  `tfsdk:"size_bytes"`
-	StorageClass types.String `tfsdk:"storage_class"`
-	AccessMode   types.String `tfsdk:"access_mode"`
 	VolumeMode   types.String `tfsdk:"volume_mode"`
 	URN          types.String `tfsdk:"urn"`
 	Status       types.String `tfsdk:"status"`
@@ -59,8 +57,6 @@ func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp 
 					"between reads, so this is the value to compare against.",
 				Computed: true,
 			},
-			"storage_class":  schema.StringAttribute{Description: "Storage class backing the volume.", Computed: true},
-			"access_mode":    schema.StringAttribute{Description: "Access mode of the volume.", Computed: true},
 			"volume_mode":    schema.StringAttribute{Description: "Volume mode.", Computed: true},
 			"urn":            schema.StringAttribute{Description: "URN of the volume, which carries its uuid.", Computed: true},
 			"status":         schema.StringAttribute{Description: "Current lifecycle status.", Computed: true},
@@ -113,7 +109,6 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 
 	state = Model{
 		Name: types.StringValue(current.Name), Size: types.StringValue(current.Size), SizeBytes: types.Int64Value(size),
-		StorageClass: types.StringValue(current.StorageClass), AccessMode: types.StringValue(current.AccessMode),
 		VolumeMode: types.StringValue(current.VolumeMode), URN: types.StringValue(current.URN),
 		Status: types.StringValue(current.Status), LastError: types.StringValue(current.LastError),
 		AttachedToVM: types.StringValue(current.AttachedToVM),

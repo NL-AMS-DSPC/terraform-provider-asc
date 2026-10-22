@@ -13,11 +13,14 @@ Manages an ASC virtual machine group.
 ## Example Usage
 
 ```terraform
+# A group of identical virtual machines that scales between 2 and 10
+# replicas, and is held at 6 replicas on weekdays from 08:00 to 18:00.
+# Changing any argument of a group replaces it.
 resource "asc_vm_group" "example" {
   name   = "example-group"
   sku_id = "gp-2"
   vpc_id = asc_vpc.example.id
-  image  = "vm-images/ubuntu:24.04"
+  image  = "ubuntu-24.04-lts"
 
   autoscaling = {
     min_replicas = 2
@@ -43,45 +46,45 @@ resource "asc_vm_group" "example" {
 ### Required
 
 - `autoscaling` (Attributes) Scaling bounds of the group. Changing the policy replaces the group. (see [below for nested schema](#nestedatt--autoscaling))
-- `name` (String)
-- `sku_id` (String)
-- `vpc_id` (String)
+- `name` (String) Name of the virtual machine group. Must be 1 to 50 characters: a lowercase letter first, then lowercase letters, digits or hyphens, ending with a letter or digit. Changing it replaces the group.
+- `sku_id` (String) Identifier of the SKU backing every member of the group; list them with the asc_skus data source. Changing it replaces the group.
+- `vpc_id` (String) Identifier of the VPC the group is attached to, a UUID version 4. Changing it replaces the group.
 
 ### Optional
 
-- `customization` (Attributes, Sensitive) (see [below for nested schema](#nestedatt--customization))
-- `image` (String)
-- `tags` (Map of String)
+- `customization` (Attributes, Sensitive) First-boot customization of the group, as cloud-init or Ignition data. Sensitive. Changing it replaces the group. (see [below for nested schema](#nestedatt--customization))
+- `image` (String) Identifier of the operating system image, for example ubuntu-24.04-lts, which is also the default. Changing it replaces the group.
+- `tags` (Map of String) Tags applied to the group. Changing them replaces the group.
 
 ### Read-Only
 
 - `attached_volumes` (List of String) Names of the volumes attached to the group, sorted.
-- `last_error` (String)
-- `sku` (Attributes) (see [below for nested schema](#nestedatt--sku))
-- `status` (String)
-- `urn` (String)
+- `last_error` (String) Last error reported for the group, empty when there is none.
+- `sku` (Attributes) SKU backing every member of the group. (see [below for nested schema](#nestedatt--sku))
+- `status` (String) Current lifecycle status.
+- `urn` (String) Resource identifier of the group.
 
 <a id="nestedatt--autoscaling"></a>
 ### Nested Schema for `autoscaling`
 
 Required:
 
-- `max_replicas` (Number)
-- `min_replicas` (Number)
+- `max_replicas` (Number) Upper replica bound, 1 to 100 and at least min_replicas.
+- `min_replicas` (Number) Lower replica bound, 1 to 100.
 
 Optional:
 
-- `cron` (Attributes) (see [below for nested schema](#nestedatt--autoscaling--cron))
+- `cron` (Attributes) Cron window that overrides the replica count while it is open. (see [below for nested schema](#nestedatt--autoscaling--cron))
 
 <a id="nestedatt--autoscaling--cron"></a>
 ### Nested Schema for `autoscaling.cron`
 
 Required:
 
-- `desired_replicas` (Number)
-- `end` (String)
-- `start` (String)
-- `timezone` (String)
+- `desired_replicas` (Number) Replica count held while the window is open, 0 to 100.
+- `end` (String) Cron expression closing the window.
+- `start` (String) Cron expression opening the window.
+- `timezone` (String) IANA timezone the window is expressed in.
 
 
 
@@ -90,16 +93,16 @@ Required:
 
 Optional:
 
-- `cloud_init` (Attributes, Sensitive) (see [below for nested schema](#nestedatt--customization--cloud_init))
-- `ignition` (Attributes, Sensitive) (see [below for nested schema](#nestedatt--customization--ignition))
+- `cloud_init` (Attributes, Sensitive) Cloud-init customization. (see [below for nested schema](#nestedatt--customization--cloud_init))
+- `ignition` (Attributes, Sensitive) Ignition customization. (see [below for nested schema](#nestedatt--customization--ignition))
 
 <a id="nestedatt--customization--cloud_init"></a>
 ### Nested Schema for `customization.cloud_init`
 
 Optional:
 
-- `meta_data` (String, Sensitive)
-- `user_data` (String, Sensitive)
+- `meta_data` (String, Sensitive) Cloud-init meta data.
+- `user_data` (String, Sensitive) Cloud-init user data.
 
 
 <a id="nestedatt--customization--ignition"></a>
@@ -107,8 +110,8 @@ Optional:
 
 Required:
 
-- `config` (String, Sensitive)
-- `format` (String)
+- `config` (String, Sensitive) Ignition config content.
+- `format` (String) Format of the Ignition config.
 
 
 
@@ -117,13 +120,13 @@ Required:
 
 Read-Only:
 
-- `cores` (Number)
-- `family` (String)
-- `gpu_count` (Number)
-- `gpu_type` (String)
-- `id` (String)
-- `memory_in_mb` (Number)
-- `name` (String)
-- `storage_in_gb` (Number)
-- `storage_type` (String)
-- `threads` (Number)
+- `cores` (Number) Physical cores.
+- `family` (String) Instance family of the SKU.
+- `gpu_count` (Number) Number of GPUs, 0 when the SKU has none.
+- `gpu_type` (String) GPU model, empty when the SKU has none.
+- `id` (String) Identifier of the SKU.
+- `memory_in_mb` (Number) Memory in MB.
+- `name` (String) Name of the SKU.
+- `storage_in_gb` (Number) Storage in GB.
+- `storage_type` (String) Storage type backing the SKU.
+- `threads` (Number) Threads per core.

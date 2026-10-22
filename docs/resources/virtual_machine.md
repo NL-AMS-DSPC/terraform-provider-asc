@@ -13,11 +13,19 @@ Manages an ASC virtual machine.
 ## Example Usage
 
 ```terraform
+# A virtual machine attached to the VPC from the asc_vpc example. List valid
+# sku_id values with the asc_skus data source.
 resource "asc_virtual_machine" "example" {
-  name     = "example-vm"
-  sku_id   = "gp-2"
-  vpc_id   = asc_vpc.example.id
-  image    = "vm-images/ubuntu:24.04"
+  name   = "example-vm"
+  sku_id = "gp-2"
+  vpc_id = asc_vpc.example.id
+
+  # Optional: ubuntu-24.04-lts when omitted.
+  image = "ubuntu-24.04-lts"
+
+  tags = {
+    env = "production"
+  }
 }
 ```
 
@@ -26,40 +34,40 @@ resource "asc_virtual_machine" "example" {
 
 ### Required
 
-- `name` (String)
-- `sku_id` (String)
-- `vpc_id` (String)
+- `name` (String) Name of the virtual machine. Must be 1 to 50 characters: a lowercase letter first, then lowercase letters, digits or hyphens, ending with a letter or digit. Changing it replaces the machine.
+- `sku_id` (String) Identifier of the SKU to run on; list them with the asc_skus data source. Changing it replaces the machine.
+- `vpc_id` (String) Identifier of the VPC the virtual machine is attached to. Changing it replaces the machine.
 
 ### Optional
 
-- `customization` (Attributes, Sensitive) (see [below for nested schema](#nestedatt--customization))
-- `image` (String)
+- `customization` (Attributes, Sensitive) First-boot customization of the virtual machine, as cloud-init or Ignition data. Sensitive, and cannot be recovered by import. Changing it replaces the virtual machine. (see [below for nested schema](#nestedatt--customization))
+- `image` (String) Identifier of the operating system image, for example ubuntu-24.04-lts, which is also the default. Changing the configured value replaces the machine.
 - `tags` (Map of String) Tags applied to the virtual machine. Changing tags updates the machine in place.
 
 ### Read-Only
 
 - `attached_volumes` (List of String) Names of the volumes attached to the machine, sorted.
-- `last_error` (String)
-- `os` (Attributes) (see [below for nested schema](#nestedatt--os))
-- `sku` (Attributes) (see [below for nested schema](#nestedatt--sku))
-- `status` (String)
-- `urn` (String)
+- `last_error` (String) Last error reported for the virtual machine, empty when healthy.
+- `os` (Attributes) Operating system image the virtual machine boots. (see [below for nested schema](#nestedatt--os))
+- `sku` (Attributes) SKU the virtual machine runs on. (see [below for nested schema](#nestedatt--sku))
+- `status` (String) Current lifecycle status.
+- `urn` (String) URN of the virtual machine.
 
 <a id="nestedatt--customization"></a>
 ### Nested Schema for `customization`
 
 Optional:
 
-- `cloud_init` (Attributes, Sensitive) (see [below for nested schema](#nestedatt--customization--cloud_init))
-- `ignition` (Attributes, Sensitive) (see [below for nested schema](#nestedatt--customization--ignition))
+- `cloud_init` (Attributes, Sensitive) Cloud-init customization. (see [below for nested schema](#nestedatt--customization--cloud_init))
+- `ignition` (Attributes, Sensitive) Ignition customization. (see [below for nested schema](#nestedatt--customization--ignition))
 
 <a id="nestedatt--customization--cloud_init"></a>
 ### Nested Schema for `customization.cloud_init`
 
 Optional:
 
-- `meta_data` (String, Sensitive)
-- `user_data` (String, Sensitive)
+- `meta_data` (String, Sensitive) Cloud-init meta data.
+- `user_data` (String, Sensitive) Cloud-init user data.
 
 
 <a id="nestedatt--customization--ignition"></a>
@@ -67,8 +75,8 @@ Optional:
 
 Required:
 
-- `config` (String, Sensitive)
-- `format` (String)
+- `config` (String, Sensitive) Ignition config content.
+- `format` (String) Format of the Ignition config.
 
 
 
@@ -77,11 +85,11 @@ Required:
 
 Read-Only:
 
-- `display_name` (String)
-- `distribution` (String)
-- `family` (String)
-- `id` (String)
-- `release` (String)
+- `display_name` (String) Human readable name of the image.
+- `distribution` (String) Operating system distribution.
+- `family` (String) Operating system family.
+- `id` (String) Identifier of the operating system image.
+- `release` (String) Operating system release.
 
 
 <a id="nestedatt--sku"></a>
@@ -89,13 +97,13 @@ Read-Only:
 
 Read-Only:
 
-- `cores` (Number)
-- `family` (String)
-- `gpu_count` (Number)
-- `gpu_type` (String)
-- `id` (String)
-- `memory_in_mb` (Number)
-- `name` (String)
-- `storage_in_gb` (Number)
-- `storage_type` (String)
-- `threads` (Number)
+- `cores` (Number) Physical cores.
+- `family` (String) Instance family of the SKU.
+- `gpu_count` (Number) Number of GPUs, 0 when the SKU has none.
+- `gpu_type` (String) GPU model, empty when the SKU has none.
+- `id` (String) Identifier of the SKU.
+- `memory_in_mb` (Number) Memory in MB.
+- `name` (String) Name of the SKU.
+- `storage_in_gb` (Number) Storage in GB.
+- `storage_type` (String) Storage type backing the SKU.
+- `threads` (Number) Threads per core.

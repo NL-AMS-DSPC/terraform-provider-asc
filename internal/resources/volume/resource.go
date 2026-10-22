@@ -43,8 +43,6 @@ type Model struct {
 	Name         types.String `tfsdk:"name"`
 	Size         types.String `tfsdk:"size"`
 	SizeBytes    types.Int64  `tfsdk:"size_bytes"`
-	StorageClass types.String `tfsdk:"storage_class"`
-	AccessMode   types.String `tfsdk:"access_mode"`
 	VolumeMode   types.String `tfsdk:"volume_mode"`
 	URN          types.String `tfsdk:"urn"`
 	Status       types.String `tfsdk:"status"`
@@ -82,13 +80,6 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				Description: "Capacity in bytes. The reported size may use a different but " +
 					"numerically equal spelling of size, so this is the value to compare against.",
 				Computed: true,
-			},
-			"storage_class": schema.StringAttribute{Description: "Storage class backing the volume.", Required: true, PlanModifiers: replaceString},
-			"access_mode": schema.StringAttribute{
-				Description:   "Access mode of the volume.",
-				Required:      true,
-				PlanModifiers: replaceString,
-				Validators:    []validator.String{stringvalidator.OneOf("ReadWriteOnce", "ReadWriteMany", "ReadOnlyMany")},
 			},
 			"volume_mode":    schema.StringAttribute{Description: "Volume mode.", Computed: true},
 			"urn":            schema.StringAttribute{Description: "URN of the volume, which carries its uuid.", Computed: true},
@@ -175,7 +166,6 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 
 	created, err := r.client.CreateVolume(ctx, client.CreateVolumeRequest{
 		Name: plan.Name.ValueString(), Size: plan.Size.ValueString(),
-		StorageClass: plan.StorageClass.ValueString(), AccessMode: plan.AccessMode.ValueString(),
 		Tags: common.TagsToClient(ctx, plan.Tags, &resp.Diagnostics),
 	})
 	if err != nil {
@@ -288,8 +278,6 @@ func setFromVolume(ctx context.Context, model *Model, value client.Volume, diags
 	model.SizeBytes = types.Int64Value(actual)
 
 	model.Name = types.StringValue(value.Name)
-	model.StorageClass = types.StringValue(value.StorageClass)
-	model.AccessMode = types.StringValue(value.AccessMode)
 	model.VolumeMode = types.StringValue(value.VolumeMode)
 	model.URN = types.StringValue(value.URN)
 	model.Status = types.StringValue(value.Status)

@@ -39,8 +39,8 @@ func (g *volumeGateway) handlers() map[string]http.HandlerFunc {
 			defer g.mu.Unlock()
 			g.current = client.Volume{
 				URN:  "asc:atos:storage:test-tenant:block_volume:00000000-0000-4000-8000-000000000001",
-				Name: request.Name, Size: request.Size, StorageClass: request.StorageClass,
-				AccessMode: request.AccessMode, VolumeMode: "Filesystem", Status: "detached", Tags: request.Tags,
+				Name: request.Name, Size: request.Size,
+				VolumeMode: "Filesystem", Status: "detached", Tags: request.Tags,
 				Labels: map[string]string{"asc.io/volume": request.Name},
 			}
 			g.absent = false
@@ -146,11 +146,9 @@ func applyTagPatch(current, patch []client.Tag) []client.Tag {
 func volumeConfig(environment testEnvironment, size, tags string) string {
 	return environment.providerConfig() + fmt.Sprintf(`
 resource "asc_volume" "test" {
-  name          = "test-volume"
-  size          = %q
-  storage_class = "standard"
-  access_mode   = "ReadWriteOnce"
-  tags          = %s
+  name = "test-volume"
+  size = %q
+  tags = %s
 }`, size, tags)
 }
 
@@ -164,7 +162,6 @@ func TestVolumeProvisioning(t *testing.T) {
 			Check: resource.ComposeAggregateTestCheckFunc(
 				resource.TestCheckResourceAttr("asc_volume.test", "size", "10Gi"),
 				resource.TestCheckResourceAttr("asc_volume.test", "size_bytes", "10737418240"),
-				resource.TestCheckResourceAttr("asc_volume.test", "access_mode", "ReadWriteOnce"),
 				resource.TestCheckResourceAttr("asc_volume.test", "volume_mode", "Filesystem"),
 				resource.TestCheckResourceAttr("asc_volume.test", "status", "detached"),
 				resource.TestCheckResourceAttr("asc_volume.test", "tags.env", "test"),

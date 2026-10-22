@@ -27,9 +27,9 @@ type attachmentFixture struct {
 
 func (f *attachmentFixture) volume() client.Volume {
 	return client.Volume{
-		URN: "asc:volume:data", Name: "data", Size: "10Gi", StorageClass: "standard",
-		AccessMode: "ReadWriteOnce", VolumeMode: "Filesystem",
-		Status: f.status, LastError: f.lastError, AttachedToVM: f.attachedToVM,
+		URN: "asc:volume:data", Name: "data", Size: "10Gi",
+		VolumeMode: "Filesystem",
+		Status:     f.status, LastError: f.lastError, AttachedToVM: f.attachedToVM,
 	}
 }
 

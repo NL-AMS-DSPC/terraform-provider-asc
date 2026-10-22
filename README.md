@@ -20,6 +20,9 @@ service prefix cannot be reintroduced by accident.
 | --- | --- |
 | `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume`, `asc_volume_attachment`, `asc_role`, `asc_group`, `asc_ip` | `asc_skus`, `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume`, `asc_role`, `asc_group`, `asc_ips` |
 
+To create a first VPC and virtual machine, follow
+[docs/guides/getting-started.md](docs/guides/getting-started.md).
+
 Per-attribute change, import and read behaviour is in
 [docs/supported-fields.md](docs/supported-fields.md). The UAM route contract and
 the constraints it forces are in [docs/uam-contract.md](docs/uam-contract.md).

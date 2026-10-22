@@ -51,7 +51,7 @@ Read-only: `id`, `urn`, `status`, `last_error`.
 | `name` | Required, 1-50 characters, lowercase letter first, then lowercase letters, digits or hyphens, alphanumeric last | Replaces | |
 | `sku_id` | Required | Replaces | Changing a machine's SKU in place is not supported by this provider. |
 | `vpc_id` | Required | Replaces | |
-| `image` | Optional, Computed | Replaces | Omitted, it requests `vm-images/ubuntu:24.04`. Keeps its prior value when the configuration omits it, so an unrelated change does not look like a new image. |
+| `image` | Optional, Computed | Replaces | Omitted, it requests `ubuntu-24.04-lts`. Keeps its prior value when the configuration omits it, so an unrelated change does not look like a new image. |
 | `customization` | Optional, sensitive | Replaces | Write-only; see [what import cannot recover](#what-import-cannot-recover). |
 | `tags` | Optional | In place | Tags can be changed without replacing the machine. |
 
@@ -64,7 +64,7 @@ Read-only: `urn`, `sku`, `os`, `status`, `last_error`, `attached_volumes`.
 | `name` | Required, same pattern and length as a virtual machine name | Replaces | |
 | `sku_id` | Required | Replaces | |
 | `vpc_id` | Required, UUID v4 | Replaces | |
-| `image` | Optional | Replaces | Configuration-only: the original image cannot be read back. An empty value requests `vm-images/ubuntu:24.04`. |
+| `image` | Optional | Replaces | Configuration-only: the original image cannot be read back. An empty value requests `ubuntu-24.04-lts`. |
 | `autoscaling` | Required, with `min_replicas` and `max_replicas` between 1 and 100 and `max_replicas` at least `min_replicas`; optional `cron` block with required `timezone`, `start`, `end` and `desired_replicas` between 0 and 100 | Replaces | Changing the scaling policy in place is not supported. |
 | `customization` | Optional, sensitive | Replaces | Never served back. |
 | `tags` | Optional | Replaces | Changing group tags in place is not supported. |
@@ -79,8 +79,6 @@ Every configurable attribute of a VM group requires replacement when changed.
 | --- | --- | --- | --- |
 | `name` | Required, 1-50 characters | Replaces | |
 | `size` | Required | In place, growth only | Capacity can be increased repeatedly. A smaller value is rejected at plan time with the current and requested byte counts; shrinking requires replacing the volume. |
-| `storage_class` | Required | Replaces | |
-| `access_mode` | Required, `ReadWriteOnce`, `ReadWriteMany` or `ReadOnlyMany` | Replaces | |
 | `tags` | Optional | In place | Tags can be changed without replacing the volume. |
 
 Read-only: `size_bytes`, `volume_mode`, `urn`, `status`, `last_error`, `attached_to_vm`, `labels`,
