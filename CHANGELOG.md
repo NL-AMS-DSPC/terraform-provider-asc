@@ -4,6 +4,11 @@ All notable changes to this provider are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-10-23
+
+No changes to the provider. This release checks that a new GitHub release is
+published to the Registry automatically.
+
 ## [0.2.0] - 2026-10-22
 
 This release follows the infra-gateway on ASC main and contains breaking changes.
