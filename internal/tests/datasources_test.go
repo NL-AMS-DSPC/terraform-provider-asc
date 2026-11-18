@@ -146,6 +146,8 @@ func TestAccVirtualMachineDataSource(t *testing.T) {
 		// ranging over a Go map, so state has to come out sorted regardless.
 		AttachedVolumes: []string{"vol-c", "vol-a", "vol-b"},
 		OS:              client.OS{ID: "ubuntu-24.04", Family: "linux", Distribution: "ubuntu", Release: "24.04", DisplayName: "Ubuntu 24.04"},
+		// In attach order, which state keeps.
+		VNICs: []string{testOtherVNICURN, testVNICURN},
 	}
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
 		"GET /api/infra-gateway/vms/test-vm": func(w http.ResponseWriter, _ *http.Request) { writeData(w, http.StatusOK, vm) },
@@ -160,6 +162,9 @@ data "asc_virtual_machine" "test" {
 			resource.TestCheckResourceAttr("data.asc_virtual_machine.test", "urn", vm.URN),
 			resource.TestCheckResourceAttr("data.asc_virtual_machine.test", "name", "test-vm"),
 			resource.TestCheckResourceAttr("data.asc_virtual_machine.test", "vpc_id", vm.VPCID),
+			resource.TestCheckResourceAttr("data.asc_virtual_machine.test", "vnics.#", "2"),
+			resource.TestCheckResourceAttr("data.asc_virtual_machine.test", "vnics.0", testOtherVNICURN),
+			resource.TestCheckResourceAttr("data.asc_virtual_machine.test", "vnics.1", testVNICURN),
 			resource.TestCheckResourceAttr("data.asc_virtual_machine.test", "status", "active"),
 			resource.TestCheckResourceAttr("data.asc_virtual_machine.test", "last_error", ""),
 			resource.TestCheckResourceAttr("data.asc_virtual_machine.test", "tags.env", "test"),

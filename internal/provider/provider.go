@@ -30,6 +30,7 @@ import (
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/subnet"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/virtualmachine"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/vmgroup"
+	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/vnic"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/volume"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/volumeattachment"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/vpc"
@@ -180,6 +181,7 @@ func (p *ASCProvider) Resources(context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		vpc.NewResource,
 		subnet.NewResource,
+		vnic.NewResource,
 		virtualmachine.NewResource,
 		vmgroup.NewResource,
 		volume.NewResource,

@@ -389,10 +389,11 @@ Terraform 1.0 or later; check with `terraform version` before you start.
 
 2. Write the new configuration. The legacy model carried a name and nothing
    else, so every other required argument has to come from the live object:
-   `asc_virtual_machine` requires `name`, `sku_id` and `vpc_id`. Get them from
-   the environment before importing, not after — `sku_id` and `vpc_id` both
-   force replacement, so an import against a configuration that guesses them
-   plans a replacement of a running machine.
+   `asc_virtual_machine` requires `name`, `sku_id` and `vnics`, the URNs of the
+   machine's VNICs in the order ASC lists them for the machine. Get them from the
+   environment before importing, not after — `sku_id` and `vnics` both force
+   replacement, so an import against a configuration that guesses them plans a
+   replacement of a running machine.
 
 3. Remove the old entry and import the live object. `terraform state rm` forgets
    a resource; it does not destroy it.
@@ -479,6 +480,12 @@ read cannot recover — in place of a path that does nothing.
      gateway's uuid. It is computed, so the refresh overwrites it.
    - `asc_vpc`'s inline subnets no longer carry `vpc_name`; `vpc_id` still
      carries the linkage.
+   - `asc_virtual_machine` takes `vnics`, the URNs of the VNICs it is attached
+     through, instead of `vpc_id`, which is now read-only. Replace `vpc_id` with
+     the machine's current VNICs, in the order ASC lists them for the machine.
+     The refresh reads them from the machine into state, so a matching list plans
+     nothing; a plan with `-refresh=false` records the configured list in place
+     rather than replacing the machine.
    - `tags` no longer forces replacement on `asc_vpc` or
      `asc_virtual_machine`. A tag edit that used to destroy and recreate now
      patches in place.

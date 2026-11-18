@@ -51,6 +51,7 @@ type VM struct {
 	LastError       string
 	Tags            []Tag
 	AttachedVolumes []string
+	VNICs           []string
 	OS              OS
 }
 
@@ -78,7 +79,7 @@ type OS struct {
 type CreateVMRequest struct {
 	Name          string
 	SKUID         string
-	VPCID         string
+	VNICs         []string
 	Image         string
 	Tags          []Tag
 	Customization *Customization

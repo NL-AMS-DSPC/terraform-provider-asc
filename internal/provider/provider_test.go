@@ -34,7 +34,7 @@ func TestProviderMetadataAndSchema(t *testing.T) {
 		t.Fatalf("password attribute = %#v, want sensitive string", response.Schema.Attributes["password"])
 	}
 	wantResources := []string{
-		"asc_vpc", "asc_subnet", "asc_virtual_machine",
+		"asc_vpc", "asc_subnet", "asc_vnic", "asc_virtual_machine",
 		"asc_vm_group", "asc_volume", "asc_volume_attachment",
 		"asc_role", "asc_group", "asc_ip",
 	}
