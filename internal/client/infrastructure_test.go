@@ -193,7 +193,7 @@ func TestUpdateTagsPatchesEveryTaggableResource(t *testing.T) {
 
 	mu.Lock()
 	defer mu.Unlock()
-	want := []infra.PatchTag{setTag("env", "prod"), deleteTag("owner")}
+	want := []infra.PatchTagRequest{setTag("env", "prod"), deleteTag("owner")}
 	for _, path := range []string{
 		"/api/infra-gateway/vpcs/test-vpc",
 		"/api/infra-gateway/vpcs/test-vpc/subnets/test-subnet",

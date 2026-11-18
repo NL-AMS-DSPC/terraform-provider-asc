@@ -21,13 +21,12 @@ const (
 func (c *Runtime) CreateVPC(ctx context.Context, request CreateVPCRequest) (VPC, error) {
 	body := infra.CreateVPCJSONRequestBody{Name: request.Name, Cidr: request.CIDR, Tags: infraTags(request.Tags)}
 	if request.Subnets != nil {
-		body.Subnets = make([]infra.Subnet, len(request.Subnets))
+		body.Subnets = make([]infra.VPCSubnetRequest, len(request.Subnets))
 		for i, subnet := range request.Subnets {
-			body.Subnets[i] = infra.Subnet{
-				Name:  subnet.Name,
-				Cidr:  subnet.CIDR,
-				VpcID: optionalString(subnet.VPCID),
-				Tags:  infraTags(subnet.Tags),
+			body.Subnets[i] = infra.VPCSubnetRequest{
+				Name: subnet.Name,
+				Cidr: subnet.CIDR,
+				Tags: infraTags(subnet.Tags),
 			}
 		}
 	}
@@ -189,8 +188,8 @@ func (c *Runtime) CreateVM(ctx context.Context, request CreateVMRequest) (VM, er
 	body := infra.CreateVMJSONRequestBody{
 		Name:  request.Name,
 		SkuID: request.SKUID,
-		VpcID: request.VPCID,
-		BootDisk: infra.BootDisk{
+		// The API now requires vnics instead of vpcID; VNIC support follows separately.
+		BootDisk: infra.BootDiskRequest{
 			AttachMode: infra.Create,
 			DiskSizeGB: &diskSizeGB,
 			Image:      &image,
@@ -225,7 +224,7 @@ func (c *Runtime) GetVM(ctx context.Context, name string) (VM, error) {
 		Name:            value(wire.Name),
 		VPCID:           value(wire.VpcID),
 		SKU:             skuFromInfra(wire.Sku),
-		Status:          value(wire.Status),
+		Status:          enumString(wire.Status),
 		LastError:       value(wire.LastError),
 		Tags:            tagsFromInfra(wire.Tags),
 		AttachedVolumes: sortedStrings(wire.AttachedVolumes),
@@ -274,7 +273,7 @@ func vpcFromInfra(wire infra.VPCResponse) VPC {
 		URN:       value(wire.Urn),
 		Name:      value(wire.Name),
 		CIDR:      value(wire.Cidr),
-		Status:    value(wire.Status),
+		Status:    enumString(wire.Status),
 		LastError: value(wire.LastError),
 		Subnets:   subnetsFromInfra(wire.Subnets),
 		Tags:      tagsFromInfra(wire.Tags),
@@ -293,7 +292,7 @@ func subnetsFromInfra(wire *[]infra.SubnetResponse) []Subnet {
 			Name:      value(subnet.Name),
 			CIDR:      value(subnet.Cidr),
 			VPCID:     value(subnet.VpcID),
-			Status:    value(subnet.Status),
+			Status:    enumString(subnet.Status),
 			LastError: value(subnet.LastError),
 			Tags:      tagsFromInfra(subnet.Tags),
 		}

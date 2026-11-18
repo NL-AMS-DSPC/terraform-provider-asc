@@ -19,18 +19,18 @@ func optionalString(value string) *string {
 	return &value
 }
 
-func infraTags(tags []Tag) *[]infra.Tag {
+func infraTags(tags []Tag) *[]infra.TagRequest {
 	if len(tags) == 0 {
 		return nil
 	}
-	wire := make([]infra.Tag, len(tags))
+	wire := make([]infra.TagRequest, len(tags))
 	for i, tag := range tags {
-		wire[i] = infra.Tag{Key: tag.Key, Value: tag.Value}
+		wire[i] = infra.TagRequest{Key: tag.Key, Value: tag.Value}
 	}
 	return &wire
 }
 
-func tagsFromInfra(wire *[]infra.Tag) []Tag {
+func tagsFromInfra(wire *[]infra.TagResponse) []Tag {
 	if wire == nil {
 		return nil
 	}
@@ -53,6 +53,11 @@ func sortedStrings(wire *[]string) []string {
 	}
 	slices.Sort(values)
 	return values
+}
+
+// enumString reads an optional generated enum as its plain string value.
+func enumString[T ~string](field *T) string {
+	return string(value(field))
 }
 
 func stringMap(wire *map[string]string) map[string]string {
@@ -80,7 +85,7 @@ func skuFromInfra(wire *infra.SKUResponse) SKU {
 	}
 }
 
-func osFromInfra(wire *infra.OSDetails) OS {
+func osFromInfra(wire *infra.OSDetailsResponse) OS {
 	if wire == nil {
 		return OS{}
 	}
@@ -95,21 +100,21 @@ func osFromInfra(wire *infra.OSDetails) OS {
 
 // infraCustomization keeps the handwritten wire shape: cloud-init fields are omitted when
 // empty, ignition always sends format and config.
-func infraCustomization(customization *Customization) *infra.Customization {
+func infraCustomization(customization *Customization) *infra.CustomizationRequest {
 	if customization == nil {
 		return nil
 	}
-	wire := &infra.Customization{}
+	wire := &infra.CustomizationRequest{}
 	if cloudInit := customization.CloudInit; cloudInit != nil {
-		wire.CloudInit = &infra.CloudInitCustomization{
+		wire.CloudInit = &infra.CloudInitCustomizationRequest{
 			UserData: optionalString(cloudInit.UserData),
 			MetaData: optionalString(cloudInit.MetaData),
 		}
 	}
 	if ignition := customization.Ignition; ignition != nil {
-		format := infra.IgnitionFormat(ignition.Format)
+		format := infra.IgnitionCustomizationRequestFormat(ignition.Format)
 		config := ignition.Config
-		wire.Ignition = &infra.IgnitionCustomization{Format: &format, Config: &config}
+		wire.Ignition = &infra.IgnitionCustomizationRequest{Format: &format, Config: &config}
 	}
 	return wire
 }

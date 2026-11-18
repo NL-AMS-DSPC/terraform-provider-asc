@@ -98,9 +98,11 @@ func vmGroupData(group VMGroup) map[string]any {
 	}
 }
 
-func setTag(key, value string) infra.PatchTag { return infra.PatchTag{Key: key, Value: &value} }
+func setTag(key, value string) infra.PatchTagRequest {
+	return infra.PatchTagRequest{Key: key, Value: &value}
+}
 
-func deleteTag(key string) infra.PatchTag { return setTag(key, "") }
+func deleteTag(key string) infra.PatchTagRequest { return setTag(key, "") }
 
 // assertInfraJSON compares JSON documents by value, so key order does not matter.
 func assertInfraJSON(t *testing.T, label string, got []byte, want string) {
@@ -310,7 +312,7 @@ func TestInfraRequestBodiesMatchTheHandwrittenWire(t *testing.T) {
 				},
 			})
 			return err
-		}, `{"name":"v","cidr":"10.0.0.0/24","tags":[{"key":"env","value":"prod"}],"subnets":[{"name":"s","cidr":"10.0.0.0/25","vpcID":"id","tags":[{"key":"a","value":"b"}]}]}`},
+		}, `{"name":"v","cidr":"10.0.0.0/24","tags":[{"key":"env","value":"prod"}],"subnets":[{"name":"s","cidr":"10.0.0.0/25","tags":[{"key":"a","value":"b"}]}]}`},
 		{"create subnet", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateSubnet(context.Background(), "v", CreateSubnetRequest{
 				Name: "s", CIDR: "10.0.0.0/25", VPCID: "id", Tags: []Tag{{Key: "env", Value: "prod"}},
