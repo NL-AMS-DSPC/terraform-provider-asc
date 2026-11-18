@@ -50,7 +50,7 @@ func TestCreateVolumeWaitsUntilProvisioningSettles(t *testing.T) {
 	if gets.Load() != 2 {
 		t.Fatalf("GET count = %d, want 2 (creating, then settled)", gets.Load())
 	}
-	want := infra.CreateVolumeRequest{Name: "data", Size: "10Gi", StorageClass: "standard", AccessMode: "ReadWriteOnce", Tags: &[]infra.Tag{{Key: "env", Value: "test"}}}
+	want := infra.CreateVolumeRequest{Name: "data", Size: "10Gi", StorageClass: "standard", AccessMode: "ReadWriteOnce", Tags: &[]infra.TagRequest{{Key: "env", Value: "test"}}}
 	if body.Name != want.Name || body.Size != want.Size || body.StorageClass != want.StorageClass || body.AccessMode != want.AccessMode || body.Tags == nil || len(*body.Tags) != 1 || (*body.Tags)[0] != (*want.Tags)[0] {
 		t.Fatalf("create body = %#v, want %#v", body, want)
 	}
@@ -154,7 +154,7 @@ func TestUpdateVolumeTagsSendsTheComputedPatchAndReadsBack(t *testing.T) {
 	}
 	// The gateway patches rather than replaces, so the removed key travels as an
 	// explicit empty value and the unchanged keys are left out.
-	want := []infra.PatchTag{setTag("env", "test"), setTag("owner", "platform"), deleteTag("stale")}
+	want := []infra.PatchTagRequest{setTag("env", "test"), setTag("owner", "platform"), deleteTag("stale")}
 	if patch.Tags == nil || !reflect.DeepEqual(*patch.Tags, want) {
 		t.Fatalf("patch = %#v, want %#v", patch.Tags, want)
 	}

@@ -60,8 +60,10 @@ output "sku_ids" {
 
 ## Create a VPC and a virtual machine
 
-A VPC has a CIDR and is created together with at least one inline subnet inside it. The machine refers to the VPC by `id`,
-which makes Terraform create the VPC first.
+A VPC has a CIDR and is created together with at least one inline subnet inside it. A machine
+connects to a subnet through virtual network interfaces (VNICs): each `asc_vnic` takes a private
+IP from the subnet it names, and the machine lists the VNICs to attach by `urn`. The references
+make Terraform create the VPC, then the VNIC, then the machine.
 
 ```terraform
 resource "asc_vpc" "main" {
@@ -74,10 +76,14 @@ resource "asc_vpc" "main" {
   }]
 }
 
+resource "asc_vnic" "web" {
+  subnet_urn = asc_vpc.main.subnets[0].urn
+}
+
 resource "asc_virtual_machine" "web" {
   name   = "web"
   sku_id = "gp-2"
-  vpc_id = asc_vpc.main.id
+  vnics  = [asc_vnic.web.urn]
   image  = "ubuntu-24.04-lts"
 }
 
@@ -88,25 +94,36 @@ output "vm_status" {
 output "vm_urn" {
   value = asc_virtual_machine.web.urn
 }
+
+output "vm_private_ip" {
+  value = asc_vnic.web.private_ip
+}
 ```
+
+A machine can have several VNICs, in different subnets; list them in the order the machine should
+see them.
 
 Machine and VPC names are 1 to 50 characters: a lowercase letter first, then lowercase letters,
 digits or hyphens, ending with a letter or digit. Omit `image` to get `ubuntu-24.04-lts`.
 
 ## What apply and destroy do
 
-Apply waits until each new resource exists, and until a new VPC is active, for up to 10 minutes. A
+Apply waits until each new resource exists, until a new VPC is active and until a new VNIC has its
+private IP, for up to 10 minutes. A
 resource that reports the `error` status fails the apply with its `last_error`. A machine's
 `status` can still be `pending` right after apply; run `terraform apply -refresh-only` later to see
 the settled value.
 
-Destroy removes the machine before the VPC it is attached to.
+Destroy removes the machine before its VNICs, and the VNICs before the VPC. A VNIC still attached
+to a machine cannot be deleted, so the provider retries its deletion until the machine has released
+it.
 
 ## Caveats
 
 - Most arguments cannot be changed on a live resource. Changing a VPC name, CIDR or inline subnet, or a
-  machine name, `sku_id`, `vpc_id`, `image` or `customization`, plans a replacement. Only `tags`
-  update in place on VPCs, subnets and machines.
+  machine name, `sku_id`, `vnics`, `image` or `customization`, or a VNIC's `subnet_urn`, plans a
+  replacement. Only `tags` update in place on VPCs, subnets and machines; a VNIC can also be
+  renamed in place.
 - `customization` is sensitive and cannot be recovered by import.
 - Read the plan before applying: the full list of which attribute updates in place and which
   replaces is in

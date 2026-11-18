@@ -16,14 +16,14 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
-// Defines values for BootDiskAttachMode.
+// Defines values for BootDiskRequestAttachMode.
 const (
-	Attach BootDiskAttachMode = "attach"
-	Create BootDiskAttachMode = "create"
+	Attach BootDiskRequestAttachMode = "attach"
+	Create BootDiskRequestAttachMode = "create"
 )
 
-// Valid indicates whether the value is a known member of the BootDiskAttachMode enum.
-func (e BootDiskAttachMode) Valid() bool {
+// Valid indicates whether the value is a known member of the BootDiskRequestAttachMode enum.
+func (e BootDiskRequestAttachMode) Valid() bool {
 	switch e {
 	case Attach:
 		return true
@@ -36,37 +36,235 @@ func (e BootDiskAttachMode) Valid() bool {
 
 // Defines values for CreateVolumeRequestAccessMode.
 const (
-	ReadOnlyMany  CreateVolumeRequestAccessMode = "ReadOnlyMany"
-	ReadWriteMany CreateVolumeRequestAccessMode = "ReadWriteMany"
-	ReadWriteOnce CreateVolumeRequestAccessMode = "ReadWriteOnce"
+	CreateVolumeRequestAccessModeReadOnlyMany  CreateVolumeRequestAccessMode = "ReadOnlyMany"
+	CreateVolumeRequestAccessModeReadWriteMany CreateVolumeRequestAccessMode = "ReadWriteMany"
+	CreateVolumeRequestAccessModeReadWriteOnce CreateVolumeRequestAccessMode = "ReadWriteOnce"
 )
 
 // Valid indicates whether the value is a known member of the CreateVolumeRequestAccessMode enum.
 func (e CreateVolumeRequestAccessMode) Valid() bool {
 	switch e {
-	case ReadOnlyMany:
+	case CreateVolumeRequestAccessModeReadOnlyMany:
 		return true
-	case ReadWriteMany:
+	case CreateVolumeRequestAccessModeReadWriteMany:
 		return true
-	case ReadWriteOnce:
+	case CreateVolumeRequestAccessModeReadWriteOnce:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for IgnitionFormat.
+// Defines values for IgnitionCustomizationRequestFormat.
 const (
-	IgnitionFormatButane   IgnitionFormat = "butane"
-	IgnitionFormatIgnition IgnitionFormat = "ignition"
+	Butane   IgnitionCustomizationRequestFormat = "butane"
+	Ignition IgnitionCustomizationRequestFormat = "ignition"
 )
 
-// Valid indicates whether the value is a known member of the IgnitionFormat enum.
-func (e IgnitionFormat) Valid() bool {
+// Valid indicates whether the value is a known member of the IgnitionCustomizationRequestFormat enum.
+func (e IgnitionCustomizationRequestFormat) Valid() bool {
 	switch e {
-	case IgnitionFormatButane:
+	case Butane:
 		return true
-	case IgnitionFormatIgnition:
+	case Ignition:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SubnetResponseStatus.
+const (
+	SubnetResponseStatusActive   SubnetResponseStatus = "active"
+	SubnetResponseStatusDeleting SubnetResponseStatus = "deleting"
+	SubnetResponseStatusError    SubnetResponseStatus = "error"
+	SubnetResponseStatusPending  SubnetResponseStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the SubnetResponseStatus enum.
+func (e SubnetResponseStatus) Valid() bool {
+	switch e {
+	case SubnetResponseStatusActive:
+		return true
+	case SubnetResponseStatusDeleting:
+		return true
+	case SubnetResponseStatusError:
+		return true
+	case SubnetResponseStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for VMGroupResponseStatus.
+const (
+	VMGroupResponseStatusActive   VMGroupResponseStatus = "active"
+	VMGroupResponseStatusDeleting VMGroupResponseStatus = "deleting"
+	VMGroupResponseStatusPending  VMGroupResponseStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the VMGroupResponseStatus enum.
+func (e VMGroupResponseStatus) Valid() bool {
+	switch e {
+	case VMGroupResponseStatusActive:
+		return true
+	case VMGroupResponseStatusDeleting:
+		return true
+	case VMGroupResponseStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for VMResponseStatus.
+const (
+	VMResponseStatusActive            VMResponseStatus = "active"
+	VMResponseStatusDeleting          VMResponseStatus = "deleting"
+	VMResponseStatusError             VMResponseStatus = "error"
+	VMResponseStatusPending           VMResponseStatus = "pending"
+	VMResponseStatusSchedulingDelayed VMResponseStatus = "scheduling_delayed"
+)
+
+// Valid indicates whether the value is a known member of the VMResponseStatus enum.
+func (e VMResponseStatus) Valid() bool {
+	switch e {
+	case VMResponseStatusActive:
+		return true
+	case VMResponseStatusDeleting:
+		return true
+	case VMResponseStatusError:
+		return true
+	case VMResponseStatusPending:
+		return true
+	case VMResponseStatusSchedulingDelayed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for VNICResponseStatus.
+const (
+	VNICResponseStatusAttached  VNICResponseStatus = "attached"
+	VNICResponseStatusAttaching VNICResponseStatus = "attaching"
+	VNICResponseStatusDeleting  VNICResponseStatus = "deleting"
+	VNICResponseStatusDetached  VNICResponseStatus = "detached"
+	VNICResponseStatusDetaching VNICResponseStatus = "detaching"
+	VNICResponseStatusError     VNICResponseStatus = "error"
+	VNICResponseStatusPending   VNICResponseStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the VNICResponseStatus enum.
+func (e VNICResponseStatus) Valid() bool {
+	switch e {
+	case VNICResponseStatusAttached:
+		return true
+	case VNICResponseStatusAttaching:
+		return true
+	case VNICResponseStatusDeleting:
+		return true
+	case VNICResponseStatusDetached:
+		return true
+	case VNICResponseStatusDetaching:
+		return true
+	case VNICResponseStatusError:
+		return true
+	case VNICResponseStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for VPCResponseStatus.
+const (
+	VPCResponseStatusActive   VPCResponseStatus = "active"
+	VPCResponseStatusDeleting VPCResponseStatus = "deleting"
+	VPCResponseStatusError    VPCResponseStatus = "error"
+	VPCResponseStatusPending  VPCResponseStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the VPCResponseStatus enum.
+func (e VPCResponseStatus) Valid() bool {
+	switch e {
+	case VPCResponseStatusActive:
+		return true
+	case VPCResponseStatusDeleting:
+		return true
+	case VPCResponseStatusError:
+		return true
+	case VPCResponseStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for VolumeResponseAccessMode.
+const (
+	VolumeResponseAccessModeReadOnlyMany  VolumeResponseAccessMode = "ReadOnlyMany"
+	VolumeResponseAccessModeReadWriteMany VolumeResponseAccessMode = "ReadWriteMany"
+	VolumeResponseAccessModeReadWriteOnce VolumeResponseAccessMode = "ReadWriteOnce"
+)
+
+// Valid indicates whether the value is a known member of the VolumeResponseAccessMode enum.
+func (e VolumeResponseAccessMode) Valid() bool {
+	switch e {
+	case VolumeResponseAccessModeReadOnlyMany:
+		return true
+	case VolumeResponseAccessModeReadWriteMany:
+		return true
+	case VolumeResponseAccessModeReadWriteOnce:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for VolumeResponseStatus.
+const (
+	VolumeResponseStatusAttached  VolumeResponseStatus = "attached"
+	VolumeResponseStatusAttaching VolumeResponseStatus = "attaching"
+	VolumeResponseStatusCreating  VolumeResponseStatus = "creating"
+	VolumeResponseStatusDeleting  VolumeResponseStatus = "deleting"
+	VolumeResponseStatusDetached  VolumeResponseStatus = "detached"
+	VolumeResponseStatusDetaching VolumeResponseStatus = "detaching"
+)
+
+// Valid indicates whether the value is a known member of the VolumeResponseStatus enum.
+func (e VolumeResponseStatus) Valid() bool {
+	switch e {
+	case VolumeResponseStatusAttached:
+		return true
+	case VolumeResponseStatusAttaching:
+		return true
+	case VolumeResponseStatusCreating:
+		return true
+	case VolumeResponseStatusDeleting:
+		return true
+	case VolumeResponseStatusDetached:
+		return true
+	case VolumeResponseStatusDetaching:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for VolumeResponseVolumeMode.
+const (
+	Block      VolumeResponseVolumeMode = "Block"
+	Filesystem VolumeResponseVolumeMode = "Filesystem"
+)
+
+// Valid indicates whether the value is a known member of the VolumeResponseVolumeMode enum.
+func (e VolumeResponseVolumeMode) Valid() bool {
+	switch e {
+	case Block:
+		return true
+	case Filesystem:
 		return true
 	default:
 		return false
@@ -79,9 +277,9 @@ type AttachVolumeResponse struct {
 	VolumeName *string `json:"volumeName,omitempty"`
 }
 
-// AutoscalingPolicy defines model for AutoscalingPolicy.
-type AutoscalingPolicy struct {
-	Cron *CronRule `json:"cron,omitempty"`
+// AutoscalingPolicyRequest defines model for AutoscalingPolicyRequest.
+type AutoscalingPolicyRequest struct {
+	Cron *CronRuleRequest `json:"cron,omitempty"`
 
 	// MaxReplicas Example: 10
 	MaxReplicas int `json:"max_replicas"`
@@ -90,21 +288,35 @@ type AutoscalingPolicy struct {
 	MinReplicas int `json:"min_replicas"`
 }
 
-// BootDisk defines model for BootDisk.
-type BootDisk struct {
-	AttachMode BootDiskAttachMode `json:"attachMode"`
+// AutoscalingPolicyResponse defines model for AutoscalingPolicyResponse.
+type AutoscalingPolicyResponse struct {
+	Cron *CronRuleResponse `json:"cron,omitempty"`
+
+	// MaxReplicas Example: 10
+	MaxReplicas int `json:"max_replicas"`
+
+	// MinReplicas Example: 1
+	MinReplicas int `json:"min_replicas"`
+}
+
+// BootDiskRequest defines model for BootDiskRequest.
+type BootDiskRequest struct {
+	// AttachMode Example: create
+	AttachMode BootDiskRequestAttachMode `json:"attachMode"`
 
 	// DiskSizeGB Example: 32
 	DiskSizeGB       *int    `json:"diskSizeGB,omitempty"`
 	ExistingDiskName *string `json:"existingDiskName,omitempty"`
-	Image            *string `json:"image,omitempty"`
+
+	// Image Example: ubuntu-24.04-lts
+	Image *string `json:"image,omitempty"`
 }
 
-// BootDiskAttachMode defines model for BootDisk.AttachMode.
-type BootDiskAttachMode string
+// BootDiskRequestAttachMode Example: create
+type BootDiskRequestAttachMode string
 
-// CloudInitCustomization defines model for CloudInitCustomization.
-type CloudInitCustomization struct {
+// CloudInitCustomizationRequest defines model for CloudInitCustomizationRequest.
+type CloudInitCustomizationRequest struct {
 	MetaData *string `json:"metaData,omitempty"`
 	UserData *string `json:"userData,omitempty"`
 }
@@ -115,23 +327,23 @@ type CreateSubnetRequest struct {
 	Cidr string `json:"cidr"`
 
 	// Name Example: my-vpc-public
-	Name  string `json:"name"`
-	Tags  *[]Tag `json:"tags,omitempty"`
-	VpcID string `json:"vpcID"`
+	Name  string        `json:"name"`
+	Tags  *[]TagRequest `json:"tags,omitempty"`
+	VpcID string        `json:"vpcID"`
 }
 
 // CreateVMGroupRequest defines model for CreateVMGroupRequest.
 type CreateVMGroupRequest struct {
-	Autoscalers   *AutoscalingPolicy `json:"autoscalers,omitempty"`
-	Customization *Customization     `json:"customization,omitempty"`
+	Autoscalers   *AutoscalingPolicyRequest `json:"autoscalers,omitempty"`
+	Customization *CustomizationRequest     `json:"customization,omitempty"`
 
 	// DiskSizeGB Example: 32
-	DiskSizeGB int    `json:"diskSizeGB"`
-	Image      string `json:"image"`
-	Name       string `json:"name"`
-	SkuID      string `json:"skuID"`
-	Tags       *[]Tag `json:"tags,omitempty"`
-	VpcID      string `json:"vpcID"`
+	DiskSizeGB int           `json:"diskSizeGB"`
+	Image      string        `json:"image"`
+	Name       string        `json:"name"`
+	SkuID      string        `json:"skuID"`
+	Tags       *[]TagRequest `json:"tags,omitempty"`
+	VpcID      string        `json:"vpcID"`
 }
 
 // CreateVMGroupResponse defines model for CreateVMGroupResponse.
@@ -143,12 +355,18 @@ type CreateVMGroupResponse struct {
 
 // CreateVMRequest defines model for CreateVMRequest.
 type CreateVMRequest struct {
-	BootDisk      BootDisk       `json:"bootDisk"`
-	Customization *Customization `json:"customization,omitempty"`
-	Name          string         `json:"name"`
-	SkuID         string         `json:"skuID"`
-	Tags          *[]Tag         `json:"tags,omitempty"`
-	VpcID         string         `json:"vpcID"`
+	BootDisk      BootDiskRequest       `json:"bootDisk"`
+	Customization *CustomizationRequest `json:"customization,omitempty"`
+
+	// Name Example: my-vm
+	Name string `json:"name"`
+
+	// SkuID Example: gp-2
+	SkuID string        `json:"skuID"`
+	Tags  *[]TagRequest `json:"tags,omitempty"`
+
+	// Vnics Example: ["asc:atos:network:my-tenant:vnic:123e4567-e89b-12d3-a456-426655440000"]
+	Vnics []string `json:"vnics"`
 }
 
 // CreateVMResponse defines model for CreateVMResponse.
@@ -158,14 +376,24 @@ type CreateVMResponse struct {
 	Urn  *string `json:"urn,omitempty"`
 }
 
+// CreateVNICRequest defines model for CreateVNICRequest.
+type CreateVNICRequest struct {
+	// Name Example: my vnic
+	Name *string `json:"name,omitempty"`
+
+	// SubnetURN Example: asc:atos:network:my-tenant:subnet:123e4567-e89b-12d3-a456-426655440002
+	SubnetURN string        `json:"subnetURN"`
+	Tags      *[]TagRequest `json:"tags,omitempty"`
+}
+
 // CreateVPCRequest defines model for CreateVPCRequest.
 type CreateVPCRequest struct {
 	// Cidr Example: 10.0.0.0/16
-	Cidr    string   `json:"cidr"`
-	ID      *string  `json:"id,omitempty"`
-	Name    string   `json:"name"`
-	Subnets []Subnet `json:"subnets"`
-	Tags    *[]Tag   `json:"tags,omitempty"`
+	Cidr    string             `json:"cidr"`
+	ID      *string            `json:"id,omitempty"`
+	Name    string             `json:"name"`
+	Subnets []VPCSubnetRequest `json:"subnets"`
+	Tags    *[]TagRequest      `json:"tags,omitempty"`
 }
 
 // CreateVPCResponse defines model for CreateVPCResponse.
@@ -181,7 +409,7 @@ type CreateVolumeRequest struct {
 	Name         string                        `json:"name"`
 	Size         string                        `json:"size"`
 	StorageClass string                        `json:"storageClass"`
-	Tags         *[]Tag                        `json:"tags,omitempty"`
+	Tags         *[]TagRequest                 `json:"tags,omitempty"`
 }
 
 // CreateVolumeRequestAccessMode defines model for CreateVolumeRequest.AccessMode.
@@ -194,8 +422,8 @@ type CreateVolumeResponse struct {
 	Urn  *string `json:"urn,omitempty"`
 }
 
-// CronRule defines model for CronRule.
-type CronRule struct {
+// CronRuleRequest defines model for CronRuleRequest.
+type CronRuleRequest struct {
 	// DesiredReplicas Example: 5
 	DesiredReplicas int `json:"desiredReplicas"`
 
@@ -209,10 +437,25 @@ type CronRule struct {
 	Timezone string `json:"timezone"`
 }
 
-// Customization defines model for Customization.
-type Customization struct {
-	CloudInit *CloudInitCustomization `json:"cloudInit,omitempty"`
-	Ignition  *IgnitionCustomization  `json:"ignition,omitempty"`
+// CronRuleResponse defines model for CronRuleResponse.
+type CronRuleResponse struct {
+	// DesiredReplicas Example: 5
+	DesiredReplicas int `json:"desiredReplicas"`
+
+	// End Example: 0 18 * * 1-5
+	End string `json:"end"`
+
+	// Start Example: 0 8 * * 1-5
+	Start string `json:"start"`
+
+	// Timezone Example: Europe/Amsterdam
+	Timezone string `json:"timezone"`
+}
+
+// CustomizationRequest defines model for CustomizationRequest.
+type CustomizationRequest struct {
+	CloudInit *CloudInitCustomizationRequest `json:"cloudInit,omitempty"`
+	Ignition  *IgnitionCustomizationRequest  `json:"ignition,omitempty"`
 }
 
 // DeleteSubnetResponse defines model for DeleteSubnetResponse.
@@ -227,6 +470,11 @@ type DeleteVMGroupResponse struct {
 
 // DeleteVMResponse defines model for DeleteVMResponse.
 type DeleteVMResponse struct {
+	Deleted *string `json:"deleted,omitempty"`
+}
+
+// DeleteVNICResponse defines model for DeleteVNICResponse.
+type DeleteVNICResponse struct {
 	Deleted *string `json:"deleted,omitempty"`
 }
 
@@ -259,17 +507,17 @@ type ErrorResponse struct {
 	Meta  *map[string]interface{} `json:"meta,omitempty"`
 }
 
-// IgnitionCustomization defines model for IgnitionCustomization.
-type IgnitionCustomization struct {
-	Config *string         `json:"config,omitempty"`
-	Format *IgnitionFormat `json:"format,omitempty"`
+// IgnitionCustomizationRequest defines model for IgnitionCustomizationRequest.
+type IgnitionCustomizationRequest struct {
+	Config *string                             `json:"config,omitempty"`
+	Format *IgnitionCustomizationRequestFormat `json:"format,omitempty"`
 }
 
-// IgnitionFormat defines model for IgnitionFormat.
-type IgnitionFormat string
+// IgnitionCustomizationRequestFormat defines model for IgnitionCustomizationRequest.Format.
+type IgnitionCustomizationRequestFormat string
 
-// OSDetails defines model for OSDetails.
-type OSDetails struct {
+// OSDetailsResponse defines model for OSDetailsResponse.
+type OSDetailsResponse struct {
 	DisplayName  *string `json:"displayName,omitempty"`
 	Distribution *string `json:"distribution,omitempty"`
 	Family       *string `json:"family,omitempty"`
@@ -282,8 +530,8 @@ type PageInfo struct {
 	After *string `json:"after,omitempty"`
 }
 
-// PatchTag defines model for PatchTag.
-type PatchTag struct {
+// PatchTagRequest defines model for PatchTagRequest.
+type PatchTagRequest struct {
 	// Key Example: env
 	Key string `json:"key"`
 
@@ -293,12 +541,12 @@ type PatchTag struct {
 
 // PatchTagsRequest defines model for PatchTagsRequest.
 type PatchTagsRequest struct {
-	Tags *[]PatchTag `json:"tags,omitempty"`
+	Tags *[]PatchTagRequest `json:"tags,omitempty"`
 }
 
-// PatchVPCRequest defines model for PatchVPCRequest.
-type PatchVPCRequest struct {
-	Tags *[]PatchTag `json:"tags,omitempty"`
+// PatchVNICRequest defines model for PatchVNICRequest.
+type PatchVNICRequest struct {
+	Tags *[]PatchTagRequest `json:"tags,omitempty"`
 }
 
 // ResizeVolumeRequest defines model for ResizeVolumeRequest.
@@ -375,6 +623,13 @@ type ResponseBodyDeleteVMResponse struct {
 	PageInfo *PageInfo               `json:"pageInfo,omitempty"`
 }
 
+// ResponseBodyDeleteVNICResponse defines model for ResponseBodyDeleteVNICResponse.
+type ResponseBodyDeleteVNICResponse struct {
+	Data     *DeleteVNICResponse     `json:"data,omitempty"`
+	Meta     *map[string]interface{} `json:"meta,omitempty"`
+	PageInfo *PageInfo               `json:"pageInfo,omitempty"`
+}
+
 // ResponseBodyDeleteVPCResponse defines model for ResponseBodyDeleteVPCResponse.
 type ResponseBodyDeleteVPCResponse struct {
 	Data     *DeleteVPCResponse      `json:"data,omitempty"`
@@ -403,9 +658,9 @@ type ResponseBodyResizeVolumeResponse struct {
 	PageInfo *PageInfo               `json:"pageInfo,omitempty"`
 }
 
-// ResponseBodySubnet defines model for ResponseBodySubnet.
-type ResponseBodySubnet struct {
-	Data     *Subnet                 `json:"data,omitempty"`
+// ResponseBodySubnetResponse defines model for ResponseBodySubnetResponse.
+type ResponseBodySubnetResponse struct {
+	Data     *SubnetResponse         `json:"data,omitempty"`
 	Meta     *map[string]interface{} `json:"meta,omitempty"`
 	PageInfo *PageInfo               `json:"pageInfo,omitempty"`
 }
@@ -420,6 +675,13 @@ type ResponseBodyVMGroupResponse struct {
 // ResponseBodyVMResponse defines model for ResponseBodyVMResponse.
 type ResponseBodyVMResponse struct {
 	Data     *VMResponse             `json:"data,omitempty"`
+	Meta     *map[string]interface{} `json:"meta,omitempty"`
+	PageInfo *PageInfo               `json:"pageInfo,omitempty"`
+}
+
+// ResponseBodyVNICResponse defines model for ResponseBodyVNICResponse.
+type ResponseBodyVNICResponse struct {
+	Data     *VNICResponse           `json:"data,omitempty"`
 	Meta     *map[string]interface{} `json:"meta,omitempty"`
 	PageInfo *PageInfo               `json:"pageInfo,omitempty"`
 }
@@ -452,45 +714,6 @@ type SKUResponse struct {
 	Threads     *int    `json:"threads,omitempty"`
 }
 
-// Subnet defines model for Subnet.
-type Subnet struct {
-	// Cidr CIDR is the IP address range for the subnet in CIDR notation
-	//
-	// Example: 10.0.0.0/25
-	Cidr string `json:"cidr"`
-
-	// ID Example: 123e4567-e89b-12d3-a456-426655440000
-	ID *string `json:"id,omitempty"`
-
-	// LastError LastError holds the most recent error message, if the subnet is in the error state
-	//
-	// Example: cidr overlaps with existing subnet
-	LastError *string `json:"lastError,omitempty"`
-
-	// Name Name is the unique identifier for the subnet
-	//
-	// Example: my-vpc-public
-	Name string `json:"name"`
-
-	// Status Status indicates the current state of the subnet
-	//
-	// Example: active
-	Status *string `json:"status,omitempty"`
-
-	// Tags Tags are optional customer tags stored as Kubernetes annotations.
-	Tags *[]Tag `json:"tags,omitempty"`
-
-	// TenantID TenantID is the unique identifier for the tenant
-	//
-	// Example: default
-	TenantID *string `json:"tenantID,omitempty"`
-
-	// VpcID VPCID is the ID of the parent VPC
-	//
-	// Example: 123e4567-e89b-12d3-a456-426655440000
-	VpcID *string `json:"vpcID,omitempty"`
-}
-
 // SubnetResponse defines model for SubnetResponse.
 type SubnetResponse struct {
 	// Cidr Example: 10.0.0.0/25
@@ -506,8 +729,8 @@ type SubnetResponse struct {
 	Name *string `json:"name,omitempty"`
 
 	// Status Example: active
-	Status *string `json:"status,omitempty"`
-	Tags   *[]Tag  `json:"tags,omitempty"`
+	Status *SubnetResponseStatus `json:"status,omitempty"`
+	Tags   *[]TagResponse        `json:"tags,omitempty"`
 
 	// Urn Example: asc:atos:network:my-tenant:subnet:123e4567-e89b-12d3-a456-426655440000
 	Urn *string `json:"urn,omitempty"`
@@ -516,8 +739,11 @@ type SubnetResponse struct {
 	VpcID *string `json:"vpcID,omitempty"`
 }
 
-// Tag defines model for Tag.
-type Tag struct {
+// SubnetResponseStatus Example: active
+type SubnetResponseStatus string
+
+// TagRequest defines model for TagRequest.
+type TagRequest struct {
 	// Key Example: env
 	Key string `json:"key"`
 
@@ -525,46 +751,109 @@ type Tag struct {
 	Value string `json:"value"`
 }
 
+// TagResponse defines model for TagResponse.
+type TagResponse struct {
+	// Key Example: env
+	Key string `json:"key"`
+
+	// Value Example: local
+	Value string `json:"value"`
+}
+
+// UpdateVNICRequest defines model for UpdateVNICRequest.
+type UpdateVNICRequest struct {
+	// Name Example: my vnic
+	Name *string `json:"name,omitempty"`
+
+	// PublicIP Example: 203.0.113.10
+	PublicIP *string `json:"publicIP,omitempty"`
+}
+
 // VMGroupResponse defines model for VMGroupResponse.
 type VMGroupResponse struct {
-	AttachedVolumes   *[]string          `json:"attachedVolumes,omitempty"`
-	AutoscalingPolicy *AutoscalingPolicy `json:"autoscalingPolicy,omitempty"`
+	AttachedVolumes   *[]string                  `json:"attachedVolumes,omitempty"`
+	AutoscalingPolicy *AutoscalingPolicyResponse `json:"autoscalingPolicy,omitempty"`
 
 	// LastError Example: scale up failed
-	LastError *string      `json:"lastError,omitempty"`
-	Name      *string      `json:"name,omitempty"`
-	Sku       *SKUResponse `json:"sku,omitempty"`
-	Status    *string      `json:"status,omitempty"`
-	Tags      *[]Tag       `json:"tags,omitempty"`
+	LastError *string                `json:"lastError,omitempty"`
+	Name      *string                `json:"name,omitempty"`
+	Sku       *SKUResponse           `json:"sku,omitempty"`
+	Status    *VMGroupResponseStatus `json:"status,omitempty"`
+	Tags      *[]TagResponse         `json:"tags,omitempty"`
 
 	// Urn Example: asc:atos:compute:my-tenant:vm_group:123e4567-e89b-12d3-a456-426655440000
 	Urn *string `json:"urn,omitempty"`
 }
 
+// VMGroupResponseStatus defines model for VMGroupResponse.Status.
+type VMGroupResponseStatus string
+
 // VMResponse defines model for VMResponse.
 type VMResponse struct {
-	// AttachedVolumes Example: ["[\"vol1\"","\"vol2\"]"]
+	// AttachedVolumes Example: ["vol1","vol2"]
 	AttachedVolumes *[]string `json:"attachedVolumes,omitempty"`
-	InternalIP      *string   `json:"internalIP,omitempty"`
 
 	// LastError Example: no agent available
 	LastError *string `json:"lastError,omitempty"`
 
 	// Name Example: my-vm
-	Name *string      `json:"name,omitempty"`
-	Os   *OSDetails   `json:"os,omitempty"`
-	Sku  *SKUResponse `json:"sku,omitempty"`
+	Name *string            `json:"name,omitempty"`
+	Os   *OSDetailsResponse `json:"os,omitempty"`
+	Sku  *SKUResponse       `json:"sku,omitempty"`
 
 	// Status Example: pending
-	Status *string `json:"status,omitempty"`
-	Tags   *[]Tag  `json:"tags,omitempty"`
+	Status *VMResponseStatus `json:"status,omitempty"`
+	Tags   *[]TagResponse    `json:"tags,omitempty"`
 
 	// Urn Example: asc:atos:compute:my-tenant:virtual_machine:123e4567-e89b-12d3-a456-426655440000
 	Urn *string `json:"urn,omitempty"`
 
+	// Vnics Example: ["asc:atos:network:my-tenant:vnic:123e4567-e89b-12d3-a456-426655440000"]
+	Vnics *[]string `json:"vnics,omitempty"`
+
 	// VpcID Example: 123e4567-e89b-12d3-a456-426655440000
 	VpcID *string `json:"vpcID,omitempty"`
 }
+
+// VMResponseStatus Example: pending
+type VMResponseStatus string
+
+// VNICResponse defines model for VNICResponse.
+type VNICResponse struct {
+	CreatedAt *string `json:"createdAt,omitempty"`
+
+	// ErrorReason Example: no free IP in the subnet
+	ErrorReason *string `json:"errorReason,omitempty"`
+
+	// Mac Example: 00:00:00:00:00:00
+	Mac *string `json:"mac,omitempty"`
+
+	// Name Example: eth1
+	Name *string `json:"name,omitempty"`
+
+	// PrivateIP Example: 10.0.0.5
+	PrivateIP *string `json:"privateIP,omitempty"`
+
+	// PublicIP Example: 203.0.113.10
+	PublicIP *string `json:"publicIP,omitempty"`
+
+	// Status Example: attached
+	Status *VNICResponseStatus `json:"status,omitempty"`
+
+	// SubnetURN Example: asc:atos:network:my-tenant:subnet:123e4567-e89b-12d3-a456-426655440002
+	SubnetURN *string        `json:"subnetURN,omitempty"`
+	Tags      *[]TagResponse `json:"tags,omitempty"`
+	UpdatedAt *string        `json:"updatedAt,omitempty"`
+
+	// Urn Example: asc:atos:network:my-tenant:vnic:123e4567-e89b-12d3-a456-426655440000
+	Urn *string `json:"urn,omitempty"`
+
+	// VMURN Example: asc:atos:compute:my-tenant:virtual_machine:123e4567-e89b-12d3-a456-426655440001
+	VMURN *string `json:"vmURN,omitempty"`
+}
+
+// VNICResponseStatus Example: attached
+type VNICResponseStatus string
 
 // VPCResponse defines model for VPCResponse.
 type VPCResponse struct {
@@ -581,21 +870,37 @@ type VPCResponse struct {
 	Name *string `json:"name,omitempty"`
 
 	// Status Example: pending
-	Status  *string           `json:"status,omitempty"`
-	Subnets *[]SubnetResponse `json:"subnets,omitempty"`
-	Tags    *[]Tag            `json:"tags,omitempty"`
+	Status  *VPCResponseStatus `json:"status,omitempty"`
+	Subnets *[]SubnetResponse  `json:"subnets,omitempty"`
+	Tags    *[]TagResponse     `json:"tags,omitempty"`
 
 	// Urn Example: asc:atos:network:my-tenant:vpc:123e4567-e89b-12d3-a456-426655440000
 	Urn *string `json:"urn,omitempty"`
 }
 
+// VPCResponseStatus Example: pending
+type VPCResponseStatus string
+
+// VPCSubnetRequest defines model for VPCSubnetRequest.
+type VPCSubnetRequest struct {
+	// Cidr Example: 10.0.0.0/25
+	Cidr string `json:"cidr"`
+
+	// ID Example: 123e4567-e89b-12d3-a456-426655440000
+	ID *string `json:"id,omitempty"`
+
+	// Name Example: my-vpc-public
+	Name string        `json:"name"`
+	Tags *[]TagRequest `json:"tags,omitempty"`
+}
+
 // VolumeResponse defines model for VolumeResponse.
 type VolumeResponse struct {
 	// AccessMode Example: ReadWriteOnce
-	AccessMode  *string            `json:"accessMode,omitempty"`
-	Annotations *map[string]string `json:"annotations,omitempty"`
+	AccessMode  *VolumeResponseAccessMode `json:"accessMode,omitempty"`
+	Annotations *map[string]string        `json:"annotations,omitempty"`
 
-	// AttachedToVM Example: my-vm
+	// AttachedToVM Example: 123e4567-e89b-12d3-a456-426655440000
 	AttachedToVM *string            `json:"attachedToVM,omitempty"`
 	Labels       *map[string]string `json:"labels,omitempty"`
 
@@ -609,11 +914,11 @@ type VolumeResponse struct {
 	Size *string `json:"size,omitempty"`
 
 	// Status Example: creating
-	Status *string `json:"status,omitempty"`
+	Status *VolumeResponseStatus `json:"status,omitempty"`
 
 	// StorageClass Example: standard
-	StorageClass *string `json:"storageClass,omitempty"`
-	Tags         *[]Tag  `json:"tags,omitempty"`
+	StorageClass *string        `json:"storageClass,omitempty"`
+	Tags         *[]TagResponse `json:"tags,omitempty"`
 
 	// TenantID Example: default
 	TenantID *string `json:"tenantId,omitempty"`
@@ -622,8 +927,17 @@ type VolumeResponse struct {
 	Urn *string `json:"urn,omitempty"`
 
 	// VolumeMode Example: Filesystem
-	VolumeMode *string `json:"volumeMode,omitempty"`
+	VolumeMode *VolumeResponseVolumeMode `json:"volumeMode,omitempty"`
 }
+
+// VolumeResponseAccessMode Example: ReadWriteOnce
+type VolumeResponseAccessMode string
+
+// VolumeResponseStatus Example: creating
+type VolumeResponseStatus string
+
+// VolumeResponseVolumeMode Example: Filesystem
+type VolumeResponseVolumeMode string
 
 // CreateVMGroupParams defines parameters for CreateVMGroup.
 type CreateVMGroupParams struct {
@@ -663,6 +977,36 @@ type GetVMParams struct {
 
 // PatchVMParams defines parameters for PatchVM.
 type PatchVMParams struct {
+	// XTenant Tenant identifier
+	XTenant string `json:"X-Tenant"`
+}
+
+// CreateVNICParams defines parameters for CreateVNIC.
+type CreateVNICParams struct {
+	// XTenant Tenant identifier
+	XTenant string `json:"X-Tenant"`
+}
+
+// DeleteVNICParams defines parameters for DeleteVNIC.
+type DeleteVNICParams struct {
+	// XTenant Tenant identifier
+	XTenant string `json:"X-Tenant"`
+}
+
+// GetVNICParams defines parameters for GetVNIC.
+type GetVNICParams struct {
+	// XTenant Tenant identifier
+	XTenant string `json:"X-Tenant"`
+}
+
+// PatchVNICParams defines parameters for PatchVNIC.
+type PatchVNICParams struct {
+	// XTenant Tenant identifier
+	XTenant string `json:"X-Tenant"`
+}
+
+// UpdateVNICParams defines parameters for UpdateVNIC.
+type UpdateVNICParams struct {
 	// XTenant Tenant identifier
 	XTenant string `json:"X-Tenant"`
 }
@@ -766,6 +1110,15 @@ type CreateVMJSONRequestBody = CreateVMRequest
 // PatchVMJSONRequestBody defines body for PatchVM for application/json ContentType.
 type PatchVMJSONRequestBody = PatchTagsRequest
 
+// CreateVNICJSONRequestBody defines body for CreateVNIC for application/json ContentType.
+type CreateVNICJSONRequestBody = CreateVNICRequest
+
+// PatchVNICJSONRequestBody defines body for PatchVNIC for application/json ContentType.
+type PatchVNICJSONRequestBody = PatchVNICRequest
+
+// UpdateVNICJSONRequestBody defines body for UpdateVNIC for application/json ContentType.
+type UpdateVNICJSONRequestBody = UpdateVNICRequest
+
 // CreateVolumeJSONRequestBody defines body for CreateVolume for application/json ContentType.
 type CreateVolumeJSONRequestBody = CreateVolumeRequest
 
@@ -785,7 +1138,7 @@ type PatchVPCJSONRequestBody = PatchTagsRequest
 type CreateSubnetJSONRequestBody = CreateSubnetRequest
 
 // PatchSubnetJSONRequestBody defines body for PatchSubnet for application/json ContentType.
-type PatchSubnetJSONRequestBody = PatchVPCRequest
+type PatchSubnetJSONRequestBody = PatchTagsRequest
 
 // RequestEditorFn is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -949,6 +1302,74 @@ type ClientInterface interface {
 	//
 	// Corresponds with PATCH /vms/{vmName} (the `PatchVM` operationId).
 	PatchVM(ctx context.Context, vmName string, params *PatchVMParams, body PatchVMJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateVNICWithBody Create a virtual network interface
+	//
+	// Requests a new vnic in a subnet. The interface is created and gets its private IP asynchronously, and can then be attached to a virtual machine.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /vnics (the `CreateVNIC` operationId).
+	CreateVNICWithBody(ctx context.Context, params *CreateVNICParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateVNIC Create a virtual network interface
+	//
+	// Requests a new vnic in a subnet. The interface is created and gets its private IP asynchronously, and can then be attached to a virtual machine.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /vnics (the `CreateVNIC` operationId).
+	CreateVNIC(ctx context.Context, params *CreateVNICParams, body CreateVNICJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteVNIC Delete a virtual network interface
+	//
+	// Requests the deletion of a virtual network interface that is not attached to a virtual machine.
+	//
+	// Corresponds with DELETE /vnics/{vnicID} (the `DeleteVNIC` operationId).
+	DeleteVNIC(ctx context.Context, vnicID string, params *DeleteVNICParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetVNIC Get a virtual network interface
+	//
+	// Retrieves a single virtual network interface by ID.
+	//
+	// Corresponds with GET /vnics/{vnicID} (the `GetVNIC` operationId).
+	GetVNIC(ctx context.Context, vnicID string, params *GetVNICParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PatchVNICWithBody Patch a virtual network interface
+	//
+	// Applies tag mutations to a virtual network interface.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PATCH /vnics/{vnicID} (the `PatchVNIC` operationId).
+	PatchVNICWithBody(ctx context.Context, vnicID string, params *PatchVNICParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PatchVNIC Patch a virtual network interface
+	//
+	// Applies tag mutations to a virtual network interface.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PATCH /vnics/{vnicID} (the `PatchVNIC` operationId).
+	PatchVNIC(ctx context.Context, vnicID string, params *PatchVNICParams, body PatchVNICJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateVNICWithBody Update a virtual network interface
+	//
+	// Renames a virtual network interface, and associates the public IP with it, or disassociates its current public IP when it is left out or empty.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /vnics/{vnicID} (the `UpdateVNIC` operationId).
+	UpdateVNICWithBody(ctx context.Context, vnicID string, params *UpdateVNICParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateVNIC Update a virtual network interface
+	//
+	// Renames a virtual network interface, and associates the public IP with it, or disassociates its current public IP when it is left out or empty.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /vnics/{vnicID} (the `UpdateVNIC` operationId).
+	UpdateVNIC(ctx context.Context, vnicID string, params *UpdateVNICParams, body UpdateVNICJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateVolumeWithBody Create a new block volume
 	//
@@ -1332,6 +1753,154 @@ func (c *Client) PatchVMWithBody(ctx context.Context, vmName string, params *Pat
 // Corresponds with PATCH /vms/{vmName} (the `PatchVM` operationId).
 func (c *Client) PatchVM(ctx context.Context, vmName string, params *PatchVMParams, body PatchVMJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPatchVMRequest(c.Server, vmName, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateVNICWithBody Create a virtual network interface
+//
+// Requests a new vnic in a subnet. The interface is created and gets its private IP asynchronously, and can then be attached to a virtual machine.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /vnics (the `CreateVNIC` operationId).
+func (c *Client) CreateVNICWithBody(ctx context.Context, params *CreateVNICParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateVNICRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateVNIC Create a virtual network interface
+//
+// Requests a new vnic in a subnet. The interface is created and gets its private IP asynchronously, and can then be attached to a virtual machine.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /vnics (the `CreateVNIC` operationId).
+func (c *Client) CreateVNIC(ctx context.Context, params *CreateVNICParams, body CreateVNICJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateVNICRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteVNIC Delete a virtual network interface
+//
+// Requests the deletion of a virtual network interface that is not attached to a virtual machine.
+//
+// Corresponds with DELETE /vnics/{vnicID} (the `DeleteVNIC` operationId).
+func (c *Client) DeleteVNIC(ctx context.Context, vnicID string, params *DeleteVNICParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteVNICRequest(c.Server, vnicID, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetVNIC Get a virtual network interface
+//
+// Retrieves a single virtual network interface by ID.
+//
+// Corresponds with GET /vnics/{vnicID} (the `GetVNIC` operationId).
+func (c *Client) GetVNIC(ctx context.Context, vnicID string, params *GetVNICParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetVNICRequest(c.Server, vnicID, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// PatchVNICWithBody Patch a virtual network interface
+//
+// Applies tag mutations to a virtual network interface.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PATCH /vnics/{vnicID} (the `PatchVNIC` operationId).
+func (c *Client) PatchVNICWithBody(ctx context.Context, vnicID string, params *PatchVNICParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPatchVNICRequestWithBody(c.Server, vnicID, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// PatchVNIC Patch a virtual network interface
+//
+// Applies tag mutations to a virtual network interface.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PATCH /vnics/{vnicID} (the `PatchVNIC` operationId).
+func (c *Client) PatchVNIC(ctx context.Context, vnicID string, params *PatchVNICParams, body PatchVNICJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPatchVNICRequest(c.Server, vnicID, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateVNICWithBody Update a virtual network interface
+//
+// Renames a virtual network interface, and associates the public IP with it, or disassociates its current public IP when it is left out or empty.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /vnics/{vnicID} (the `UpdateVNIC` operationId).
+func (c *Client) UpdateVNICWithBody(ctx context.Context, vnicID string, params *UpdateVNICParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateVNICRequestWithBody(c.Server, vnicID, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateVNIC Update a virtual network interface
+//
+// Renames a virtual network interface, and associates the public IP with it, or disassociates its current public IP when it is left out or empty.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /vnics/{vnicID} (the `UpdateVNIC` operationId).
+func (c *Client) UpdateVNIC(ctx context.Context, vnicID string, params *UpdateVNICParams, body UpdateVNICJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateVNICRequest(c.Server, vnicID, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -2113,6 +2682,273 @@ func NewPatchVMRequestWithBody(server string, vmName string, params *PatchVMPara
 	}
 
 	req, err := http.NewRequest(http.MethodPatch, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Tenant", params.XTenant, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Tenant", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewCreateVNICRequest calls the generic CreateVNIC builder with application/json body
+func NewCreateVNICRequest(server string, params *CreateVNICParams, body CreateVNICJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateVNICRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewCreateVNICRequestWithBody constructs an http.Request for the CreateVNIC method, with any body, and a specified content type
+func NewCreateVNICRequestWithBody(server string, params *CreateVNICParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/vnics")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Tenant", params.XTenant, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Tenant", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteVNICRequest constructs an http.Request for the DeleteVNIC method
+func NewDeleteVNICRequest(server string, vnicID string, params *DeleteVNICParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "vnicID", vnicID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/vnics/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Tenant", params.XTenant, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Tenant", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewGetVNICRequest constructs an http.Request for the GetVNIC method
+func NewGetVNICRequest(server string, vnicID string, params *GetVNICParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "vnicID", vnicID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/vnics/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Tenant", params.XTenant, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Tenant", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewPatchVNICRequest calls the generic PatchVNIC builder with application/json body
+func NewPatchVNICRequest(server string, vnicID string, params *PatchVNICParams, body PatchVNICJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPatchVNICRequestWithBody(server, vnicID, params, "application/json", bodyReader)
+}
+
+// NewPatchVNICRequestWithBody constructs an http.Request for the PatchVNIC method, with any body, and a specified content type
+func NewPatchVNICRequestWithBody(server string, vnicID string, params *PatchVNICParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "vnicID", vnicID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/vnics/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPatch, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Tenant", params.XTenant, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Tenant", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewUpdateVNICRequest calls the generic UpdateVNIC builder with application/json body
+func NewUpdateVNICRequest(server string, vnicID string, params *UpdateVNICParams, body UpdateVNICJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateVNICRequestWithBody(server, vnicID, params, "application/json", bodyReader)
+}
+
+// NewUpdateVNICRequestWithBody constructs an http.Request for the UpdateVNIC method, with any body, and a specified content type
+func NewUpdateVNICRequestWithBody(server string, vnicID string, params *UpdateVNICParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "vnicID", vnicID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/vnics/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -3088,6 +3924,78 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with PATCH /vms/{vmName} (the `PatchVM` operationId).
 	PatchVMWithResponse(ctx context.Context, vmName string, params *PatchVMParams, body PatchVMJSONRequestBody, reqEditors ...RequestEditorFn) (*PatchVMHTTPResponse, error)
 
+	// CreateVNICWithBodyWithResponse Create a virtual network interface
+	//
+	// Requests a new vnic in a subnet. The interface is created and gets its private IP asynchronously, and can then be attached to a virtual machine.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /vnics (the `CreateVNIC` operationId).
+	CreateVNICWithBodyWithResponse(ctx context.Context, params *CreateVNICParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateVNICHTTPResponse, error)
+
+	// CreateVNICWithResponse Create a virtual network interface
+	//
+	// Requests a new vnic in a subnet. The interface is created and gets its private IP asynchronously, and can then be attached to a virtual machine.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /vnics (the `CreateVNIC` operationId).
+	CreateVNICWithResponse(ctx context.Context, params *CreateVNICParams, body CreateVNICJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateVNICHTTPResponse, error)
+
+	// DeleteVNICWithResponse Delete a virtual network interface
+	//
+	// Requests the deletion of a virtual network interface that is not attached to a virtual machine.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /vnics/{vnicID} (the `DeleteVNIC` operationId).
+	DeleteVNICWithResponse(ctx context.Context, vnicID string, params *DeleteVNICParams, reqEditors ...RequestEditorFn) (*DeleteVNICHTTPResponse, error)
+
+	// GetVNICWithResponse Get a virtual network interface
+	//
+	// Retrieves a single virtual network interface by ID.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /vnics/{vnicID} (the `GetVNIC` operationId).
+	GetVNICWithResponse(ctx context.Context, vnicID string, params *GetVNICParams, reqEditors ...RequestEditorFn) (*GetVNICHTTPResponse, error)
+
+	// PatchVNICWithBodyWithResponse Patch a virtual network interface
+	//
+	// Applies tag mutations to a virtual network interface.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /vnics/{vnicID} (the `PatchVNIC` operationId).
+	PatchVNICWithBodyWithResponse(ctx context.Context, vnicID string, params *PatchVNICParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PatchVNICHTTPResponse, error)
+
+	// PatchVNICWithResponse Patch a virtual network interface
+	//
+	// Applies tag mutations to a virtual network interface.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /vnics/{vnicID} (the `PatchVNIC` operationId).
+	PatchVNICWithResponse(ctx context.Context, vnicID string, params *PatchVNICParams, body PatchVNICJSONRequestBody, reqEditors ...RequestEditorFn) (*PatchVNICHTTPResponse, error)
+
+	// UpdateVNICWithBodyWithResponse Update a virtual network interface
+	//
+	// Renames a virtual network interface, and associates the public IP with it, or disassociates its current public IP when it is left out or empty.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /vnics/{vnicID} (the `UpdateVNIC` operationId).
+	UpdateVNICWithBodyWithResponse(ctx context.Context, vnicID string, params *UpdateVNICParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateVNICHTTPResponse, error)
+
+	// UpdateVNICWithResponse Update a virtual network interface
+	//
+	// Renames a virtual network interface, and associates the public IP with it, or disassociates its current public IP when it is left out or empty.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /vnics/{vnicID} (the `UpdateVNIC` operationId).
+	UpdateVNICWithResponse(ctx context.Context, vnicID string, params *UpdateVNICParams, body UpdateVNICJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateVNICHTTPResponse, error)
+
 	// CreateVolumeWithBodyWithResponse Create a new block volume
 	//
 	// Creates a block volume with the specified parameters.
@@ -3352,6 +4260,8 @@ type CreateVMGroupHTTPResponse struct {
 	JSON201 *ResponseBodyCreateVMGroupResponse
 	// JSON400 the response for an HTTP 400 `application/json` response
 	JSON400 *ErrorResponse
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ErrorResponse
 }
@@ -3364,6 +4274,11 @@ func (r CreateVMGroupHTTPResponse) GetJSON201() *ResponseBodyCreateVMGroupRespon
 // GetJSON400 returns the response for an HTTP 400 `application/json` response
 func (r CreateVMGroupHTTPResponse) GetJSON400() *ErrorResponse {
 	return r.JSON400
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateVMGroupHTTPResponse) GetJSON409() *ErrorResponse {
+	return r.JSON409
 }
 
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
@@ -3409,8 +4324,12 @@ type DeleteVMGroupHTTPResponse struct {
 	JSON400 *ErrorResponse
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *ErrorResponse
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorResponse
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -3428,9 +4347,19 @@ func (r DeleteVMGroupHTTPResponse) GetJSON404() *ErrorResponse {
 	return r.JSON404
 }
 
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r DeleteVMGroupHTTPResponse) GetJSON409() *ErrorResponse {
+	return r.JSON409
+}
+
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
 func (r DeleteVMGroupHTTPResponse) GetJSON500() *ErrorResponse {
 	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r DeleteVMGroupHTTPResponse) GetJSON503() *ErrorResponse {
+	return r.JSON503
 }
 
 // GetBody returns the raw response body bytes
@@ -3467,15 +4396,24 @@ type GetVMGroupHTTPResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *ResponseBodyVMGroupResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorResponse
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *ErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorResponse
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
 func (r GetVMGroupHTTPResponse) GetJSON200() *ResponseBodyVMGroupResponse {
 	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetVMGroupHTTPResponse) GetJSON400() *ErrorResponse {
+	return r.JSON400
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -3486,6 +4424,11 @@ func (r GetVMGroupHTTPResponse) GetJSON404() *ErrorResponse {
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
 func (r GetVMGroupHTTPResponse) GetJSON500() *ErrorResponse {
 	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r GetVMGroupHTTPResponse) GetJSON503() *ErrorResponse {
+	return r.JSON503
 }
 
 // GetBody returns the raw response body bytes
@@ -3524,8 +4467,14 @@ type CreateVMHTTPResponse struct {
 	JSON201 *ResponseBodyCreateVMResponse
 	// JSON400 the response for an HTTP 400 `application/json` response
 	JSON400 *ErrorResponse
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorResponse
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorResponse
 }
 
 // GetJSON201 returns the response for an HTTP 201 `application/json` response
@@ -3538,9 +4487,24 @@ func (r CreateVMHTTPResponse) GetJSON400() *ErrorResponse {
 	return r.JSON400
 }
 
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r CreateVMHTTPResponse) GetJSON404() *ErrorResponse {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateVMHTTPResponse) GetJSON409() *ErrorResponse {
+	return r.JSON409
+}
+
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
 func (r CreateVMHTTPResponse) GetJSON500() *ErrorResponse {
 	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r CreateVMHTTPResponse) GetJSON503() *ErrorResponse {
+	return r.JSON503
 }
 
 // GetBody returns the raw response body bytes
@@ -3581,8 +4545,12 @@ type DeleteVMHTTPResponse struct {
 	JSON400 *ErrorResponse
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *ErrorResponse
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorResponse
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -3600,9 +4568,19 @@ func (r DeleteVMHTTPResponse) GetJSON404() *ErrorResponse {
 	return r.JSON404
 }
 
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r DeleteVMHTTPResponse) GetJSON409() *ErrorResponse {
+	return r.JSON409
+}
+
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
 func (r DeleteVMHTTPResponse) GetJSON500() *ErrorResponse {
 	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r DeleteVMHTTPResponse) GetJSON503() *ErrorResponse {
+	return r.JSON503
 }
 
 // GetBody returns the raw response body bytes
@@ -3639,15 +4617,24 @@ type GetVMHTTPResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *ResponseBodyVMResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorResponse
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *ErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorResponse
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
 func (r GetVMHTTPResponse) GetJSON200() *ResponseBodyVMResponse {
 	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetVMHTTPResponse) GetJSON400() *ErrorResponse {
+	return r.JSON400
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -3658,6 +4645,11 @@ func (r GetVMHTTPResponse) GetJSON404() *ErrorResponse {
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
 func (r GetVMHTTPResponse) GetJSON500() *ErrorResponse {
 	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r GetVMHTTPResponse) GetJSON503() *ErrorResponse {
+	return r.JSON503
 }
 
 // GetBody returns the raw response body bytes
@@ -3702,6 +4694,8 @@ type PatchVMHTTPResponse struct {
 	JSON409 *ErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorResponse
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -3727,6 +4721,11 @@ func (r PatchVMHTTPResponse) GetJSON409() *ErrorResponse {
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
 func (r PatchVMHTTPResponse) GetJSON500() *ErrorResponse {
 	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r PatchVMHTTPResponse) GetJSON503() *ErrorResponse {
+	return r.JSON503
 }
 
 // GetBody returns the raw response body bytes
@@ -3758,6 +4757,372 @@ func (r PatchVMHTTPResponse) ContentType() string {
 	return ""
 }
 
+type CreateVNICHTTPResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *ResponseBodyVNICResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorResponse
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorResponse
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorResponse
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r CreateVNICHTTPResponse) GetJSON201() *ResponseBodyVNICResponse {
+	return r.JSON201
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r CreateVNICHTTPResponse) GetJSON400() *ErrorResponse {
+	return r.JSON400
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateVNICHTTPResponse) GetJSON409() *ErrorResponse {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r CreateVNICHTTPResponse) GetJSON500() *ErrorResponse {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r CreateVNICHTTPResponse) GetJSON503() *ErrorResponse {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r CreateVNICHTTPResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateVNICHTTPResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateVNICHTTPResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateVNICHTTPResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteVNICHTTPResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *ResponseBodyDeleteVNICResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorResponse
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorResponse
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorResponse
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorResponse
+}
+
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r DeleteVNICHTTPResponse) GetJSON202() *ResponseBodyDeleteVNICResponse {
+	return r.JSON202
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DeleteVNICHTTPResponse) GetJSON400() *ErrorResponse {
+	return r.JSON400
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r DeleteVNICHTTPResponse) GetJSON404() *ErrorResponse {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r DeleteVNICHTTPResponse) GetJSON409() *ErrorResponse {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r DeleteVNICHTTPResponse) GetJSON500() *ErrorResponse {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r DeleteVNICHTTPResponse) GetJSON503() *ErrorResponse {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteVNICHTTPResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteVNICHTTPResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteVNICHTTPResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteVNICHTTPResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetVNICHTTPResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ResponseBodyVNICResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorResponse
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorResponse
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorResponse
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetVNICHTTPResponse) GetJSON200() *ResponseBodyVNICResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetVNICHTTPResponse) GetJSON400() *ErrorResponse {
+	return r.JSON400
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetVNICHTTPResponse) GetJSON404() *ErrorResponse {
+	return r.JSON404
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetVNICHTTPResponse) GetJSON500() *ErrorResponse {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r GetVNICHTTPResponse) GetJSON503() *ErrorResponse {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r GetVNICHTTPResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetVNICHTTPResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetVNICHTTPResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetVNICHTTPResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type PatchVNICHTTPResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ResponseBodyVNICResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorResponse
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorResponse
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorResponse
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorResponse
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PatchVNICHTTPResponse) GetJSON200() *ResponseBodyVNICResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r PatchVNICHTTPResponse) GetJSON400() *ErrorResponse {
+	return r.JSON400
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r PatchVNICHTTPResponse) GetJSON404() *ErrorResponse {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r PatchVNICHTTPResponse) GetJSON409() *ErrorResponse {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r PatchVNICHTTPResponse) GetJSON500() *ErrorResponse {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r PatchVNICHTTPResponse) GetJSON503() *ErrorResponse {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r PatchVNICHTTPResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r PatchVNICHTTPResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PatchVNICHTTPResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r PatchVNICHTTPResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type UpdateVNICHTTPResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *ResponseBodyVNICResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorResponse
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorResponse
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorResponse
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorResponse
+}
+
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r UpdateVNICHTTPResponse) GetJSON202() *ResponseBodyVNICResponse {
+	return r.JSON202
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r UpdateVNICHTTPResponse) GetJSON400() *ErrorResponse {
+	return r.JSON400
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r UpdateVNICHTTPResponse) GetJSON404() *ErrorResponse {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r UpdateVNICHTTPResponse) GetJSON409() *ErrorResponse {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r UpdateVNICHTTPResponse) GetJSON500() *ErrorResponse {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r UpdateVNICHTTPResponse) GetJSON503() *ErrorResponse {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r UpdateVNICHTTPResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateVNICHTTPResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateVNICHTTPResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdateVNICHTTPResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type CreateVolumeHTTPResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -3765,6 +5130,8 @@ type CreateVolumeHTTPResponse struct {
 	JSON201 *ResponseBodyCreateVolumeResponse
 	// JSON400 the response for an HTTP 400 `application/json` response
 	JSON400 *ErrorResponse
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ErrorResponse
 }
@@ -3777,6 +5144,11 @@ func (r CreateVolumeHTTPResponse) GetJSON201() *ResponseBodyCreateVolumeResponse
 // GetJSON400 returns the response for an HTTP 400 `application/json` response
 func (r CreateVolumeHTTPResponse) GetJSON400() *ErrorResponse {
 	return r.JSON400
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateVolumeHTTPResponse) GetJSON409() *ErrorResponse {
+	return r.JSON409
 }
 
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
@@ -3818,10 +5190,16 @@ type DeleteVolumeHTTPResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *ResponseBodyDeleteVolumeResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorResponse
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *ErrorResponse
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorResponse
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -3829,14 +5207,29 @@ func (r DeleteVolumeHTTPResponse) GetJSON200() *ResponseBodyDeleteVolumeResponse
 	return r.JSON200
 }
 
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DeleteVolumeHTTPResponse) GetJSON400() *ErrorResponse {
+	return r.JSON400
+}
+
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
 func (r DeleteVolumeHTTPResponse) GetJSON404() *ErrorResponse {
 	return r.JSON404
 }
 
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r DeleteVolumeHTTPResponse) GetJSON409() *ErrorResponse {
+	return r.JSON409
+}
+
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
 func (r DeleteVolumeHTTPResponse) GetJSON500() *ErrorResponse {
 	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r DeleteVolumeHTTPResponse) GetJSON503() *ErrorResponse {
+	return r.JSON503
 }
 
 // GetBody returns the raw response body bytes
@@ -3873,15 +5266,24 @@ type GetVolumeHTTPResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *ResponseBodyVolumeResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorResponse
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *ErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorResponse
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
 func (r GetVolumeHTTPResponse) GetJSON200() *ResponseBodyVolumeResponse {
 	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetVolumeHTTPResponse) GetJSON400() *ErrorResponse {
+	return r.JSON400
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -3892,6 +5294,11 @@ func (r GetVolumeHTTPResponse) GetJSON404() *ErrorResponse {
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
 func (r GetVolumeHTTPResponse) GetJSON500() *ErrorResponse {
 	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r GetVolumeHTTPResponse) GetJSON503() *ErrorResponse {
+	return r.JSON503
 }
 
 // GetBody returns the raw response body bytes
@@ -3932,8 +5339,12 @@ type PatchVolumeHTTPResponse struct {
 	JSON400 *ErrorResponse
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *ErrorResponse
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorResponse
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -3951,9 +5362,19 @@ func (r PatchVolumeHTTPResponse) GetJSON404() *ErrorResponse {
 	return r.JSON404
 }
 
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r PatchVolumeHTTPResponse) GetJSON409() *ErrorResponse {
+	return r.JSON409
+}
+
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
 func (r PatchVolumeHTTPResponse) GetJSON500() *ErrorResponse {
 	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r PatchVolumeHTTPResponse) GetJSON503() *ErrorResponse {
+	return r.JSON503
 }
 
 // GetBody returns the raw response body bytes
@@ -3994,8 +5415,12 @@ type DetachVolumeHTTPResponse struct {
 	JSON400 *ErrorResponse
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *ErrorResponse
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorResponse
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -4013,9 +5438,19 @@ func (r DetachVolumeHTTPResponse) GetJSON404() *ErrorResponse {
 	return r.JSON404
 }
 
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r DetachVolumeHTTPResponse) GetJSON409() *ErrorResponse {
+	return r.JSON409
+}
+
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
 func (r DetachVolumeHTTPResponse) GetJSON500() *ErrorResponse {
 	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r DetachVolumeHTTPResponse) GetJSON503() *ErrorResponse {
+	return r.JSON503
 }
 
 // GetBody returns the raw response body bytes
@@ -4056,8 +5491,12 @@ type AttachVolumeHTTPResponse struct {
 	JSON400 *ErrorResponse
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *ErrorResponse
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorResponse
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -4075,9 +5514,19 @@ func (r AttachVolumeHTTPResponse) GetJSON404() *ErrorResponse {
 	return r.JSON404
 }
 
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r AttachVolumeHTTPResponse) GetJSON409() *ErrorResponse {
+	return r.JSON409
+}
+
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
 func (r AttachVolumeHTTPResponse) GetJSON500() *ErrorResponse {
 	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r AttachVolumeHTTPResponse) GetJSON503() *ErrorResponse {
+	return r.JSON503
 }
 
 // GetBody returns the raw response body bytes
@@ -4118,8 +5567,12 @@ type ResizeVolumeHTTPResponse struct {
 	JSON400 *ErrorResponse
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *ErrorResponse
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorResponse
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -4137,9 +5590,19 @@ func (r ResizeVolumeHTTPResponse) GetJSON404() *ErrorResponse {
 	return r.JSON404
 }
 
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r ResizeVolumeHTTPResponse) GetJSON409() *ErrorResponse {
+	return r.JSON409
+}
+
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
 func (r ResizeVolumeHTTPResponse) GetJSON500() *ErrorResponse {
 	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r ResizeVolumeHTTPResponse) GetJSON503() *ErrorResponse {
+	return r.JSON503
 }
 
 // GetBody returns the raw response body bytes
@@ -4178,6 +5641,8 @@ type CreateVPCHTTPResponse struct {
 	JSON201 *ResponseBodyCreateVPCResponse
 	// JSON400 the response for an HTTP 400 `application/json` response
 	JSON400 *ErrorResponse
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ErrorResponse
 }
@@ -4190,6 +5655,11 @@ func (r CreateVPCHTTPResponse) GetJSON201() *ResponseBodyCreateVPCResponse {
 // GetJSON400 returns the response for an HTTP 400 `application/json` response
 func (r CreateVPCHTTPResponse) GetJSON400() *ErrorResponse {
 	return r.JSON400
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateVPCHTTPResponse) GetJSON409() *ErrorResponse {
+	return r.JSON409
 }
 
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
@@ -4235,8 +5705,12 @@ type DeleteVPCHTTPResponse struct {
 	JSON400 *ErrorResponse
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *ErrorResponse
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorResponse
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -4254,9 +5728,19 @@ func (r DeleteVPCHTTPResponse) GetJSON404() *ErrorResponse {
 	return r.JSON404
 }
 
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r DeleteVPCHTTPResponse) GetJSON409() *ErrorResponse {
+	return r.JSON409
+}
+
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
 func (r DeleteVPCHTTPResponse) GetJSON500() *ErrorResponse {
 	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r DeleteVPCHTTPResponse) GetJSON503() *ErrorResponse {
+	return r.JSON503
 }
 
 // GetBody returns the raw response body bytes
@@ -4293,15 +5777,24 @@ type GetVPCHTTPResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *ResponseBodyVPCResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorResponse
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *ErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorResponse
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
 func (r GetVPCHTTPResponse) GetJSON200() *ResponseBodyVPCResponse {
 	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetVPCHTTPResponse) GetJSON400() *ErrorResponse {
+	return r.JSON400
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -4312,6 +5805,11 @@ func (r GetVPCHTTPResponse) GetJSON404() *ErrorResponse {
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
 func (r GetVPCHTTPResponse) GetJSON500() *ErrorResponse {
 	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r GetVPCHTTPResponse) GetJSON503() *ErrorResponse {
+	return r.JSON503
 }
 
 // GetBody returns the raw response body bytes
@@ -4356,6 +5854,8 @@ type PatchVPCHTTPResponse struct {
 	JSON409 *ErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorResponse
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -4381,6 +5881,11 @@ func (r PatchVPCHTTPResponse) GetJSON409() *ErrorResponse {
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
 func (r PatchVPCHTTPResponse) GetJSON500() *ErrorResponse {
 	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r PatchVPCHTTPResponse) GetJSON503() *ErrorResponse {
+	return r.JSON503
 }
 
 // GetBody returns the raw response body bytes
@@ -4416,19 +5921,40 @@ type ListSubnetsHTTPResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *[]ResponseBodySubnet
+	JSON200 *[]ResponseBodySubnetResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorResponse
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorResponse
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r ListSubnetsHTTPResponse) GetJSON200() *[]ResponseBodySubnet {
+func (r ListSubnetsHTTPResponse) GetJSON200() *[]ResponseBodySubnetResponse {
 	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListSubnetsHTTPResponse) GetJSON400() *ErrorResponse {
+	return r.JSON400
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ListSubnetsHTTPResponse) GetJSON404() *ErrorResponse {
+	return r.JSON404
 }
 
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
 func (r ListSubnetsHTTPResponse) GetJSON500() *ErrorResponse {
 	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r ListSubnetsHTTPResponse) GetJSON503() *ErrorResponse {
+	return r.JSON503
 }
 
 // GetBody returns the raw response body bytes
@@ -4464,7 +5990,7 @@ type CreateSubnetHTTPResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON201 the response for an HTTP 201 `application/json` response
-	JSON201 *ResponseBodySubnet
+	JSON201 *ResponseBodySubnetResponse
 	// JSON400 the response for an HTTP 400 `application/json` response
 	JSON400 *ErrorResponse
 	// JSON404 the response for an HTTP 404 `application/json` response
@@ -4476,7 +6002,7 @@ type CreateSubnetHTTPResponse struct {
 }
 
 // GetJSON201 returns the response for an HTTP 201 `application/json` response
-func (r CreateSubnetHTTPResponse) GetJSON201() *ResponseBodySubnet {
+func (r CreateSubnetHTTPResponse) GetJSON201() *ResponseBodySubnetResponse {
 	return r.JSON201
 }
 
@@ -4538,8 +6064,12 @@ type DeleteSubnetHTTPResponse struct {
 	JSON400 *ErrorResponse
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *ErrorResponse
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorResponse
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -4557,9 +6087,19 @@ func (r DeleteSubnetHTTPResponse) GetJSON404() *ErrorResponse {
 	return r.JSON404
 }
 
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r DeleteSubnetHTTPResponse) GetJSON409() *ErrorResponse {
+	return r.JSON409
+}
+
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
 func (r DeleteSubnetHTTPResponse) GetJSON500() *ErrorResponse {
 	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r DeleteSubnetHTTPResponse) GetJSON503() *ErrorResponse {
+	return r.JSON503
 }
 
 // GetBody returns the raw response body bytes
@@ -4595,17 +6135,21 @@ type PatchSubnetHTTPResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *ResponseBodySubnet
+	JSON200 *ResponseBodySubnetResponse
 	// JSON400 the response for an HTTP 400 `application/json` response
 	JSON400 *ErrorResponse
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *ErrorResponse
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorResponse
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PatchSubnetHTTPResponse) GetJSON200() *ResponseBodySubnet {
+func (r PatchSubnetHTTPResponse) GetJSON200() *ResponseBodySubnetResponse {
 	return r.JSON200
 }
 
@@ -4619,9 +6163,19 @@ func (r PatchSubnetHTTPResponse) GetJSON404() *ErrorResponse {
 	return r.JSON404
 }
 
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r PatchSubnetHTTPResponse) GetJSON409() *ErrorResponse {
+	return r.JSON409
+}
+
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
 func (r PatchSubnetHTTPResponse) GetJSON500() *ErrorResponse {
 	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r PatchSubnetHTTPResponse) GetJSON503() *ErrorResponse {
+	return r.JSON503
 }
 
 // GetBody returns the raw response body bytes
@@ -4816,6 +6370,126 @@ func (c *ClientWithResponses) PatchVMWithResponse(ctx context.Context, vmName st
 		return nil, err
 	}
 	return ParsePatchVMHTTPResponse(rsp)
+}
+
+// CreateVNICWithBodyWithResponse Create a virtual network interface
+//
+// Requests a new vnic in a subnet. The interface is created and gets its private IP asynchronously, and can then be attached to a virtual machine.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /vnics (the `CreateVNIC` operationId).
+func (c *ClientWithResponses) CreateVNICWithBodyWithResponse(ctx context.Context, params *CreateVNICParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateVNICHTTPResponse, error) {
+	rsp, err := c.CreateVNICWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateVNICHTTPResponse(rsp)
+}
+
+// CreateVNICWithResponse Create a virtual network interface
+//
+// Requests a new vnic in a subnet. The interface is created and gets its private IP asynchronously, and can then be attached to a virtual machine.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /vnics (the `CreateVNIC` operationId).
+func (c *ClientWithResponses) CreateVNICWithResponse(ctx context.Context, params *CreateVNICParams, body CreateVNICJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateVNICHTTPResponse, error) {
+	rsp, err := c.CreateVNIC(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateVNICHTTPResponse(rsp)
+}
+
+// DeleteVNICWithResponse Delete a virtual network interface
+//
+// Requests the deletion of a virtual network interface that is not attached to a virtual machine.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /vnics/{vnicID} (the `DeleteVNIC` operationId).
+func (c *ClientWithResponses) DeleteVNICWithResponse(ctx context.Context, vnicID string, params *DeleteVNICParams, reqEditors ...RequestEditorFn) (*DeleteVNICHTTPResponse, error) {
+	rsp, err := c.DeleteVNIC(ctx, vnicID, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteVNICHTTPResponse(rsp)
+}
+
+// GetVNICWithResponse Get a virtual network interface
+//
+// Retrieves a single virtual network interface by ID.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /vnics/{vnicID} (the `GetVNIC` operationId).
+func (c *ClientWithResponses) GetVNICWithResponse(ctx context.Context, vnicID string, params *GetVNICParams, reqEditors ...RequestEditorFn) (*GetVNICHTTPResponse, error) {
+	rsp, err := c.GetVNIC(ctx, vnicID, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetVNICHTTPResponse(rsp)
+}
+
+// PatchVNICWithBodyWithResponse Patch a virtual network interface
+//
+// Applies tag mutations to a virtual network interface.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /vnics/{vnicID} (the `PatchVNIC` operationId).
+func (c *ClientWithResponses) PatchVNICWithBodyWithResponse(ctx context.Context, vnicID string, params *PatchVNICParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PatchVNICHTTPResponse, error) {
+	rsp, err := c.PatchVNICWithBody(ctx, vnicID, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePatchVNICHTTPResponse(rsp)
+}
+
+// PatchVNICWithResponse Patch a virtual network interface
+//
+// Applies tag mutations to a virtual network interface.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /vnics/{vnicID} (the `PatchVNIC` operationId).
+func (c *ClientWithResponses) PatchVNICWithResponse(ctx context.Context, vnicID string, params *PatchVNICParams, body PatchVNICJSONRequestBody, reqEditors ...RequestEditorFn) (*PatchVNICHTTPResponse, error) {
+	rsp, err := c.PatchVNIC(ctx, vnicID, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePatchVNICHTTPResponse(rsp)
+}
+
+// UpdateVNICWithBodyWithResponse Update a virtual network interface
+//
+// Renames a virtual network interface, and associates the public IP with it, or disassociates its current public IP when it is left out or empty.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /vnics/{vnicID} (the `UpdateVNIC` operationId).
+func (c *ClientWithResponses) UpdateVNICWithBodyWithResponse(ctx context.Context, vnicID string, params *UpdateVNICParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateVNICHTTPResponse, error) {
+	rsp, err := c.UpdateVNICWithBody(ctx, vnicID, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateVNICHTTPResponse(rsp)
+}
+
+// UpdateVNICWithResponse Update a virtual network interface
+//
+// Renames a virtual network interface, and associates the public IP with it, or disassociates its current public IP when it is left out or empty.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /vnics/{vnicID} (the `UpdateVNIC` operationId).
+func (c *ClientWithResponses) UpdateVNICWithResponse(ctx context.Context, vnicID string, params *UpdateVNICParams, body UpdateVNICJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateVNICHTTPResponse, error) {
+	rsp, err := c.UpdateVNIC(ctx, vnicID, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateVNICHTTPResponse(rsp)
 }
 
 // CreateVolumeWithBodyWithResponse Create a new block volume
@@ -5219,6 +6893,13 @@ func ParseCreateVMGroupHTTPResponse(rsp *http.Response) (*CreateVMGroupHTTPRespo
 		}
 		response.JSON400 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -5266,12 +6947,26 @@ func ParseDeleteVMGroupHTTPResponse(rsp *http.Response) (*DeleteVMGroupHTTPRespo
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
 
 	}
 
@@ -5299,6 +6994,13 @@ func ParseGetVMGroupHTTPResponse(rsp *http.Response) (*GetVMGroupHTTPResponse, e
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -5312,6 +7014,13 @@ func ParseGetVMGroupHTTPResponse(rsp *http.Response) (*GetVMGroupHTTPResponse, e
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
 
 	}
 
@@ -5346,12 +7055,33 @@ func ParseCreateVMHTTPResponse(rsp *http.Response) (*CreateVMHTTPResponse, error
 		}
 		response.JSON400 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
 
 	}
 
@@ -5393,12 +7123,26 @@ func ParseDeleteVMHTTPResponse(rsp *http.Response) (*DeleteVMHTTPResponse, error
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
 
 	}
 
@@ -5426,6 +7170,13 @@ func ParseGetVMHTTPResponse(rsp *http.Response) (*GetVMHTTPResponse, error) {
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -5439,6 +7190,13 @@ func ParseGetVMHTTPResponse(rsp *http.Response) (*GetVMHTTPResponse, error) {
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
 
 	}
 
@@ -5494,6 +7252,304 @@ func ParsePatchVMHTTPResponse(rsp *http.Response) (*PatchVMHTTPResponse, error) 
 		}
 		response.JSON500 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateVNICHTTPResponse parses an HTTP response from a CreateVNICWithResponse call
+func ParseCreateVNICHTTPResponse(rsp *http.Response) (*CreateVNICHTTPResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateVNICHTTPResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest ResponseBodyVNICResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteVNICHTTPResponse parses an HTTP response from a DeleteVNICWithResponse call
+func ParseDeleteVNICHTTPResponse(rsp *http.Response) (*DeleteVNICHTTPResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteVNICHTTPResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
+		var dest ResponseBodyDeleteVNICResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON202 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetVNICHTTPResponse parses an HTTP response from a GetVNICWithResponse call
+func ParseGetVNICHTTPResponse(rsp *http.Response) (*GetVNICHTTPResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetVNICHTTPResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ResponseBodyVNICResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePatchVNICHTTPResponse parses an HTTP response from a PatchVNICWithResponse call
+func ParsePatchVNICHTTPResponse(rsp *http.Response) (*PatchVNICHTTPResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PatchVNICHTTPResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ResponseBodyVNICResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateVNICHTTPResponse parses an HTTP response from a UpdateVNICWithResponse call
+func ParseUpdateVNICHTTPResponse(rsp *http.Response) (*UpdateVNICHTTPResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateVNICHTTPResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
+		var dest ResponseBodyVNICResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON202 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
 	}
 
 	return response, nil
@@ -5526,6 +7582,13 @@ func ParseCreateVolumeHTTPResponse(rsp *http.Response) (*CreateVolumeHTTPRespons
 			return nil, err
 		}
 		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ErrorResponse
@@ -5560,6 +7623,13 @@ func ParseDeleteVolumeHTTPResponse(rsp *http.Response) (*DeleteVolumeHTTPRespons
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -5567,12 +7637,26 @@ func ParseDeleteVolumeHTTPResponse(rsp *http.Response) (*DeleteVolumeHTTPRespons
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
 
 	}
 
@@ -5600,6 +7684,13 @@ func ParseGetVolumeHTTPResponse(rsp *http.Response) (*GetVolumeHTTPResponse, err
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -5613,6 +7704,13 @@ func ParseGetVolumeHTTPResponse(rsp *http.Response) (*GetVolumeHTTPResponse, err
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
 
 	}
 
@@ -5654,12 +7752,26 @@ func ParsePatchVolumeHTTPResponse(rsp *http.Response) (*PatchVolumeHTTPResponse,
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
 
 	}
 
@@ -5701,12 +7813,26 @@ func ParseDetachVolumeHTTPResponse(rsp *http.Response) (*DetachVolumeHTTPRespons
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
 
 	}
 
@@ -5748,12 +7874,26 @@ func ParseAttachVolumeHTTPResponse(rsp *http.Response) (*AttachVolumeHTTPRespons
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
 
 	}
 
@@ -5795,12 +7935,26 @@ func ParseResizeVolumeHTTPResponse(rsp *http.Response) (*ResizeVolumeHTTPRespons
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
 
 	}
 
@@ -5834,6 +7988,13 @@ func ParseCreateVPCHTTPResponse(rsp *http.Response) (*CreateVPCHTTPResponse, err
 			return nil, err
 		}
 		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ErrorResponse
@@ -5882,12 +8043,26 @@ func ParseDeleteVPCHTTPResponse(rsp *http.Response) (*DeleteVPCHTTPResponse, err
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
 
 	}
 
@@ -5915,6 +8090,13 @@ func ParseGetVPCHTTPResponse(rsp *http.Response) (*GetVPCHTTPResponse, error) {
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -5928,6 +8110,13 @@ func ParseGetVPCHTTPResponse(rsp *http.Response) (*GetVPCHTTPResponse, error) {
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
 
 	}
 
@@ -5983,6 +8172,13 @@ func ParsePatchVPCHTTPResponse(rsp *http.Response) (*PatchVPCHTTPResponse, error
 		}
 		response.JSON500 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
 	}
 
 	return response, nil
@@ -6003,11 +8199,25 @@ func ParseListSubnetsHTTPResponse(rsp *http.Response) (*ListSubnetsHTTPResponse,
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest []ResponseBodySubnet
+		var dest []ResponseBodySubnetResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ErrorResponse
@@ -6015,6 +8225,13 @@ func ParseListSubnetsHTTPResponse(rsp *http.Response) (*ListSubnetsHTTPResponse,
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
 
 	}
 
@@ -6036,7 +8253,7 @@ func ParseCreateSubnetHTTPResponse(rsp *http.Response) (*CreateSubnetHTTPRespons
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
-		var dest ResponseBodySubnet
+		var dest ResponseBodySubnetResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6110,12 +8327,26 @@ func ParseDeleteSubnetHTTPResponse(rsp *http.Response) (*DeleteSubnetHTTPRespons
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
 
 	}
 
@@ -6137,7 +8368,7 @@ func ParsePatchSubnetHTTPResponse(rsp *http.Response) (*PatchSubnetHTTPResponse,
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest ResponseBodySubnet
+		var dest ResponseBodySubnetResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6157,12 +8388,26 @@ func ParsePatchSubnetHTTPResponse(rsp *http.Response) (*PatchSubnetHTTPResponse,
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
 
 	}
 

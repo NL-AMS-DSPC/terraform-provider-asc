@@ -53,7 +53,9 @@ func TestInfrastructureContract(t *testing.T) {
 		case "POST /api/infra-gateway/vms":
 			w.WriteHeader(http.StatusCreated)
 		case "GET /api/infra-gateway/vms/test-vm":
-			_ = json.NewEncoder(w).Encode(map[string]any{"data": vmData(VM{Name: "test-vm", VPCID: "vpc-id"})})
+			_ = json.NewEncoder(w).Encode(map[string]any{"data": vmData(VM{URN: "urn:vm", Name: "test-vm", VPCID: "vpc-id", VNICs: []string{"vnic-urn"}})})
+		case "GET /api/infra-gateway/vnics/vnic-urn":
+			_ = json.NewEncoder(w).Encode(map[string]any{"data": vnicData(VNIC{URN: "vnic-urn", VMURN: "urn:vm", Status: "attached"})})
 		case "GET /api/infra-gateway/vms/missing":
 			w.WriteHeader(http.StatusNotFound)
 		default:
@@ -76,7 +78,7 @@ func TestInfrastructureContract(t *testing.T) {
 	if _, err := runtime.CreateSubnet(ctx, "test-vpc", CreateSubnetRequest{Name: "test-subnet", CIDR: "10.0.0.128/25", VPCID: "vpc-id"}); err != nil {
 		t.Fatalf("CreateSubnet() error = %v", err)
 	}
-	vm, err := runtime.CreateVM(ctx, CreateVMRequest{Name: "test-vm", SKUID: "sku", VPCID: "vpc-id"})
+	vm, err := runtime.CreateVM(ctx, CreateVMRequest{Name: "test-vm", SKUID: "sku", VNICs: []string{"vnic-urn"}})
 	if err != nil {
 		t.Fatalf("CreateVM() error = %v", err)
 	}
@@ -193,7 +195,7 @@ func TestUpdateTagsPatchesEveryTaggableResource(t *testing.T) {
 
 	mu.Lock()
 	defer mu.Unlock()
-	want := []infra.PatchTag{setTag("env", "prod"), deleteTag("owner")}
+	want := []infra.PatchTagRequest{setTag("env", "prod"), deleteTag("owner")}
 	for _, path := range []string{
 		"/api/infra-gateway/vpcs/test-vpc",
 		"/api/infra-gateway/vpcs/test-vpc/subnets/test-subnet",

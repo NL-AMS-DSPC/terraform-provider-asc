@@ -68,7 +68,8 @@ would not by itself bridge a different source address and resource type.
 | --- | --- | --- | --- | --- |
 | `asc_vpc` | `name` | `name` | 0 | `name`, `cidr`; a change to a configured field of an inline subnet |
 | `asc_subnet` | `vpc_name` + `name` | `vpc-name:subnet-name` | 0 | `name`, `vpc_name`, `vpc_id`, `cidr` |
-| `asc_virtual_machine` | `name` | `name` | 0 | `name`, `sku_id`, `vpc_id`, `image`, `customization` |
+| `asc_vnic` | `id` | `id` | 0 | `subnet_urn` |
+| `asc_virtual_machine` | `name` | `name` | 0 | `name`, `sku_id`, `vnics` once state holds a list, `image`, `customization` |
 | `asc_vm_group` | `name` | `name` | 0 | `name`, `sku_id`, `vpc_id`, `image`, `autoscaling`, `customization`, `tags` |
 | `asc_volume` | `name` | `name` | 0 | `name`, `storage_class`, `access_mode` |
 | `asc_volume_attachment` | `volume_name` + `vm_name` | `volume-name:vm-name` | 0 | `volume_name`, `vm_name` |
@@ -104,6 +105,7 @@ null.
 | `asc_vpc` | inline subnets no longer carry `vpc_name` | Dropped from the nested object; `vpc_id` still carries the linkage. |
 | `asc_vpc` | `tags` no longer forces replacement | A tag edit that used to destroy a VPC now patches in place. |
 | `asc_virtual_machine` | `tags` no longer forces replacement | Same: a tag edit is now an in-place update. |
+| `asc_virtual_machine` | `vpc_id` is read-only; the machine is configured with `vnics` | `vnics` starts null. `Read` fills it from the VNICs whose `vmURN` names the machine, before the plan is computed, so a configuration listing those VNICs in the same order proposes nothing. Without a refresh, a null list is recorded in place and never replaces the machine. |
 | all | attribute *ordering* in the model structs | Irrelevant. State is keyed by name, not position. |
 
 Rename `autoscaling_policy` to `autoscaling` in configuration while retaining

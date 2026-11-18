@@ -48,7 +48,7 @@ func (v Volume) tags() []Tag { return v.Tags }
 // volume is created with these fixed values.
 const (
 	volumeStorageClass = "standard"
-	volumeAccessMode   = infra.ReadWriteOnce
+	volumeAccessMode   = infra.CreateVolumeRequestAccessModeReadWriteOnce
 )
 
 // CreateVolume waits for provisioning. Duplicate names return an untyped 500, which cannot
@@ -91,8 +91,8 @@ func (c *Runtime) GetVolume(ctx context.Context, name string) (Volume, error) {
 		URN:          value(wire.Urn),
 		Name:         value(wire.Name),
 		Size:         value(wire.Size),
-		VolumeMode:   value(wire.VolumeMode),
-		Status:       value(wire.Status),
+		VolumeMode:   enumString(wire.VolumeMode),
+		Status:       enumString(wire.Status),
 		LastError:    value(wire.LastError),
 		TenantID:     value(wire.TenantID),
 		AttachedToVM: value(wire.AttachedToVM),

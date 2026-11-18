@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -43,6 +45,7 @@ type Model struct {
 	Name            types.String        `tfsdk:"name"`
 	SKUID           types.String        `tfsdk:"sku_id"`
 	SKU             types.Object        `tfsdk:"sku"`
+	VNICs           types.List          `tfsdk:"vnics"`
 	VPCID           types.String        `tfsdk:"vpc_id"`
 	Image           types.String        `tfsdk:"image"`
 	Status          types.String        `tfsdk:"status"`
@@ -151,9 +154,23 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				Required: true, PlanModifiers: replaceString,
 			},
 			"sku": schema.SingleNestedAttribute{Description: "SKU the virtual machine runs on.", Computed: true, Attributes: computedSKU},
+			"vnics": schema.ListAttribute{
+				Description: "URNs of the virtual network interfaces to attach, in order; create them with asc_vnic. " +
+					"Changing the list replaces the machine.",
+				Required: true, ElementType: types.StringType,
+				PlanModifiers: []planmodifier.List{listplanmodifier.RequiresReplaceIf(replaceKnownVNICs,
+					"Changing the list replaces the machine, unless state has no list yet.",
+					"Changing the list replaces the machine, unless state has no list yet.")},
+				Validators: []validator.List{
+					listvalidator.SizeAtLeast(1),
+					listvalidator.UniqueValues(),
+					listvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1)),
+				},
+			},
 			"vpc_id": schema.StringAttribute{
-				Description: "Identifier of the VPC the virtual machine is attached to. Changing it replaces the machine.",
-				Required:    true, PlanModifiers: replaceString,
+				Description:   "Identifier of the VPC the virtual machine is in, as reported by ASC.",
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"image": schema.StringAttribute{
 				Description: "Identifier of the operating system image, for example ubuntu-24.04-lts, which is also the default. " +
@@ -220,8 +237,8 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 	created, err := r.client.CreateVM(ctx, client.CreateVMRequest{
-		Name: plan.Name.ValueString(), SKUID: plan.SKUID.ValueString(), VPCID: plan.VPCID.ValueString(),
-		Image: plan.Image.ValueString(), Tags: common.TagsToClient(ctx, plan.Tags, &resp.Diagnostics),
+		Name: plan.Name.ValueString(), SKUID: plan.SKUID.ValueString(),
+		VNICs: vnicsToClient(ctx, plan.VNICs, &resp.Diagnostics), Image: plan.Image.ValueString(), Tags: common.TagsToClient(ctx, plan.Tags, &resp.Diagnostics),
 		Customization: customizationToClient(plan.Customization),
 	})
 	if err != nil {
@@ -248,7 +265,21 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		return
 	}
 	setFromVM(ctx, &state, current, &resp.Diagnostics)
+
+	state.VNICs = refreshedVNICs(ctx, state.VNICs, current.VNICs, &resp.Diagnostics)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+// refreshedVNICs takes the VNICs the machine reports, in the API's attach order.
+// Reporting none keeps state, so a machine from a version that configured vpc_id records
+// the configured list on the next apply instead of being replaced.
+func refreshedVNICs(ctx context.Context, state types.List, reported []string, diags *diag.Diagnostics) types.List {
+	if len(reported) == 0 {
+		return state
+	}
+	list, listDiags := types.ListValueFrom(ctx, types.StringType, reported)
+	diags.Append(listDiags...)
+	return list
 }
 
 // Update patches tags. SKU changes require replacement because the gateway never clears
@@ -289,6 +320,18 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 
 func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("name"), req, resp)
+}
+
+// replaceKnownVNICs replaces the machine when its VNICs change. State without a list, as
+// a plan without refresh can see after an upgrade, only records the configured list.
+func replaceKnownVNICs(_ context.Context, req planmodifier.ListRequest, resp *listplanmodifier.RequiresReplaceIfFuncResponse) {
+	resp.RequiresReplace = !req.StateValue.IsNull()
+}
+
+func vnicsToClient(ctx context.Context, value types.List, diags *diag.Diagnostics) []string {
+	var urns []string
+	diags.Append(value.ElementsAs(ctx, &urns, false)...)
+	return urns
 }
 
 func customizationToClient(value *CustomizationModel) *client.Customization {

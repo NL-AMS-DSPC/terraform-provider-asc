@@ -4,6 +4,27 @@ All notable changes to this provider are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+This release follows ASC's move from a VPC ID to virtual network interfaces on
+virtual machines, and contains breaking changes.
+
+### Added
+
+- `asc_vnic` resource: a virtual network interface in a subnet, with its
+  private IP, MAC and attachment status. Its name and tags update in place;
+  changing `subnet_urn` replaces it. Import it by the UUID that ends its URN.
+- `vnics` on the `asc_virtual_machine` data source, in attach order.
+
+### Changed
+
+- `asc_virtual_machine` requires `vnics`, the URNs of the VNICs to attach,
+  instead of `vpc_id`. Changing the list replaces the machine. `vpc_id` is
+  now read-only. For an existing machine, replace `vpc_id` with its current
+  VNICs: the first refresh reads them into state, so a matching list plans no
+  change. Creating a machine waits until all of its VNICs are attached, and a
+  refresh detects VNICs attached or detached outside Terraform.
+
 ## [0.2.1] - 2026-10-23
 
 No changes to the provider. This release checks that a new GitHub release is

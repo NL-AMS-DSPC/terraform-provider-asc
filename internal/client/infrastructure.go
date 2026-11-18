@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,13 +22,12 @@ const (
 func (c *Runtime) CreateVPC(ctx context.Context, request CreateVPCRequest) (VPC, error) {
 	body := infra.CreateVPCJSONRequestBody{Name: request.Name, Cidr: request.CIDR, Tags: infraTags(request.Tags)}
 	if request.Subnets != nil {
-		body.Subnets = make([]infra.Subnet, len(request.Subnets))
+		body.Subnets = make([]infra.VPCSubnetRequest, len(request.Subnets))
 		for i, subnet := range request.Subnets {
-			body.Subnets[i] = infra.Subnet{
-				Name:  subnet.Name,
-				Cidr:  subnet.CIDR,
-				VpcID: optionalString(subnet.VPCID),
-				Tags:  infraTags(subnet.Tags),
+			body.Subnets[i] = infra.VPCSubnetRequest{
+				Name: subnet.Name,
+				Cidr: subnet.CIDR,
+				Tags: infraTags(subnet.Tags),
 			}
 		}
 	}
@@ -189,8 +189,8 @@ func (c *Runtime) CreateVM(ctx context.Context, request CreateVMRequest) (VM, er
 	body := infra.CreateVMJSONRequestBody{
 		Name:  request.Name,
 		SkuID: request.SKUID,
-		VpcID: request.VPCID,
-		BootDisk: infra.BootDisk{
+		Vnics: request.VNICs,
+		BootDisk: infra.BootDiskRequest{
 			AttachMode: infra.Create,
 			DiskSizeGB: &diskSizeGB,
 			Image:      &image,
@@ -198,7 +198,7 @@ func (c *Runtime) CreateVM(ctx context.Context, request CreateVMRequest) (VM, er
 		Tags:          infraTags(request.Tags),
 		Customization: infraCustomization(request.Customization),
 	}
-	return createWithNameReservation(ctx, c, vmKind, request.Name,
+	created, err := createWithNameReservation(ctx, c, vmKind, request.Name,
 		func(ctx context.Context) error {
 			return callInfra[infra.CreateVMResponse](ctx, func(ctx context.Context) (*http.Response, error) {
 				return c.infraAPI().CreateVM(ctx, &infra.CreateVMParams{XTenant: c.tenant()}, body, c.infraEditor())
@@ -206,9 +206,28 @@ func (c *Runtime) CreateVM(ctx context.Context, request CreateVMRequest) (VM, er
 		},
 		c.vmReader(request.Name),
 	)
+	if err != nil {
+		return VM{}, err
+	}
+
+	// The API orders a machine's VNICs by when each attach finished, and lists the
+	// ones still attaching last. Waiting for every attach makes the order final before it
+	// reaches state.
+	operationCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
+	defer cancel()
+	for _, urn := range request.VNICs {
+		id := VNICIDFromURN(urn)
+		if _, err := waitUntil(operationCtx, c, vnicKind, id, c.vnicReader(id), func(current VNIC) bool {
+			return current.VMURN == created.URN && strings.EqualFold(current.Status, statusVNICAttached)
+		}, "attach to "+vmKind+" "+strconv.Quote(request.Name)); err != nil {
+			return VM{}, err
+		}
+	}
+	return c.GetVM(operationCtx, request.Name)
 }
 
 // GetVM sorts attached volumes because the gateway returns them in map iteration order.
+// VNICs keep the API's order, the order their attaches finished in.
 func (c *Runtime) GetVM(ctx context.Context, name string) (VM, error) {
 	var wire infra.VMResponse
 	err := callInfra(ctx, func(ctx context.Context) (*http.Response, error) {
@@ -225,10 +244,11 @@ func (c *Runtime) GetVM(ctx context.Context, name string) (VM, error) {
 		Name:            value(wire.Name),
 		VPCID:           value(wire.VpcID),
 		SKU:             skuFromInfra(wire.Sku),
-		Status:          value(wire.Status),
+		Status:          enumString(wire.Status),
 		LastError:       value(wire.LastError),
 		Tags:            tagsFromInfra(wire.Tags),
 		AttachedVolumes: sortedStrings(wire.AttachedVolumes),
+		VNICs:           orderedStrings(wire.Vnics),
 		OS:              osFromInfra(wire.Os),
 	}, nil
 }
@@ -274,7 +294,7 @@ func vpcFromInfra(wire infra.VPCResponse) VPC {
 		URN:       value(wire.Urn),
 		Name:      value(wire.Name),
 		CIDR:      value(wire.Cidr),
-		Status:    value(wire.Status),
+		Status:    enumString(wire.Status),
 		LastError: value(wire.LastError),
 		Subnets:   subnetsFromInfra(wire.Subnets),
 		Tags:      tagsFromInfra(wire.Tags),
@@ -293,7 +313,7 @@ func subnetsFromInfra(wire *[]infra.SubnetResponse) []Subnet {
 			Name:      value(subnet.Name),
 			CIDR:      value(subnet.Cidr),
 			VPCID:     value(subnet.VpcID),
-			Status:    value(subnet.Status),
+			Status:    enumString(subnet.Status),
 			LastError: value(subnet.LastError),
 			Tags:      tagsFromInfra(subnet.Tags),
 		}

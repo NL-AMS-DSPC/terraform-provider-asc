@@ -12,7 +12,7 @@ import (
 // value is empty; omitted keys are unchanged. Every entry carries a value, so a deletion
 // travels as an explicit empty string. Empty desired values are rejected because the
 // gateway interprets them as deletions.
-func tagPatchFor(current, desired []Tag) ([]infra.PatchTag, error) {
+func tagPatchFor(current, desired []Tag) ([]infra.PatchTagRequest, error) {
 	desiredByKey := make(map[string]string, len(desired))
 	for _, tag := range desired {
 		if tag.Value == "" {
@@ -26,16 +26,16 @@ func tagPatchFor(current, desired []Tag) ([]infra.PatchTag, error) {
 		currentByKey[tag.Key] = tag.Value
 	}
 
-	patch := make([]infra.PatchTag, 0, len(desired))
+	patch := make([]infra.PatchTagRequest, 0, len(desired))
 	for key, value := range desiredByKey {
 		if existing, ok := currentByKey[key]; !ok || existing != value {
-			patch = append(patch, infra.PatchTag{Key: key, Value: &value})
+			patch = append(patch, infra.PatchTagRequest{Key: key, Value: &value})
 		}
 	}
 	for key := range currentByKey {
 		if _, ok := desiredByKey[key]; !ok {
 			deletion := ""
-			patch = append(patch, infra.PatchTag{Key: key, Value: &deletion})
+			patch = append(patch, infra.PatchTagRequest{Key: key, Value: &deletion})
 		}
 	}
 	sort.Slice(patch, func(i, j int) bool { return patch[i].Key < patch[j].Key })

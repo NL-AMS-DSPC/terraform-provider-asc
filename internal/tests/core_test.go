@@ -24,6 +24,12 @@ var providerFactories = map[string]func() (tfprotov6.ProviderServer, error){
 	"asc": providerserver.NewProtocol6WithError(ascprovider.New("test")()),
 }
 
+// VNIC URNs shared by the machine tests.
+const (
+	testVNICURN      = "asc:atos:network:test-tenant:vnic:00000000-0000-4000-8000-000000000021"
+	testOtherVNICURN = "asc:atos:network:test-tenant:vnic:00000000-0000-4000-8000-000000000022"
+)
+
 // Allowed API prefixes; authentication is checked separately.
 var allowedAPIPrefixes = []string{"/api/infra-gateway", "/api/uam", "/api/ipam"}
 
@@ -257,10 +263,12 @@ func TestVirtualMachineProvisioning(t *testing.T) {
 	vm := client.VM{
 		URN: "asc:vm:test-vm", Name: "test-vm", VPCID: "00000000-0000-4000-8000-000000000001",
 		SKU: client.SKU{ID: "gp-2", Name: "general-purpose"}, Status: "active",
-		OS:   client.OS{ID: "ubuntu-24.04", Family: "linux", Distribution: "ubuntu", Release: "24.04", DisplayName: "Ubuntu 24.04"},
-		Tags: []client.Tag{{Key: "env", Value: "test"}},
+		OS:    client.OS{ID: "ubuntu-24.04", Family: "linux", Distribution: "ubuntu", Release: "24.04", DisplayName: "Ubuntu 24.04"},
+		Tags:  []client.Tag{{Key: "env", Value: "test"}},
+		VNICs: []string{testVNICURN},
 	}
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
+		"GET /api/infra-gateway/vnics/" + client.VNICIDFromURN(testVNICURN): attachedVNIC("asc:vm:test-vm"),
 		"POST /api/infra-gateway/vms": func(w http.ResponseWriter, _ *http.Request) {
 			writeData(w, http.StatusCreated, map[string]string{"created": vm.Name})
 		},
@@ -283,7 +291,7 @@ func TestVirtualMachineProvisioning(t *testing.T) {
 resource "asc_virtual_machine" "test" {
   name = "test-vm"
   sku_id = "gp-2"
-  vpc_id = "00000000-0000-4000-8000-000000000001"
+  vnics = ["` + testVNICURN + `"]
   image = "ubuntu-24.04"
   tags = { env = "test" }
   customization = { cloud_init = { user_data = "#cloud-config" } }
@@ -291,6 +299,8 @@ resource "asc_virtual_machine" "test" {
 			Check: resource.ComposeAggregateTestCheckFunc(
 				resource.TestCheckResourceAttr("asc_virtual_machine.test", "urn", vm.URN),
 				resource.TestCheckResourceAttr("asc_virtual_machine.test", "vpc_id", vm.VPCID),
+				resource.TestCheckResourceAttr("asc_virtual_machine.test", "vnics.#", "1"),
+				resource.TestCheckResourceAttr("asc_virtual_machine.test", "vnics.0", testVNICURN),
 				resource.TestCheckResourceAttr("asc_virtual_machine.test", "customization.cloud_init.user_data", "#cloud-config"),
 			),
 		},
@@ -305,7 +315,7 @@ func TestVirtualMachineProvisioningRejectsNonCanonicalName(t *testing.T) {
 resource "asc_virtual_machine" "test" {
   name = "My-VM"
   sku_id = "gp-2"
-  vpc_id = "00000000-0000-4000-8000-000000000001"
+  vnics = ["asc:atos:network:test-tenant:vnic:00000000-0000-4000-8000-000000000021"]
 }`,
 		ExpectError: regexp.MustCompile("must start with a lowercase letter"),
 	}}})
@@ -416,6 +426,7 @@ func TestVirtualMachineProvisioningReplacementWaitsForNameRelease(t *testing.T) 
 	}
 
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
+		"GET /api/infra-gateway/vnics/" + client.VNICIDFromURN(testVNICURN): attachedVNIC("asc:vm:test-vm"),
 		"POST /api/infra-gateway/vms": func(w http.ResponseWriter, _ *http.Request) {
 			mu.Lock()
 			defer mu.Unlock()
@@ -461,7 +472,7 @@ func TestVirtualMachineProvisioningReplacementWaitsForNameRelease(t *testing.T) 
 resource "asc_virtual_machine" "test" {
   name = "test-vm"
   sku_id = %q
-  vpc_id = "00000000-0000-4000-8000-000000000001"
+  vnics = ["asc:atos:network:test-tenant:vnic:00000000-0000-4000-8000-000000000021"]
 }`, skuID)
 	}
 	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: providerFactories, Steps: []resource.TestStep{
@@ -697,6 +708,7 @@ func TestVirtualMachineTagsUpdateInPlaceAndVolumesStaySorted(t *testing.T) {
 	var reads atomic.Int64
 	var deleted atomic.Bool
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
+		"GET /api/infra-gateway/vnics/" + client.VNICIDFromURN(testVNICURN): attachedVNIC("asc:vm:test-vm"),
 		"POST /api/infra-gateway/vms": func(w http.ResponseWriter, _ *http.Request) {
 			writeData(w, http.StatusCreated, map[string]string{"created": "test-vm"})
 		},
@@ -730,7 +742,7 @@ func TestVirtualMachineTagsUpdateInPlaceAndVolumesStaySorted(t *testing.T) {
 resource "asc_virtual_machine" "test" {
   name = "test-vm"
   sku_id = "gp-2"
-  vpc_id = "00000000-0000-4000-8000-000000000001"
+  vnics = ["asc:atos:network:test-tenant:vnic:00000000-0000-4000-8000-000000000021"]
   tags = %s
 }`, tags)
 	}
@@ -757,4 +769,12 @@ resource "asc_virtual_machine" "test" {
 			),
 		},
 	}})
+}
+
+// attachedVNIC serves the fixture configuration's VNIC as attached to vmURN, so a create
+// that waits for its VNICs to attach finishes.
+func attachedVNIC(vmURN string) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		writeData(w, http.StatusOK, client.VNIC{URN: testVNICURN, VMURN: vmURN, Status: "attached"})
+	}
 }

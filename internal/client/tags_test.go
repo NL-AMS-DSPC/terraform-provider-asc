@@ -20,43 +20,43 @@ func TestTagPatchForComputesSetsAndDeletes(t *testing.T) {
 		name    string
 		current []Tag
 		desired []Tag
-		want    []infra.PatchTag
+		want    []infra.PatchTagRequest
 	}{
 		{
 			name:    "adds a new key",
 			current: []Tag{{Key: "env", Value: "test"}},
 			desired: []Tag{{Key: "env", Value: "test"}, {Key: "owner", Value: "platform"}},
-			want:    []infra.PatchTag{setTag("owner", "platform")},
+			want:    []infra.PatchTagRequest{setTag("owner", "platform")},
 		},
 		{
 			name:    "overwrites a changed value",
 			current: []Tag{{Key: "env", Value: "test"}},
 			desired: []Tag{{Key: "env", Value: "prod"}},
-			want:    []infra.PatchTag{setTag("env", "prod")},
+			want:    []infra.PatchTagRequest{setTag("env", "prod")},
 		},
 		{
 			name:    "deletes a removed key with an empty value",
 			current: []Tag{{Key: "env", Value: "test"}, {Key: "owner", Value: "platform"}},
 			desired: []Tag{{Key: "env", Value: "test"}},
-			want:    []infra.PatchTag{deleteTag("owner")},
+			want:    []infra.PatchTagRequest{deleteTag("owner")},
 		},
 		{
 			name:    "clears every tag",
 			current: []Tag{{Key: "b", Value: "2"}, {Key: "a", Value: "1"}},
 			desired: nil,
-			want:    []infra.PatchTag{deleteTag("a"), deleteTag("b")},
+			want:    []infra.PatchTagRequest{deleteTag("a"), deleteTag("b")},
 		},
 		{
 			name:    "is empty when nothing changed",
 			current: []Tag{{Key: "env", Value: "test"}},
 			desired: []Tag{{Key: "env", Value: "test"}},
-			want:    []infra.PatchTag{},
+			want:    []infra.PatchTagRequest{},
 		},
 		{
 			name:    "orders mixed changes by key",
 			current: []Tag{{Key: "gone", Value: "1"}, {Key: "kept", Value: "1"}},
 			desired: []Tag{{Key: "added", Value: "1"}, {Key: "kept", Value: "2"}},
-			want:    []infra.PatchTag{setTag("added", "1"), deleteTag("gone"), setTag("kept", "2")},
+			want:    []infra.PatchTagRequest{setTag("added", "1"), deleteTag("gone"), setTag("kept", "2")},
 		},
 	}
 
@@ -154,7 +154,7 @@ func TestReconcileTagsIgnoresThePatchEchoAndReadsBack(t *testing.T) {
 
 	mu.Lock()
 	defer mu.Unlock()
-	want := []infra.PatchTag{setTag("env", "prod"), deleteTag("owner")}
+	want := []infra.PatchTagRequest{setTag("env", "prod"), deleteTag("owner")}
 	if body.Tags == nil || !reflect.DeepEqual(*body.Tags, want) {
 		t.Fatalf("patch body = %#v, want %#v", body.Tags, want)
 	}

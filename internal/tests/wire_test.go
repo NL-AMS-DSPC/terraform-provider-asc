@@ -20,11 +20,20 @@ func wire(value any) any {
 		return map[string]any{
 			"urn": v.URN, "name": v.Name, "vpcID": v.VPCID, "sku": wireSKU(v.SKU), "status": v.Status,
 			"lastError": v.LastError, "tags": wireTags(v.Tags), "attachedVolumes": v.AttachedVolumes,
+			"vnics": v.VNICs,
 			"os": map[string]any{
 				"id": v.OS.ID, "family": v.OS.Family, "distribution": v.OS.Distribution,
 				"release": v.OS.Release, "displayName": v.OS.DisplayName,
 			},
 		}
+	case client.VNIC:
+		return wireVNIC(v)
+	case []client.VNIC:
+		vnics := make([]map[string]any, len(v))
+		for i, vnic := range v {
+			vnics[i] = wireVNIC(vnic)
+		}
+		return vnics
 	case client.SKU:
 		return wireSKU(v)
 	case []client.SKU:
@@ -60,6 +69,13 @@ func wire(value any) any {
 		return wireTags(v)
 	default:
 		return value
+	}
+}
+
+func wireVNIC(v client.VNIC) map[string]any {
+	return map[string]any{
+		"urn": v.URN, "name": v.Name, "subnetURN": v.SubnetURN, "vmURN": v.VMURN, "privateIP": v.PrivateIP,
+		"publicIP": v.PublicIP, "mac": v.MAC, "status": v.Status, "errorReason": v.LastError, "tags": wireTags(v.Tags),
 	}
 }
 
