@@ -78,7 +78,7 @@ func TestDataSourceSchemaMirrorsTheReadableResource(t *testing.T) {
 	// name identifies the machine to look up; everything else is served by
 	// infra-gateway and may never be set in a configuration.
 	required := map[string]bool{"name": true}
-	for _, attribute := range []string{"urn", "name", "sku", "vpc_id", "status", "last_error", "tags", "attached_volumes", "os"} {
+	for _, attribute := range []string{"urn", "name", "sku", "vnics", "vpc_id", "status", "last_error", "tags", "attached_volumes", "os"} {
 		found, ok := attributes[attribute]
 		if !ok {
 			t.Fatalf("attribute %q is missing", attribute)
@@ -90,8 +90,8 @@ func TestDataSourceSchemaMirrorsTheReadableResource(t *testing.T) {
 			t.Errorf("attribute %q is optional, which would let a configuration override a served value", attribute)
 		}
 	}
-	if len(attributes) != 9 {
-		t.Fatalf("attributes = %d, want 9", len(attributes))
+	if len(attributes) != 10 {
+		t.Fatalf("attributes = %d, want 10", len(attributes))
 	}
 	// image and sku_id would only repeat os.id and sku.id, and customization is
 	// write-only, so none of them belong on a read-only view.
@@ -144,6 +144,7 @@ func TestDataSourceReadMapsTheVirtualMachine(t *testing.T) {
 		SKU:  client.SKU{ID: "gp-2", Name: "general-purpose", Cores: 4, MemoryInMB: 8192},
 		OS:   client.OS{ID: "ubuntu-24.04", Family: "linux", Distribution: "ubuntu", Release: "24.04", DisplayName: "Ubuntu 24.04"},
 		Tags: []client.Tag{{Key: "env", Value: "test"}}, Status: "active",
+		VNICs: []string{"urn:vnic-b", "urn:vnic-a"},
 	}}, "test-vm")
 	if response.Diagnostics.HasError() {
 		t.Fatalf("Read() diagnostics = %v", response.Diagnostics)
@@ -153,6 +154,13 @@ func TestDataSourceReadMapsTheVirtualMachine(t *testing.T) {
 	}
 	if state.SKU.IsNull() || state.OS.IsNull() {
 		t.Fatalf("sku = %v, os = %v, want both populated", state.SKU, state.OS)
+	}
+	var vnics []string
+	if diags := state.VNICs.ElementsAs(context.Background(), &vnics, false); diags.HasError() {
+		t.Fatalf("ElementsAs() diagnostics = %v", diags)
+	}
+	if strings.Join(vnics, ",") != "urn:vnic-b,urn:vnic-a" {
+		t.Fatalf("vnics = %v, want the API's order", vnics)
 	}
 }
 

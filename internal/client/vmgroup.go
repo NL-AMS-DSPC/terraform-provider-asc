@@ -107,7 +107,7 @@ func (c *Runtime) GetVMGroup(ctx context.Context, name string) (VMGroup, error) 
 		URN:             value(wire.Urn),
 		Name:            value(wire.Name),
 		SKU:             skuFromInfra(wire.Sku),
-		Status:          value(wire.Status),
+		Status:          enumString(wire.Status),
 		LastError:       value(wire.LastError),
 		Tags:            tagsFromInfra(wire.Tags),
 		AttachedVolumes: sortedStrings(wire.AttachedVolumes),
@@ -138,10 +138,10 @@ func (c *Runtime) DeleteVMGroup(ctx context.Context, name string) error {
 	)
 }
 
-func infraAutoscalingPolicy(policy AutoscalingPolicy) *infra.AutoscalingPolicy {
-	wire := &infra.AutoscalingPolicy{MinReplicas: int(policy.MinReplicas), MaxReplicas: int(policy.MaxReplicas)}
+func infraAutoscalingPolicy(policy AutoscalingPolicy) *infra.AutoscalingPolicyRequest {
+	wire := &infra.AutoscalingPolicyRequest{MinReplicas: int(policy.MinReplicas), MaxReplicas: int(policy.MaxReplicas)}
 	if cron := policy.Cron; cron != nil {
-		wire.Cron = &infra.CronRule{
+		wire.Cron = &infra.CronRuleRequest{
 			Timezone: cron.Timezone, Start: cron.Start, End: cron.End, DesiredReplicas: int(cron.DesiredReplicas),
 		}
 	}

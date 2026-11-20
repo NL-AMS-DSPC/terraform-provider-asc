@@ -116,10 +116,10 @@ address = sys.argv[2]
 if set(schemas) != {address}:
     sys.exit(f"unexpected provider addresses: {list(schemas)}")
 schema = schemas[address]
-resources = {"asc_vpc", "asc_subnet", "asc_virtual_machine", "asc_vm_group",
+resources = {"asc_vpc", "asc_subnet", "asc_vnic", "asc_virtual_machine", "asc_vm_group",
              "asc_volume", "asc_volume_attachment", "asc_role", "asc_group",
              "asc_ip"}
-data_sources = resources - {"asc_volume_attachment", "asc_ip"} | {"asc_skus", "asc_ips"}
+data_sources = resources - {"asc_vnic", "asc_volume_attachment", "asc_ip"} | {"asc_skus", "asc_ips"}
 if set(schema.get("resource_schemas", {})) != resources:
     sys.exit("installed provider exposes an unexpected resource inventory")
 if set(schema.get("data_source_schemas", {})) != data_sources:

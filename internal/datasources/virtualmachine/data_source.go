@@ -35,6 +35,7 @@ type Model struct {
 	URN             types.String `tfsdk:"urn"`
 	Name            types.String `tfsdk:"name"`
 	SKU             types.Object `tfsdk:"sku"`
+	VNICs           types.List   `tfsdk:"vnics"`
 	VPCID           types.String `tfsdk:"vpc_id"`
 	Status          types.String `tfsdk:"status"`
 	LastError       types.String `tfsdk:"last_error"`
@@ -107,9 +108,14 @@ func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp 
 	resp.Schema = schema.Schema{
 		Description: "Reads an ASC virtual machine.",
 		Attributes: map[string]schema.Attribute{
-			"urn":        schema.StringAttribute{Description: "URN of the virtual machine.", Computed: true},
-			"name":       schema.StringAttribute{Description: "Name of the virtual machine to read.", Required: true},
-			"sku":        schema.SingleNestedAttribute{Description: "SKU the virtual machine runs on.", Computed: true, Attributes: computedSKU},
+			"urn":  schema.StringAttribute{Description: "URN of the virtual machine.", Computed: true},
+			"name": schema.StringAttribute{Description: "Name of the virtual machine to read.", Required: true},
+			"sku":  schema.SingleNestedAttribute{Description: "SKU the virtual machine runs on.", Computed: true, Attributes: computedSKU},
+			"vnics": schema.ListAttribute{
+				Description: "URNs of the virtual network interfaces attached to the virtual machine, in attach order.",
+				Computed:    true,
+				ElementType: types.StringType,
+			},
 			"vpc_id":     schema.StringAttribute{Description: "Identifier of the VPC the virtual machine belongs to.", Computed: true},
 			"status":     schema.StringAttribute{Description: "Current lifecycle status.", Computed: true},
 			"last_error": schema.StringAttribute{Description: "Last error reported for the virtual machine, empty when healthy.", Computed: true},
@@ -155,6 +161,10 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 		return
 	}
 
+	// Keep the API's attach order; an empty list stays empty rather than null.
+	vnics, vnicDiags := types.ListValueFrom(ctx, types.StringType, append([]string{}, current.VNICs...))
+	resp.Diagnostics.Append(vnicDiags...)
+
 	// Sort a copy so map iteration order cannot change Terraform state.
 	volumes := slices.Clone(current.AttachedVolumes)
 	slices.Sort(volumes)
@@ -185,6 +195,7 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 		URN:             types.StringValue(current.URN),
 		Name:            types.StringValue(current.Name),
 		SKU:             sku,
+		VNICs:           vnics,
 		VPCID:           types.StringValue(current.VPCID),
 		Status:          types.StringValue(current.Status),
 		LastError:       types.StringValue(current.LastError),
