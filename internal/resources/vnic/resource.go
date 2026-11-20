@@ -73,9 +73,8 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"name": schema.StringAttribute{
-				Description: "Name of the VNIC, 1 to 50 characters. ASC chooses one when it is omitted. " +
-					"Changing it renames the VNIC in place.",
-				Optional: true, Computed: true, PlanModifiers: keepString,
+				Description: "Name of the VNIC, 1 to 50 characters. Changing it renames the VNIC in place.",
+				Optional:    true, Computed: true, PlanModifiers: keepString,
 				Validators: []validator.String{stringvalidator.LengthBetween(1, 50)},
 			},
 			"vm_urn":     schema.StringAttribute{Description: "URN of the virtual machine the VNIC is attached to, empty when detached.", Computed: true},
