@@ -10,8 +10,12 @@ responses are decoded from their `data` envelope.
 | VPC create/read/delete | `POST /vpcs/`, `GET /vpcs/{name}`, `DELETE /vpcs/{name}` | Existing handler contract |
 | Inline bootstrap subnet | VPC create requires at least one subnet and omits unresolved `vpcID` | Provider-only encoding rule |
 | Standalone subnet create/read/delete | `POST /vpcs/{vpc}/subnets/`, list and exact-name match, `DELETE /vpcs/{vpc}/subnets/{name}` | Existing handler contract |
-| VM create/read/delete | `POST /vms/`, `GET /vms/{name}`, `DELETE /vms/{name}` | Existing handler plus approved GET fields below |
+| VM create/read/delete | `POST /vms/` with `vnics`, a list of VNIC URNs, `GET /vms/{name}`, `DELETE /vms/{name}` | Existing handler plus approved GET fields below |
 | Authoritative VM VPC | GET returns `vpcID` | Approved ASC delta in `vms.go` and `vms_test.go` |
+| VNIC create/read/delete | `POST /vnics`, `GET /vnics/{id}`, `DELETE /vnics/{id}`, where `id` is the UUID that ends the URN; create polls until the VNIC leaves `pending` | Existing handler contract |
+| VNIC tags and rename | `PATCH /vnics/{id}` carries tags only; `PUT /vnics/{id}` renames and sets the public IP, clearing it when left out, so a rename sends the current public IP back | Provider-only encoding rule |
+| VM VNICs | `GET /vms/{name}` returns `vnics` in attach order, with VNICs still attaching last; a VM create polls `GET /vnics/{id}` until each is `attached` to the machine | Provider lifecycle rule |
+| Attached VNIC deletion | `DELETE /vnics/{id}` returns 409 while a machine holds the VNIC; the provider retries until the lifecycle timeout | Provider lifecycle rule |
 | VM customization refresh | Preserve sensitive configured value because GET deliberately does not return it | Provider-only state rule |
 | Missing resources | Only HTTP 404 removes Terraform state or makes delete idempotent | Provider-only typed error rule |
 | Tag updates | `PATCH /vpcs/{name}`, `PATCH /vpcs/{vpc}/subnets/{name}`, `PATCH /vms/{name}`, `PATCH /volumes/{name}` | Existing handler contract |

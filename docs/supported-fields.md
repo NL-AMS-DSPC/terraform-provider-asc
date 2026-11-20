@@ -4,11 +4,11 @@ The generated pages under `docs/resources/` and `docs/data-sources/` list every 
 resource and data source. This page answers what they cannot: which attribute can be changed on a
 live resource, which one destroys and recreates it, and how each resource is imported.
 
-The provider registers nine resources and nine data sources, in three areas:
+The provider registers ten resources and nine data sources, in three areas:
 
 | Area | Resources | Data sources |
 | --- | --- | --- |
-| Infrastructure | `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume`, `asc_volume_attachment` | `asc_skus`, `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume` |
+| Infrastructure | `asc_vpc`, `asc_subnet`, `asc_vnic`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume`, `asc_volume_attachment` | `asc_skus`, `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume` |
 | Roles and groups | `asc_role`, `asc_group` | `asc_role`, `asc_group` |
 | IP addresses | `asc_ip` | `asc_ips` |
 
@@ -44,18 +44,32 @@ Read-only: `id`, `urn`, `status`, `last_error`, and the `id`, `urn`, `vpc_id`, `
 
 Read-only: `id`, `urn`, `status`, `last_error`.
 
+### asc_vnic
+
+| Attribute | Schema | Change | Why |
+| --- | --- | --- | --- |
+| `subnet_urn` | Required | Replaces | A VNIC takes its private IP from its subnet. |
+| `name` | Optional, Computed, 1-50 characters | In place | ASC chooses a name when it is omitted, and keeps it while the configuration omits it. |
+| `tags` | Optional | In place | Tags can be changed without replacing the VNIC. |
+
+Read-only: `id`, `urn`, `vm_urn`, `private_ip`, `public_ip`, `mac`, `status`, `last_error`.
+
+Create waits until the VNIC leaves `pending`, so `private_ip` is known when a machine is created
+with it. ASC refuses to delete a VNIC that is attached to a machine; the provider retries the
+deletion for up to the lifecycle timeout, which covers a machine destroyed in the same apply.
+
 ### asc_virtual_machine
 
 | Attribute | Schema | Change | Why |
 | --- | --- | --- | --- |
 | `name` | Required, 1-50 characters, lowercase letter first, then lowercase letters, digits or hyphens, alphanumeric last | Replaces | |
 | `sku_id` | Required | Replaces | Changing a machine's SKU in place is not supported by this provider. |
-| `vpc_id` | Required | Replaces | |
+| `vnics` | Required, at least one VNIC URN, no duplicates | Replaces | ASC attaches VNICs it creates the machine or through a VM PUT request. |
 | `image` | Optional, Computed | Replaces | Omitted, it requests `ubuntu-24.04-lts`. Keeps its prior value when the configuration omits it, so an unrelated change does not look like a new image. |
 | `customization` | Optional, sensitive | Replaces | Write-only; see [what import cannot recover](#what-import-cannot-recover). |
 | `tags` | Optional | In place | Tags can be changed without replacing the machine. |
 
-Read-only: `urn`, `sku`, `os`, `status`, `last_error`, `attached_volumes`.
+Read-only: `urn`, `vpc_id`, `sku`, `os`, `status`, `last_error`, `attached_volumes`.
 
 ### asc_vm_group
 
@@ -141,12 +155,13 @@ Deleting the resource releases the address.
 
 ## Import
 
-All nine resources are importable.
+All ten resources are importable.
 
 | Resource | Import ID | Example |
 | --- | --- | --- |
 | `asc_vpc` | `name` | `terraform import asc_vpc.example production` |
 | `asc_subnet` | `vpc-name:subnet-name` | `terraform import asc_subnet.example production:web` |
+| `asc_vnic` | `id`, the UUID that ends the URN | `terraform import asc_vnic.example e6981388-97c7-4279-ab96-b270dd70b7df` |
 | `asc_virtual_machine` | `name` | `terraform import asc_virtual_machine.example web-01` |
 | `asc_vm_group` | `name` | `terraform import asc_vm_group.example web-pool` |
 | `asc_volume` | `name` | `terraform import asc_volume.example data-01` |
@@ -170,6 +185,9 @@ the configuration supplies them.
 
 ## Read behavior and limitations
 
+- `asc_virtual_machine.vnics` is read from the machine in attach order. A create waits until
+  every VNIC is attached, so the order is final when it reaches state. A machine that reports no
+  VNICs keeps the list in state.
 - Attached volume lists and the SKU catalog are sorted to keep their order stable across refreshes.
 - Volume capacity may be reported using equivalent units, for example `10240Mi` for `10Gi`.
   Compare `size_bytes` when you need the capacity as a number. An equivalent spelling alone does

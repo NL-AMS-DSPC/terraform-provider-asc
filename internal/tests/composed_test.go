@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"encoding/json"
 	"net/http"
 	"slices"
 	"sync"
@@ -15,13 +16,19 @@ import (
 const (
 	composedVMID  = "20000000-0000-4000-8000-000000000004"
 	composedVMURN = "asc:atos:compute:tenant:virtual_machine:" + composedVMID
+
+	composedVNICID  = "20000000-0000-4000-8000-000000000005"
+	composedVNICURN = "asc:atos:network:tenant:vnic:" + composedVNICID
 )
 
-// composedGateway enforces creation dependencies and rejects deletion of attached volumes.
+// composedGateway enforces creation dependencies and rejects deletion of attached volumes
+// and VNICs.
 type composedGateway struct {
 	mu sync.Mutex
 
 	vpcPresent    bool
+	vnicPresent   bool
+	vnicVM        string
 	vmPresent     bool
 	volumePresent bool
 	attachedToVM  string
@@ -73,9 +80,56 @@ func (g *composedGateway) handlers() map[string]http.HandlerFunc {
 			writeData(w, http.StatusOK, map[string]string{"deleted": "composed-vpc"})
 		},
 
-		"POST /api/infra-gateway/vms": func(w http.ResponseWriter, _ *http.Request) {
+		// A VNIC takes its IP from a subnet, so the VPC must exist first.
+		"POST /api/infra-gateway/vnics": func(w http.ResponseWriter, r *http.Request) {
 			g.mu.Lock()
 			defer g.mu.Unlock()
+			var body struct {
+				SubnetURN string `json:"subnetURN"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			if !g.vpcPresent || body.SubnetURN != "asc:subnet:bootstrap" {
+				http.Error(w, `{"error":"subnet not found"}`, http.StatusBadRequest)
+				return
+			}
+			g.vnicPresent = true
+			g.record("create vnic")
+			writeData(w, http.StatusCreated, g.vnic())
+		},
+		"GET /api/infra-gateway/vnics/" + composedVNICID: func(w http.ResponseWriter, _ *http.Request) {
+			g.mu.Lock()
+			defer g.mu.Unlock()
+			if !g.vnicPresent {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			writeData(w, http.StatusOK, g.vnic())
+		},
+		"DELETE /api/infra-gateway/vnics/" + composedVNICID: func(w http.ResponseWriter, _ *http.Request) {
+			g.mu.Lock()
+			defer g.mu.Unlock()
+			if g.vnicVM != "" {
+				w.WriteHeader(http.StatusConflict)
+				return
+			}
+			g.vnicPresent = false
+			g.record("delete vnic")
+			writeData(w, http.StatusAccepted, map[string]string{"deleted": composedVNICID})
+		},
+
+		// A machine is created with existing VNICs and attaches them.
+		"POST /api/infra-gateway/vms": func(w http.ResponseWriter, r *http.Request) {
+			g.mu.Lock()
+			defer g.mu.Unlock()
+			var body struct {
+				VNICs []string `json:"vnics"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			if !g.vnicPresent || !slices.Equal(body.VNICs, []string{composedVNICURN}) {
+				http.Error(w, `{"error":"vnic not found"}`, http.StatusBadRequest)
+				return
+			}
+			g.vnicVM = composedVMURN
 			g.vmPresent = true
 			g.record("create vm")
 			writeData(w, http.StatusCreated, map[string]string{"created": "composed-vm"})
@@ -94,12 +148,16 @@ func (g *composedGateway) handlers() map[string]http.HandlerFunc {
 			if g.attachedToVM == composedVMID {
 				vm.AttachedVolumes = []string{"composed-volume"}
 			}
+			if g.vnicVM == composedVMURN {
+				vm.VNICs = []string{composedVNICURN}
+			}
 			writeData(w, http.StatusOK, vm)
 		},
 		"DELETE /api/infra-gateway/vms/composed-vm": func(w http.ResponseWriter, _ *http.Request) {
 			g.mu.Lock()
 			defer g.mu.Unlock()
 			g.vmPresent = false
+			g.vnicVM = ""
 			g.record("delete vm")
 			writeData(w, http.StatusOK, map[string]string{"deleted": "composed-vm"})
 		},
@@ -164,6 +222,17 @@ func (g *composedGateway) handlers() map[string]http.HandlerFunc {
 	}
 }
 
+func (g *composedGateway) vnic() client.VNIC {
+	status := "detached"
+	if g.vnicVM != "" {
+		status = "attached"
+	}
+	return client.VNIC{
+		URN: composedVNICURN, Name: "eth0", SubnetURN: "asc:subnet:bootstrap", VMURN: g.vnicVM,
+		PrivateIP: "10.0.0.5", MAC: "00:00:00:00:00:05", Status: status,
+	}
+}
+
 func composedConfig(environment testEnvironment) string {
 	return environment.providerConfig() + `
 resource "asc_vpc" "test" {
@@ -172,10 +241,14 @@ resource "asc_vpc" "test" {
   subnets = [{ name = "bootstrap", cidr = "10.0.0.0/25" }]
 }
 
+resource "asc_vnic" "test" {
+  subnet_urn = asc_vpc.test.subnets[0].urn
+}
+
 resource "asc_virtual_machine" "test" {
   name   = "composed-vm"
   sku_id = "gp-2"
-  vpc_id = asc_vpc.test.id
+  vnics  = [asc_vnic.test.urn]
 }
 
 resource "asc_volume" "test" {
@@ -198,7 +271,8 @@ func TestComposedInfrastructureAppliesAndDestroysInOrder(t *testing.T) {
 		ProtoV6ProviderFactories: providerFactories,
 		CheckDestroy: func(*terraform.State) error {
 			assertOrder(t, gateway.calls(), "detach", "delete volume")
-			assertOrder(t, gateway.calls(), "delete vm", "delete vpc")
+			assertOrder(t, gateway.calls(), "delete vm", "delete vnic")
+			assertOrder(t, gateway.calls(), "delete vnic", "delete vpc")
 			return nil
 		},
 		Steps: []resource.TestStep{
@@ -206,13 +280,17 @@ func TestComposedInfrastructureAppliesAndDestroysInOrder(t *testing.T) {
 				Config: composedConfig(environment),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrPair("asc_virtual_machine.test", "vpc_id", "asc_vpc.test", "id"),
+					resource.TestCheckResourceAttrPair("asc_virtual_machine.test", "vnics.0", "asc_vnic.test", "urn"),
+					resource.TestCheckResourceAttr("asc_vnic.test", "id", composedVNICID),
+					resource.TestCheckResourceAttr("asc_vnic.test", "private_ip", "10.0.0.5"),
 					resource.TestCheckResourceAttr("asc_volume_attachment.test", "status", "attached"),
 					// Both resources were created before the attachment; the next refresh records it.
 					resource.TestCheckResourceAttr("asc_volume.test", "attached_to_vm", ""),
 					resource.TestCheckResourceAttr("asc_virtual_machine.test", "attached_volumes.#", "0"),
 					func(*terraform.State) error {
 						calls := gateway.calls()
-						assertOrder(t, calls, "create vpc", "create vm")
+						assertOrder(t, calls, "create vpc", "create vnic")
+						assertOrder(t, calls, "create vnic", "create vm")
 						assertOrder(t, calls, "create vm", "attach")
 						assertOrder(t, calls, "create volume", "attach")
 						return nil
@@ -226,6 +304,8 @@ func TestComposedInfrastructureAppliesAndDestroysInOrder(t *testing.T) {
 					resource.TestCheckResourceAttr("asc_volume.test", "attached_to_vm", composedVMID),
 					resource.TestCheckResourceAttr("asc_virtual_machine.test", "attached_volumes.#", "1"),
 					resource.TestCheckResourceAttr("asc_virtual_machine.test", "attached_volumes.0", "composed-volume"),
+					resource.TestCheckResourceAttr("asc_vnic.test", "status", "attached"),
+					resource.TestCheckResourceAttr("asc_vnic.test", "vm_urn", composedVMURN),
 				),
 			},
 			{Config: composedConfig(environment), PlanOnly: true},

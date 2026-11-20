@@ -224,8 +224,11 @@ func migrationCases() map[string]map[string]http.HandlerFunc {
 				writeData(w, http.StatusOK, []client.Subnet{subnet})
 			},
 		},
+		// Legacy state has no vnics; the refresh records the ones the machine reports.
 		"virtual_machine": {
-			"GET /api/infra-gateway/vms/test-vm": func(w http.ResponseWriter, _ *http.Request) { writeData(w, http.StatusOK, vm) },
+			"GET /api/infra-gateway/vms/test-vm": func(w http.ResponseWriter, _ *http.Request) {
+				writeData(w, http.StatusOK, withFixtureVNIC(vm))
+			},
 		},
 		"vm_group": {
 			"GET /api/infra-gateway/vm-groups/test-group": func(w http.ResponseWriter, _ *http.Request) {
@@ -233,6 +236,12 @@ func migrationCases() map[string]map[string]http.HandlerFunc {
 			},
 		},
 	}
+}
+
+// withFixtureVNIC reports the fixture configuration's VNIC as attached to vm.
+func withFixtureVNIC(vm client.VM) client.VM {
+	vm.VNICs = []string{testVNICURN}
+	return vm
 }
 
 func TestMigrationFromLegacySameAddressPlansNothing(t *testing.T) {
@@ -387,7 +396,7 @@ func TestMigrationImportAdoptsALiveMachine(t *testing.T) {
 	}
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
 		"GET /api/infra-gateway/vms/test-vm": func(w http.ResponseWriter, _ *http.Request) {
-			writeData(w, http.StatusOK, vm)
+			writeData(w, http.StatusOK, withFixtureVNIC(vm))
 		},
 	})
 

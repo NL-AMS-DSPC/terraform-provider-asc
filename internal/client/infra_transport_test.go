@@ -66,10 +66,19 @@ func vmData(vm VM) map[string]any {
 	return map[string]any{
 		"urn": vm.URN, "name": vm.Name, "vpcID": vm.VPCID, "sku": skuData(vm.SKU), "status": vm.Status,
 		"lastError": vm.LastError, "tags": tagsData(vm.Tags), "attachedVolumes": vm.AttachedVolumes,
+		"vnics": vm.VNICs,
 		"os": map[string]any{
 			"id": vm.OS.ID, "family": vm.OS.Family, "distribution": vm.OS.Distribution,
 			"release": vm.OS.Release, "displayName": vm.OS.DisplayName,
 		},
+	}
+}
+
+func vnicData(vnic VNIC) map[string]any {
+	return map[string]any{
+		"urn": vnic.URN, "name": vnic.Name, "subnetURN": vnic.SubnetURN, "vmURN": vnic.VMURN,
+		"privateIP": vnic.PrivateIP, "publicIP": vnic.PublicIP, "mac": vnic.MAC, "status": vnic.Status,
+		"errorReason": vnic.LastError, "tags": tagsData(vnic.Tags),
 	}
 }
 
@@ -166,6 +175,20 @@ func TestInfraOperationsRouteAndEscape(t *testing.T) {
 				return err
 			}},
 			{"DELETE /vms/" + escaped, func(ctx context.Context, c *Runtime) error { return c.DeleteVM(ctx, name) }},
+			{"POST /vnics", func(ctx context.Context, c *Runtime) error {
+				_, err := c.CreateVNIC(ctx, CreateVNICRequest{SubnetURN: name})
+				return err
+			}},
+			{"GET /vnics/" + escaped, func(ctx context.Context, c *Runtime) error { _, err := c.GetVNIC(ctx, name); return err }},
+			{"PUT /vnics/" + escaped, func(ctx context.Context, c *Runtime) error {
+				_, err := c.RenameVNIC(ctx, name, "eth1")
+				return err
+			}},
+			{"PATCH /vnics/" + escaped, func(ctx context.Context, c *Runtime) error {
+				_, err := c.UpdateVNICTags(ctx, name, nil, []Tag{{Key: "k", Value: "v"}})
+				return err
+			}},
+			{"DELETE /vnics/" + escaped, func(ctx context.Context, c *Runtime) error { return c.DeleteVNIC(ctx, name) }},
 			{"POST /volumes", func(ctx context.Context, c *Runtime) error {
 				_, err := c.CreateVolume(ctx, CreateVolumeRequest{Name: name, Size: "1Gi"})
 				return err
@@ -220,6 +243,9 @@ func TestInfraOperationsRouteAndEscape(t *testing.T) {
 					switch {
 					case r.Method == http.MethodGet && strings.HasPrefix(r.URL.EscapedPath(), base+"/vms/"):
 						writeEnvelope(w, map[string]any{"name": name, "status": "active"})
+					// A rename reads the VNIC first to keep its public IP.
+					case r.Method == http.MethodGet && strings.HasPrefix(r.URL.EscapedPath(), base+"/vnics/"):
+						writeEnvelope(w, map[string]any{"urn": "urn:" + name, "name": name})
 					case r.Method == http.MethodGet:
 						w.WriteHeader(http.StatusNotFound)
 					default:
@@ -276,14 +302,23 @@ func TestInfraRequestBodiesMatchTheHandwrittenWire(t *testing.T) {
 
 	settled := func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/vnics"):
+			w.WriteHeader(http.StatusCreated)
+			writeEnvelope(w, map[string]any{"urn": "asc:vnic:id", "status": "pending"})
 		case r.Method != http.MethodGet:
 			w.WriteHeader(http.StatusCreated)
 		case strings.HasSuffix(r.URL.Path, "/subnets"):
 			writeEnvelope(w, []map[string]any{{"name": "s"}})
 		case strings.Contains(r.URL.Path, "/volumes/"):
 			writeEnvelope(w, map[string]any{"name": "data", "size": "20Gi", "status": "detached"})
+		// VNICs read as attached to the machine below, so a VM create finishes.
+		case strings.Contains(r.URL.Path, "/vnics/"):
+			writeEnvelope(w, map[string]any{
+				"name": "x", "publicIP": "203.0.113.5", "status": "attached", "vmURN": "urn:vm:x",
+				"tags": []map[string]any{{"key": "env", "value": "prod"}},
+			})
 		default:
-			writeEnvelope(w, map[string]any{"name": "x", "status": "active", "tags": []map[string]any{{"key": "env", "value": "prod"}}})
+			writeEnvelope(w, map[string]any{"urn": "urn:vm:x", "name": "x", "status": "active", "tags": []map[string]any{{"key": "env", "value": "prod"}}})
 		}
 	}
 
@@ -324,20 +359,30 @@ func TestInfraRequestBodiesMatchTheHandwrittenWire(t *testing.T) {
 			return err
 		}, `{"name":"s","cidr":"10.0.0.0/25"}`},
 		{"create VM minimal", http.MethodPost, func(c *Runtime) error {
-			_, err := c.CreateVM(context.Background(), CreateVMRequest{Name: "x", SKUID: "sku", VPCID: "id"})
+			_, err := c.CreateVM(context.Background(), CreateVMRequest{Name: "x", SKUID: "sku", VNICs: []string{"urn:a"}})
 			return err
-		}, `{"name":"x","skuID":"sku","vpcID":"id","bootDisk":{"attachMode":"create","diskSizeGB":32,"image":"ubuntu-24.04-lts"}}`},
+		}, `{"name":"x","skuID":"sku","vnics":["urn:a"],"bootDisk":{"attachMode":"create","diskSizeGB":32,"image":"ubuntu-24.04-lts"}}`},
 		{"create VM with cloud-init", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateVM(context.Background(), CreateVMRequest{
-				Name: "x", SKUID: "sku", VPCID: "id", Image: "ubuntu", Tags: []Tag{{Key: "env", Value: "prod"}},
+				Name: "x", SKUID: "sku", VNICs: []string{"urn:a", "urn:b"}, Image: "ubuntu", Tags: []Tag{{Key: "env", Value: "prod"}},
 				Customization: cloudInit,
 			})
 			return err
-		}, `{"name":"x","skuID":"sku","vpcID":"id","bootDisk":{"attachMode":"create","diskSizeGB":32,"image":"ubuntu"},"tags":[{"key":"env","value":"prod"}],"customization":{"cloudInit":{"userData":"#cloud-config"}}}`},
+		}, `{"name":"x","skuID":"sku","vnics":["urn:a","urn:b"],"bootDisk":{"attachMode":"create","diskSizeGB":32,"image":"ubuntu"},"tags":[{"key":"env","value":"prod"}],"customization":{"cloudInit":{"userData":"#cloud-config"}}}`},
 		{"create VM with ignition", http.MethodPost, func(c *Runtime) error {
-			_, err := c.CreateVM(context.Background(), CreateVMRequest{Name: "x", SKUID: "sku", VPCID: "id", Customization: ignition})
+			_, err := c.CreateVM(context.Background(), CreateVMRequest{Name: "x", SKUID: "sku", VNICs: []string{"urn:a"}, Customization: ignition})
 			return err
-		}, `{"name":"x","skuID":"sku","vpcID":"id","bootDisk":{"attachMode":"create","diskSizeGB":32,"image":"ubuntu-24.04-lts"},"customization":{"ignition":{"format":"butane","config":""}}}`},
+		}, `{"name":"x","skuID":"sku","vnics":["urn:a"],"bootDisk":{"attachMode":"create","diskSizeGB":32,"image":"ubuntu-24.04-lts"},"customization":{"ignition":{"format":"butane","config":""}}}`},
+		{"create VNIC minimal", http.MethodPost, func(c *Runtime) error {
+			_, err := c.CreateVNIC(context.Background(), CreateVNICRequest{SubnetURN: "urn:subnet"})
+			return err
+		}, `{"subnetURN":"urn:subnet"}`},
+		{"create VNIC full", http.MethodPost, func(c *Runtime) error {
+			_, err := c.CreateVNIC(context.Background(), CreateVNICRequest{
+				Name: "eth1", SubnetURN: "urn:subnet", Tags: []Tag{{Key: "env", Value: "prod"}},
+			})
+			return err
+		}, `{"name":"eth1","subnetURN":"urn:subnet","tags":[{"key":"env","value":"prod"}]}`},
 		{"create volume", http.MethodPost, func(c *Runtime) error {
 			_, err := c.CreateVolume(context.Background(), CreateVolumeRequest{Name: "data", Size: "10Gi"})
 			return err
@@ -373,6 +418,15 @@ func TestInfraRequestBodiesMatchTheHandwrittenWire(t *testing.T) {
 				[]Tag{{Key: "env", Value: "test"}, {Key: "owner", Value: "platform"}}, []Tag{{Key: "env", Value: "prod"}})
 			return err
 		}, `{"tags":[{"key":"env","value":"prod"},{"key":"owner","value":""}]}`},
+		{"VNIC tag patch", http.MethodPatch, func(c *Runtime) error {
+			_, err := c.UpdateVNICTags(context.Background(), "id", nil, []Tag{{Key: "env", Value: "prod"}})
+			return err
+		}, `{"tags":[{"key":"env","value":"prod"}]}`},
+		// The PUT that renames also sets the public IP, so the current one is sent back.
+		{"VNIC rename", http.MethodPut, func(c *Runtime) error {
+			_, err := c.RenameVNIC(context.Background(), "id", "x")
+			return err
+		}, `{"name":"x","publicIP":"203.0.113.5"}`},
 	}
 
 	for _, test := range tests {
@@ -441,8 +495,14 @@ func TestInfraReadsMapEveryField(t *testing.T) {
 		AttachedVolumes: []string{"z", "y"}, AutoscalingPolicy: AutoscalingPolicy{MinReplicas: 1, MaxReplicas: 3,
 			Cron: &CronRule{Timezone: "UTC", Start: "s", End: "e", DesiredReplicas: 2}}}
 
+	vnic := VNIC{ID: "vnic-id", URN: "asc:network:t:vnic:vnic-id", Name: "eth1", SubnetURN: "urn:s", VMURN: "urn:vm",
+		PrivateIP: "10.0.0.5", PublicIP: "203.0.113.10", MAC: "00:00:00:00:00:01", Status: "attached", LastError: "none",
+		Tags: []Tag{{Key: "env", Value: "prod"}}}
+
 	runtime := newLifecycleRuntime(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case "/api/infra-gateway/vnics/vnic-id":
+			writeEnvelope(w, vnicData(vnic))
 		case "/api/infra-gateway/vms/vm":
 			writeEnvelope(w, vmData(vm))
 		case "/api/infra-gateway/vpcs/vpc":
@@ -483,6 +543,10 @@ func TestInfraReadsMapEveryField(t *testing.T) {
 	sort.Strings(group.AttachedVolumes)
 	if err != nil || !reflect.DeepEqual(gotGroup, group) {
 		t.Errorf("GetVMGroup() = %#v, %v, want %#v", gotGroup, err, group)
+	}
+	gotVNIC, err := runtime.GetVNIC(ctx, "vnic-id")
+	if err != nil || !reflect.DeepEqual(gotVNIC, vnic) {
+		t.Errorf("GetVNIC() = %#v, %v, want %#v", gotVNIC, err, vnic)
 	}
 	gotSKUs, err := runtime.ListSKUs(ctx)
 	if err != nil || !reflect.DeepEqual(gotSKUs, []SKU{sku}) {

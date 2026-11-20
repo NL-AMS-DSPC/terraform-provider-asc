@@ -4,7 +4,9 @@
 edit it by hand; regenerate it in ASC and copy it here.
 
 - ASC target: `//clients/infra-gateway:openapi3_terraform` (`bazel-bin/clients/infra-gateway/openapi3.terraform.json`)
-- ASC revision: `main`, commit `5e8ba8ac0e014c33823195748fe58f172e869366`
+- ASC revision: `main`, commit `5e8ba8ac0e014c33823195748fe58f172e869366`, plus an uncommitted
+  allowlist change that adds the VNIC operations. Record the commit that merges it before
+  release.
 - sha256: `3a8a6d0c788eefb6921c245c96d131d151677a25d868cba1c6513e59692f4a7a`
 
 It includes the required `bootDisk` object on `CreateVMRequest` (ASC commit `12e151d01`), the

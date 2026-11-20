@@ -55,6 +55,19 @@ func sortedStrings(wire *[]string) []string {
 	return values
 }
 
+// orderedStrings copies an optional list in the API's order; a present but empty list stays
+// empty and non-nil.
+func orderedStrings(wire *[]string) []string {
+	if wire == nil {
+		return nil
+	}
+	values := slices.Clone(*wire)
+	if values == nil {
+		values = []string{}
+	}
+	return values
+}
+
 // enumString reads an optional generated enum as its plain string value.
 func enumString[T ~string](field *T) string {
 	return string(value(field))

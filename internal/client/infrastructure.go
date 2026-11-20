@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -188,7 +189,7 @@ func (c *Runtime) CreateVM(ctx context.Context, request CreateVMRequest) (VM, er
 	body := infra.CreateVMJSONRequestBody{
 		Name:  request.Name,
 		SkuID: request.SKUID,
-		// The API now requires vnics instead of vpcID; VNIC support follows separately.
+		Vnics: request.VNICs,
 		BootDisk: infra.BootDiskRequest{
 			AttachMode: infra.Create,
 			DiskSizeGB: &diskSizeGB,
@@ -197,7 +198,7 @@ func (c *Runtime) CreateVM(ctx context.Context, request CreateVMRequest) (VM, er
 		Tags:          infraTags(request.Tags),
 		Customization: infraCustomization(request.Customization),
 	}
-	return createWithNameReservation(ctx, c, vmKind, request.Name,
+	created, err := createWithNameReservation(ctx, c, vmKind, request.Name,
 		func(ctx context.Context) error {
 			return callInfra[infra.CreateVMResponse](ctx, func(ctx context.Context) (*http.Response, error) {
 				return c.infraAPI().CreateVM(ctx, &infra.CreateVMParams{XTenant: c.tenant()}, body, c.infraEditor())
@@ -205,9 +206,28 @@ func (c *Runtime) CreateVM(ctx context.Context, request CreateVMRequest) (VM, er
 		},
 		c.vmReader(request.Name),
 	)
+	if err != nil {
+		return VM{}, err
+	}
+
+	// The API orders a machine's VNICs by when each attach finished, and lists the
+	// ones still attaching last. Waiting for every attach makes the order final before it
+	// reaches state.
+	operationCtx, cancel := context.WithTimeout(ctx, c.lifecycleTimeout)
+	defer cancel()
+	for _, urn := range request.VNICs {
+		id := VNICIDFromURN(urn)
+		if _, err := waitUntil(operationCtx, c, vnicKind, id, c.vnicReader(id), func(current VNIC) bool {
+			return current.VMURN == created.URN && strings.EqualFold(current.Status, statusVNICAttached)
+		}, "attach to "+vmKind+" "+strconv.Quote(request.Name)); err != nil {
+			return VM{}, err
+		}
+	}
+	return c.GetVM(operationCtx, request.Name)
 }
 
 // GetVM sorts attached volumes because the gateway returns them in map iteration order.
+// VNICs keep the API's order, the order their attaches finished in.
 func (c *Runtime) GetVM(ctx context.Context, name string) (VM, error) {
 	var wire infra.VMResponse
 	err := callInfra(ctx, func(ctx context.Context) (*http.Response, error) {
@@ -228,6 +248,7 @@ func (c *Runtime) GetVM(ctx context.Context, name string) (VM, error) {
 		LastError:       value(wire.LastError),
 		Tags:            tagsFromInfra(wire.Tags),
 		AttachedVolumes: sortedStrings(wire.AttachedVolumes),
+		VNICs:           orderedStrings(wire.Vnics),
 		OS:              osFromInfra(wire.Os),
 	}, nil
 }
