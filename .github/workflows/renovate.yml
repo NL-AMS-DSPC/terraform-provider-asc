@@ -1,0 +1,49 @@
+name: renovate.yml
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+# Renovate authenticates with a GitHub App token; GITHUB_TOKEN is only used
+# to check out the repository.
+permissions:
+  contents: read
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # A GitHub App token is required because GITHUB_TOKEN can neither push
+      # changes to workflow files nor trigger CI on the pull requests it opens.
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
+        with:
+          client-id: ${{ vars.RENOVATE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RENOVATE_KEY }}
+          # The following is sourced from https://docs.renovatebot.com/modules/platform/github/#running-as-a-github-app
+          permission-administration: read
+          permission-checks: write
+          permission-statuses: write
+          permission-contents: write
+          permission-vulnerability-alerts: read
+          permission-issues: write
+          permission-merge-queues: write
+          permission-metadata: read
+          permission-pull-requests: write
+          permission-workflows: write
+
+      - name: Self-hosted Renovate
+        uses: renovatebot/github-action@ebcbb513d07ead4d9c0c2139064301db05e84a3e # v46.3.15
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          configurationFile: renovate.json
+        env:
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          RENOVATE_ONBOARDING: "false"
+          RENOVATE_REQUIRE_CONFIG: optional
