@@ -33,8 +33,7 @@ this repository. There is no `asc_load_balancer`, because infra-gateway
 registers no read route for one, and no `asc_group_member` or `asc_group_role`,
 because UAM exposes no membership or role-assignment route. The disposition of
 all 41 legacy registrations is recorded in
-[docs/legacy-registrations.md](docs/legacy-registrations.md), and what to do per
-capability is in [docs/guides/migration.md](docs/guides/migration.md).
+[docs/legacy-registrations.md](docs/legacy-registrations.md).
 
 The provider retains the Terraform source address
 `registry.terraform.io/nl-ams-dspc/asc` and the `asc_*` resource namespace.
@@ -46,12 +45,9 @@ Two builds can have written the state a user holds: the published
 answers to this provider's source address. They take different paths, and taking
 the wrong one can cause unnecessary state removal or replacement plans.
 
-- [docs/compatibility.md](docs/compatibility.md) is the matrix: addresses,
-  protocols, schema versions, what changed shape, and what the first plan after
-  the switch is allowed to do.
-- [docs/guides/upgrade-runbook.md](docs/guides/upgrade-runbook.md) is the
-  procedure: how to tell which origin you are on, how to back up and pin, what a
-  safe dry run looks like, and the stop conditions that abort the upgrade.
+[docs/compatibility.md](docs/compatibility.md) is the matrix: addresses,
+protocols, schema versions, what changed shape, and what the first plan after
+the switch is allowed to do.
 
 The surface per version is in [CHANGELOG.md](CHANGELOG.md).
 
