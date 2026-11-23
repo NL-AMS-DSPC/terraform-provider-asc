@@ -14,9 +14,9 @@ import (
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/client"
 )
 
-// Migration tests run Terraform against legacy state and a mock gateway. State fixtures
-// retain old field names; configuration fixtures use the new schema with equivalent
-// inputs. See docs/compatibility.md.
+// Migration tests run Terraform against committed state fixtures and a mock gateway.
+// State fixtures retain old field names; configuration fixtures use the current schema
+// with equivalent inputs.
 
 var (
 	devOverrideOnce sync.Once

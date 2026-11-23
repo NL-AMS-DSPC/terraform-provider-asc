@@ -148,9 +148,8 @@ Consequences the resource implementation must obey:
 ## Capabilities UAM does not expose
 
 No route assigns a role to a user, a group or an API client, and no route adds
-or removes a group member. The legacy provider's `asc_group_member` and
-`asc_group_role` registrations therefore have no UAM equivalent and cannot be
-reimplemented without new UAM API work.
+or removes a group member. `asc_group_member` and `asc_group_role` are therefore not supported and cannot
+be implemented without new UAM API work.
 
 ## Read strategy forced by the contract
 

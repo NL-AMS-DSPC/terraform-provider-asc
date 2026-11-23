@@ -11,8 +11,8 @@ Its intentionally small boundary is:
 
 Those three API prefixes, plus the realm token path used to obtain a bearer token,
 are the whole of the provider's egress. The acceptance suite records every route
-the provider sends and fails on anything outside that allowlist, so a legacy
-service prefix cannot be reintroduced by accident.
+the provider sends and fails on anything outside that allowlist, so no other
+service prefix can be added by accident.
 
 ## Surface
 
@@ -27,29 +27,13 @@ Per-attribute change, import and read behaviour is in
 [docs/supported-fields.md](docs/supported-fields.md). The UAM route contract and
 the constraints it forces are in [docs/uam-contract.md](docs/uam-contract.md).
 
-Legacy direct VM, network, storage, database, container, function, cluster,
-security, load-balancer and authorization service adapters are not carried into
-this repository. There is no `asc_load_balancer`, because infra-gateway
-registers no read route for one, and no `asc_group_member` or `asc_group_role`,
-because UAM exposes no membership or role-assignment route. The disposition of
-all 41 legacy registrations is recorded in
-[docs/legacy-registrations.md](docs/legacy-registrations.md).
+There is no `asc_load_balancer`, because infra-gateway registers no read route
+for one, and no `asc_group_member` or `asc_group_role`, because UAM exposes no
+membership or role-assignment route.
 
-The provider retains the Terraform source address
-`registry.terraform.io/nl-ams-dspc/asc` and the `asc_*` resource namespace.
-
-## Upgrading
-
-Two builds can have written the state a user holds: the published
-`NL-AMS-DSPC/dspc` v0.0.1 release, and the unreleased legacy build that already
-answers to this provider's source address. They take different paths, and taking
-the wrong one can cause unnecessary state removal or replacement plans.
-
-[docs/compatibility.md](docs/compatibility.md) is the matrix: addresses,
-protocols, schema versions, what changed shape, and what the first plan after
-the switch is allowed to do.
-
-The surface per version is in [CHANGELOG.md](CHANGELOG.md).
+The provider's Terraform source address is `registry.terraform.io/nl-ams-dspc/asc`
+and its resources use the `asc_*` namespace. The surface per version is in
+[CHANGELOG.md](CHANGELOG.md).
 
 ## Releasing
 

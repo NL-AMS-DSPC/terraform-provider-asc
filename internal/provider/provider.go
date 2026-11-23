@@ -175,8 +175,7 @@ func resolveTimeout(value types.Int64) (time.Duration, error) {
 	return time.Duration(seconds) * time.Second, nil
 }
 
-// Resources registers the supported infra-gateway and UAM resources. See docs/legacy-
-// registrations.md for omitted legacy capabilities.
+// Resources registers the supported infra-gateway and UAM resources.
 func (p *ASCProvider) Resources(context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		vpc.NewResource,
