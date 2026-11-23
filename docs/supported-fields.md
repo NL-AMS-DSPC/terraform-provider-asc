@@ -4,11 +4,11 @@ The generated pages under `docs/resources/` and `docs/data-sources/` list every 
 resource and data source. This page answers what they cannot: which attribute can be changed on a
 live resource, which one destroys and recreates it, and how each resource is imported.
 
-The provider registers ten resources and nine data sources, in three areas:
+The provider registers nine resources and eight data sources, in three areas:
 
 | Area | Resources | Data sources |
 | --- | --- | --- |
-| Infrastructure | `asc_vpc`, `asc_subnet`, `asc_vnic`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume`, `asc_volume_attachment` | `asc_skus`, `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_vm_group`, `asc_volume` |
+| Infrastructure | `asc_vpc`, `asc_subnet`, `asc_vnic`, `asc_virtual_machine`, `asc_volume`, `asc_volume_attachment` | `asc_skus`, `asc_vpc`, `asc_subnet`, `asc_virtual_machine`, `asc_volume` |
 | Roles and groups | `asc_role`, `asc_group` | `asc_role`, `asc_group` |
 | IP addresses | `asc_ip` | `asc_ips` |
 
@@ -70,22 +70,6 @@ deletion for up to the lifecycle timeout, which covers a machine destroyed in th
 | `tags` | Optional | In place | Tags can be changed without replacing the machine. |
 
 Read-only: `urn`, `vpc_id`, `sku`, `os`, `status`, `last_error`, `attached_volumes`.
-
-### asc_vm_group
-
-| Attribute | Schema | Change | Why |
-| --- | --- | --- | --- |
-| `name` | Required, same pattern and length as a virtual machine name | Replaces | |
-| `sku_id` | Required | Replaces | |
-| `vpc_id` | Required, UUID v4 | Replaces | |
-| `image` | Optional | Replaces | Configuration-only: the original image cannot be read back. An empty value requests `ubuntu-24.04-lts`. |
-| `autoscaling` | Required, with `min_replicas` and `max_replicas` between 1 and 100 and `max_replicas` at least `min_replicas`; optional `cron` block with required `timezone`, `start`, `end` and `desired_replicas` between 0 and 100 | Replaces | Changing the scaling policy in place is not supported. |
-| `customization` | Optional, sensitive | Replaces | Never served back. |
-| `tags` | Optional | Replaces | Changing group tags in place is not supported. |
-
-Read-only: `urn`, `sku`, `status`, `last_error`, `attached_volumes`.
-
-Every configurable attribute of a VM group requires replacement when changed.
 
 ### asc_volume
 
@@ -155,7 +139,7 @@ Deleting the resource releases the address.
 
 ## Import
 
-All ten resources are importable.
+All nine resources are importable.
 
 | Resource | Import ID | Example |
 | --- | --- | --- |
@@ -163,7 +147,6 @@ All ten resources are importable.
 | `asc_subnet` | `vpc-name:subnet-name` | `terraform import asc_subnet.example production:web` |
 | `asc_vnic` | `id`, the UUID that ends the URN | `terraform import asc_vnic.example e6981388-97c7-4279-ab96-b270dd70b7df` |
 | `asc_virtual_machine` | `name` | `terraform import asc_virtual_machine.example web-01` |
-| `asc_vm_group` | `name` | `terraform import asc_vm_group.example web-pool` |
 | `asc_volume` | `name` | `terraform import asc_volume.example data-01` |
 | `asc_volume_attachment` | `volume-name:vm-name` | `terraform import asc_volume_attachment.example data-01:web-01` |
 | `asc_role` | `name` | `terraform import asc_role.example network-admin` |
@@ -180,7 +163,6 @@ the configuration supplies them.
 
 | Resource | Attributes | Consequence |
 | --- | --- | --- |
-| `asc_vm_group` | `vpc_id`, `image`, `customization` | They must come from the configuration after an import. Each forces replacement, so importing a group whose configuration differs plans a replacement rather than silently adopting it. |
 | `asc_virtual_machine` | `customization` | Write-only. The value in state is the configured one, preserved across reads because it cannot be read back; an import leaves it null. |
 
 ## Read behavior and limitations

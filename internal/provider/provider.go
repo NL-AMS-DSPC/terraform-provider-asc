@@ -21,7 +21,6 @@ import (
 	skudatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/sku"
 	subnetdatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/subnet"
 	virtualmachinedatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/virtualmachine"
-	vmgroupdatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/vmgroup"
 	volumedatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/volume"
 	vpcdatasource "github.com/nl-ams-dspc/terraform-provider-asc/internal/datasources/vpc"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/group"
@@ -29,7 +28,6 @@ import (
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/role"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/subnet"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/virtualmachine"
-	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/vmgroup"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/vnic"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/volume"
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/resources/volumeattachment"
@@ -183,7 +181,6 @@ func (p *ASCProvider) Resources(context.Context) []func() resource.Resource {
 		subnet.NewResource,
 		vnic.NewResource,
 		virtualmachine.NewResource,
-		vmgroup.NewResource,
 		volume.NewResource,
 		volumeattachment.NewResource,
 		role.NewResource,
@@ -199,7 +196,6 @@ func (p *ASCProvider) DataSources(context.Context) []func() datasource.DataSourc
 		vpcdatasource.NewDataSource,
 		subnetdatasource.NewDataSource,
 		virtualmachinedatasource.NewDataSource,
-		vmgroupdatasource.NewDataSource,
 		volumedatasource.NewDataSource,
 		roledatasource.NewDataSource,
 		groupdatasource.NewDataSource,

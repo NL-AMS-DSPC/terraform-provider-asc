@@ -21,11 +21,10 @@ responses are decoded from their `data` envelope.
 | Tag updates | `PATCH /vpcs/{name}`, `PATCH /vpcs/{vpc}/subnets/{name}`, `PATCH /vms/{name}`, `PATCH /volumes/{name}` | Existing handler contract |
 | Tag removal | Tags are a patch, not a replacement, so a removed key is sent as an entry with an empty value | Provider-only encoding rule |
 | Tag state after a patch | State comes from an authoritative re-read, never from the PATCH response | Provider-only state rule |
-| VM group create/read/delete | `POST /vm-groups/`, `GET /vm-groups/{name}`, `DELETE /vm-groups/{name}` | Existing handler contract |
 | Volume create/read/delete | `POST /volumes/`, `GET /volumes/{name}`, `DELETE /volumes/{name}` | Existing handler contract |
 | Volume resize | `POST /volumes/{name}/resize`, then poll until the read model reports the new byte count | Existing handler contract |
 | Volume attachment | `POST` and `DELETE /volumes/{name}/attach/{vm}`, then poll the volume's `status` and `attachedToVM` | Existing handler contract |
-| Unsupported updates | Every configurable VPC, subnet, VM, VM group and volume field other than tags and volume size requires replacement | Provider schema rule |
+| Unsupported updates | Every configurable VPC, subnet, VM and volume field other than tags and volume size requires replacement | Provider schema rule |
 | Canonical VM names | 1-50 chars, lowercase letter first, then lowercase letters/digits/hyphens, alphanumeric last | Provider validation matching ASC |
 | Same-name VPC/VM replacement | Delete converges; typed 409 plus authoritative GET distinguishes stale reservations from real conflicts | Approved ASC error-mapping delta plus provider lifecycle rule |
 
@@ -56,8 +55,7 @@ Three gateway behaviours constrain the provider beyond that algorithm:
 1. Only VPC and VM name collisions are typed. A duplicate volume name has no
    branch in `respondWithServiceError`, so it arrives as an untyped HTTP 500,
    which could equally mean a partial success; volume creation therefore reports
-   the error rather than retrying. VM group names share the VM reservation
-   table, so they do get the typed 409 and do use the retry.
+   the error rather than retrying.
 2. A VM accepts exactly one resize for its lifetime, because
    `request_vm_resizing` latches `isResizingRequested` and never clears it.
    `sku_id` therefore forces replacement. The volume resize slice clears the

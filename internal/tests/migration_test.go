@@ -193,9 +193,9 @@ func assertNoDestructivePlan(t testingT, changes []planChange, output string) {
 	}
 }
 
-// migrationCases serves unchanged objects for the four infrastructure fixtures.
-func migrationCases() map[string]map[string]http.HandlerFunc {
-	vpc := client.VPC{
+// migrationVPC is the gateway's view of the vpc fixture.
+func migrationVPC() client.VPC {
+	return client.VPC{
 		ID: "00000000-0000-4000-8000-000000000001", URN: "asc:vpc:test-vpc", Name: "test-vpc",
 		CIDR: "10.0.0.0/24", Status: "active", Tags: []client.Tag{{Key: "env", Value: "test"}},
 		Subnets: []client.Subnet{{
@@ -203,6 +203,11 @@ func migrationCases() map[string]map[string]http.HandlerFunc {
 			VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.0/25", Status: "active",
 		}},
 	}
+}
+
+// migrationCases serves unchanged objects for the three infrastructure fixtures.
+func migrationCases() map[string]map[string]http.HandlerFunc {
+	vpc := migrationVPC()
 	subnet := client.Subnet{
 		ID: "00000000-0000-4000-8000-000000000002", URN: "asc:subnet:test-subnet", Name: "test-subnet",
 		VPCID: "00000000-0000-4000-8000-000000000001", CIDR: "10.0.0.128/25", Status: "active",
@@ -213,7 +218,6 @@ func migrationCases() map[string]map[string]http.HandlerFunc {
 		OS:   client.OS{ID: "ubuntu-24.04", Family: "linux", Distribution: "ubuntu", Release: "24.04", DisplayName: "Ubuntu 24.04"},
 		Tags: []client.Tag{{Key: "env", Value: "test"}},
 	}
-	group := testVMGroup()
 
 	return map[string]map[string]http.HandlerFunc{
 		"vpc": {
@@ -228,11 +232,6 @@ func migrationCases() map[string]map[string]http.HandlerFunc {
 		"virtual_machine": {
 			"GET /api/infra-gateway/vms/test-vm": func(w http.ResponseWriter, _ *http.Request) {
 				writeData(w, http.StatusOK, withFixtureVNIC(vm))
-			},
-		},
-		"vm_group": {
-			"GET /api/infra-gateway/vm-groups/test-group": func(w http.ResponseWriter, _ *http.Request) {
-				writeData(w, http.StatusOK, group)
 			},
 		},
 	}
@@ -266,15 +265,16 @@ func TestMigrationFromLegacySameAddressPlansNothing(t *testing.T) {
 }
 
 func TestMigrationAssertionDetectsAReplacement(t *testing.T) {
-	group := testVMGroup()
-	group.SKU = client.SKU{ID: "gp-4", Name: "general-purpose"}
+	// The configuration keeps 10.0.0.0/24, and a changed cidr replaces the VPC.
+	vpc := migrationVPC()
+	vpc.CIDR = "10.1.0.0/24"
 	environment := newTestEnvironment(t, map[string]http.HandlerFunc{
-		"GET /api/infra-gateway/vm-groups/test-group": func(w http.ResponseWriter, _ *http.Request) {
-			writeData(w, http.StatusOK, group)
+		"GET /api/infra-gateway/vpcs/test-vpc": func(w http.ResponseWriter, _ *http.Request) {
+			writeData(w, http.StatusOK, vpc)
 		},
 	})
 
-	dir := seedMigrationWorkspace(t, environment, "vm_group")
+	dir := seedMigrationWorkspace(t, environment, "vpc")
 	changes, output, err := terraformPlan(t, dir)
 	if err != nil {
 		t.Fatalf("terraform plan: %v\n%s", err, output)
@@ -285,7 +285,7 @@ func TestMigrationAssertionDetectsAReplacement(t *testing.T) {
 	if len(capture.failures) == 0 {
 		t.Fatalf("assertNoDestructivePlan saw no destructive action in %v; the migration guard cannot fail\n%s", changes, output)
 	}
-	if !strings.Contains(capture.failures[0], "asc_vm_group.test") {
+	if !strings.Contains(capture.failures[0], "asc_vpc.test") {
 		t.Errorf("failure %q does not name the replaced resource", capture.failures[0])
 	}
 }
@@ -428,42 +428,4 @@ func TestMain(m *testing.M) {
 		}
 	}
 	os.Exit(code)
-}
-
-func TestMigrationWithoutRefreshDetectsGroupReplacement(t *testing.T) {
-	environment := newTestEnvironment(t, migrationCases()["vm_group"])
-	dir := seedMigrationWorkspace(t, environment, "vm_group")
-	changes, output, err := terraformPlan(t, dir, "-refresh=false")
-	if err != nil {
-		t.Fatalf("plan without refresh: %v\n%s", err, output)
-	}
-	capture := &captureT{}
-	assertNoDestructivePlan(capture, changes, output)
-	if len(capture.failures) == 0 {
-		t.Fatalf("stale autoscaling state must trigger replacement: %v\n%s", changes, output)
-	}
-	if len(environment.recordedRoutes()) != 0 {
-		t.Fatal("plan refreshed despite -refresh=false")
-	}
-}
-
-func TestMigrationLegacyGroupConfigurationRequiresRename(t *testing.T) {
-	environment := newTestEnvironment(t, migrationCases()["vm_group"])
-	dir := seedMigrationWorkspace(t, environment, "vm_group")
-	configPath := filepath.Join(dir, "main.tf")
-	config, err := os.ReadFile(configPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	legacy := strings.Replace(string(config), "autoscaling =", "autoscaling_policy =", 1)
-	if legacy == string(config) {
-		t.Fatal("fixture no longer configures autoscaling")
-	}
-	if err := os.WriteFile(configPath, []byte(legacy), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	changes, output, err := terraformPlan(t, dir)
-	if err == nil || !strings.Contains(output, "autoscaling_policy") || len(changes) != 0 {
-		t.Fatalf("legacy configuration must fail before planning: %v, %v\n%s", changes, err, output)
-	}
 }

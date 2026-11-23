@@ -52,19 +52,6 @@ func wire(value any) any {
 			"lastError": v.LastError, "tenantId": v.TenantID, "attachedToVM": v.AttachedToVM,
 			"tags": wireTags(v.Tags), "labels": v.Labels, "annotations": v.Annotations,
 		}
-	case client.VMGroup:
-		policy := map[string]any{
-			"min_replicas": v.AutoscalingPolicy.MinReplicas, "max_replicas": v.AutoscalingPolicy.MaxReplicas,
-		}
-		if cron := v.AutoscalingPolicy.Cron; cron != nil {
-			policy["cron"] = map[string]any{
-				"timezone": cron.Timezone, "start": cron.Start, "end": cron.End, "desiredReplicas": cron.DesiredReplicas,
-			}
-		}
-		return map[string]any{
-			"urn": v.URN, "name": v.Name, "sku": wireSKU(v.SKU), "status": v.Status, "lastError": v.LastError,
-			"tags": wireTags(v.Tags), "attachedVolumes": v.AttachedVolumes, "autoscalingPolicy": policy,
-		}
 	case []client.Tag:
 		return wireTags(v)
 	default:
