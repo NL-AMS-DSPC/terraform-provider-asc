@@ -4,7 +4,7 @@ The generated pages under `docs/resources/` and `docs/data-sources/` list every 
 resource and data source. This page answers what they cannot: which attribute can be changed on a
 live resource, which one destroys and recreates it, and how each resource is imported.
 
-The provider registers nine resources and eight data sources, in three areas:
+The provider registers resources and data sources, in the following areas:
 
 | Area | Resources | Data sources |
 | --- | --- | --- |
