@@ -183,8 +183,7 @@ the configuration supplies them.
   detaching it automatically.
 - `asc_volume.attached_to_vm` reports the virtual machine's UUID, while
   `asc_volume_attachment.vm_name` takes its name.
-- Load balancers, group membership changes and role assignments are not supported. See the
-  [migration guide](guides/migration.md) for existing resources of these types.
+- Load balancers, group membership changes and role assignments are not supported.
 
 ## Role and group data sources
 

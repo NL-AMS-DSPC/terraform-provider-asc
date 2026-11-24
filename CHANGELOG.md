@@ -63,11 +63,9 @@ This release follows the infra-gateway on ASC main and contains breaking changes
 First version of `terraform-provider-asc`, and the first published to the
 Terraform Registry as `nl-ams-dspc/asc`.
 
-This is a fresh repository, not a rename of `terraform-provider-dspc`. It keeps
-the Terraform source address `registry.terraform.io/nl-ams-dspc/asc` and the
-`asc_*` resource namespace, which is what makes a `replace-provider` state
-surgery unnecessary for anyone coming from the unreleased legacy build. It
-speaks wire protocol 6.0 and therefore requires Terraform 1.0 or later.
+It uses the Terraform source address `registry.terraform.io/nl-ams-dspc/asc` and
+the `asc_*` resource namespace. It speaks wire protocol 6.0 and therefore
+requires Terraform 1.0 or later.
 
 ### Added
 
@@ -84,41 +82,17 @@ speaks wire protocol 6.0 and therefore requires Terraform 1.0 or later.
   three prefixes plus the realm token path used to obtain a bearer token are
   the whole of the provider's egress, and the acceptance suite asserts every
   route the provider sends against that allowlist.
-- An upgrade path and the evidence for it:
-  [the compatibility matrix](docs/compatibility.md),
-  [the upgrade runbook](docs/guides/upgrade-runbook.md) and
-  [the migration guide](docs/guides/migration.md). `internal/tests/migration_test.go`
-  drives the real Terraform CLI over committed legacy-shaped state against an
-  httptest gateway and asserts that an unchanged object plans nothing.
+- `internal/tests/migration_test.go` drives the real Terraform CLI over
+  committed state fixtures against an httptest gateway and asserts that an
+  unchanged object plans nothing.
 
-### Changed
+### Not supported
 
-Against the unreleased legacy build at `main`, which wrote state at this same
-source address:
-
-- `asc_block_storage` is now `asc_volume`, and `asc_block_storage_attachment` is
-  now `asc_volume_attachment`.
-- `asc_vm_group`'s `autoscaling_policy` is now `autoscaling`, and its replica
-  bounds widened from 32-bit to 64-bit integers. Rename the configuration
-  argument while preserving the policy values before planning.
-- The plural data sources `asc_vpcs`, `asc_subnets`, `asc_virtual_machines` and
-  `asc_vm_groups` are now singular lookups by name. `asc_skus` keeps its list
-  shape.
-- `asc_role` and `asc_group` moved from `/api/authorization` to `/api/uam`. A
-  role has no `id` attribute, because UAM's two routes disagree about what that
-  field holds; a group's `description` and `members` are read-only, because no
-  UAM route sets either.
-- `tags` no longer forces replacement on `asc_vpc` or `asc_virtual_machine`; a
-  tag edit is now an in-place patch.
-
-### Removed
-
-- `asc_group_member` and `asc_group_role` are retired with no replacement and no
-  plan: UAM exposes no membership route and no role-assignment route, so the
-  capability is absent from the approved boundary rather than merely
-  unimplemented here.
-- The `asc_block_storage_attachment` data source is retired. infra-gateway
-  serves no attachment read route; `asc_volume`'s `attached_to_vm` and `status`
+- `asc_group_member` and `asc_group_role`: UAM exposes no membership route and
+  no role-assignment route, so the capability is absent from the approved
+  boundary rather than merely unimplemented here.
+- The `asc_block_storage_attachment` data source. infra-gateway serves no
+  attachment read route; `asc_volume`'s `attached_to_vm` and `status`
   carry the same facts.
 - `asc_security_group`, `asc_security_rule`, `asc_security_group_attachment`,
   `asc_load_balancer`, `asc_mssql`, `asc_postgresql`, `asc_file_storage`,
@@ -129,6 +103,3 @@ source address:
   provider work alone. `asc_load_balancer` is the closest: infra-gateway serves
   its `POST`, `PATCH` and `DELETE` and only the read is missing, and a resource
   that cannot read cannot refresh, detect drift or import.
-
-The disposition of all 41 legacy registrations, with the evidence for each, is
-in [legacy registration disposition](docs/legacy-registrations.md).
