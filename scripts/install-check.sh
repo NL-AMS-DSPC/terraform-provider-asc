@@ -116,7 +116,7 @@ address = sys.argv[2]
 if set(schemas) != {address}:
     sys.exit(f"unexpected provider addresses: {list(schemas)}")
 schema = schemas[address]
-resources = {"asc_vpc", "asc_subnet", "asc_vnic", "asc_virtual_machine", "asc_vm_group",
+resources = {"asc_vpc", "asc_subnet", "asc_vnic", "asc_virtual_machine",
              "asc_volume", "asc_volume_attachment", "asc_role", "asc_group",
              "asc_ip"}
 data_sources = resources - {"asc_vnic", "asc_volume_attachment", "asc_ip"} | {"asc_skus", "asc_ips"}
@@ -133,5 +133,5 @@ install-check: PASS (version $VERSION)
   - terraform init installed $NAMESPACE/$TYPE v$VERSION for ${GOOS}_${GOARCH}
   - .terraform.lock.hcl pins $REGISTRY_HOST/$NAMESPACE/$TYPE at $VERSION with an h1 hash
   - unpacked executable is $PROVIDER_BINARY
-  - terraform providers confirms the address and version; the installed binary serves all nine resources and nine data sources
+  - terraform providers confirms the address and version; the installed binary serves all nine resources and eight data sources
 EOF

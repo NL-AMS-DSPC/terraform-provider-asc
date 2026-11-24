@@ -7,7 +7,7 @@ All notable changes to this provider are recorded here. The format follows
 ## [Unreleased]
 
 This release follows ASC's move from a VPC ID to virtual network interfaces on
-virtual machines, and contains breaking changes.
+virtual machines, removes VM groups, and contains breaking changes.
 
 ### Added
 
@@ -24,6 +24,12 @@ virtual machines, and contains breaking changes.
   VNICs: the first refresh reads them into state, so a matching list plans no
   change. Creating a machine waits until all of its VNICs are attached, and a
   refresh detects VNICs attached or detached outside Terraform.
+
+### Removed
+
+- The `asc_vm_group` resource and data source. Remove them from your
+  configuration and state before upgrading, either with a `removed` block with
+  `lifecycle { destroy = false }` or with `terraform state rm`.
 
 ## [0.2.1] - 2026-10-23
 

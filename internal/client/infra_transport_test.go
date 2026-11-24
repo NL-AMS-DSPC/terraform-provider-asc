@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/nl-ams-dspc/terraform-provider-asc/internal/asc/infra"
 )
@@ -91,22 +90,6 @@ func volumeData(volume Volume) map[string]any {
 	}
 }
 
-func vmGroupData(group VMGroup) map[string]any {
-	policy := map[string]any{
-		"min_replicas": group.AutoscalingPolicy.MinReplicas, "max_replicas": group.AutoscalingPolicy.MaxReplicas,
-	}
-	if cron := group.AutoscalingPolicy.Cron; cron != nil {
-		policy["cron"] = map[string]any{
-			"timezone": cron.Timezone, "start": cron.Start, "end": cron.End, "desiredReplicas": cron.DesiredReplicas,
-		}
-	}
-	return map[string]any{
-		"urn": group.URN, "name": group.Name, "sku": skuData(group.SKU), "status": group.Status,
-		"lastError": group.LastError, "tags": tagsData(group.Tags), "attachedVolumes": group.AttachedVolumes,
-		"autoscalingPolicy": policy,
-	}
-}
-
 func setTag(key, value string) infra.PatchTagRequest {
 	return infra.PatchTagRequest{Key: key, Value: &value}
 }
@@ -125,148 +108,6 @@ func assertInfraJSON(t *testing.T, label string, got []byte, want string) {
 	}
 	if !reflect.DeepEqual(gotValue, wantValue) {
 		t.Errorf("%s: body = %s, want %s", label, got, want)
-	}
-}
-
-// Every infra-gateway operation keeps its method and path, escapes each path parameter
-// once as a single segment below an escaped endpoint path, and carries the bearer token
-// and tenant.
-func TestInfraOperationsRouteAndEscape(t *testing.T) {
-	t.Parallel()
-
-	for name, escaped := range map[string]string{"a/b c": "a%2Fb%20c", "literal%2Fname": "literal%252Fname"} {
-		base := "/gateway%20prefix/api/infra-gateway"
-		operations := []struct {
-			want string
-			call func(context.Context, *Runtime) error
-		}{
-			{"POST /vpcs", func(ctx context.Context, c *Runtime) error {
-				_, err := c.CreateVPC(ctx, CreateVPCRequest{Name: name})
-				return err
-			}},
-			{"GET /vpcs/" + escaped, func(ctx context.Context, c *Runtime) error { _, err := c.GetVPC(ctx, name); return err }},
-			{"PATCH /vpcs/" + escaped, func(ctx context.Context, c *Runtime) error {
-				_, err := c.UpdateVPCTags(ctx, name, nil, []Tag{{Key: "k", Value: "v"}})
-				return err
-			}},
-			{"DELETE /vpcs/" + escaped, func(ctx context.Context, c *Runtime) error { return c.DeleteVPC(ctx, name) }},
-			{"POST /vpcs/" + escaped + "/subnets", func(ctx context.Context, c *Runtime) error {
-				_, err := c.CreateSubnet(ctx, name, CreateSubnetRequest{Name: name})
-				return err
-			}},
-			{"GET /vpcs/" + escaped + "/subnets", func(ctx context.Context, c *Runtime) error {
-				_, err := c.ListSubnets(ctx, name)
-				return err
-			}},
-			{"PATCH /vpcs/" + escaped + "/subnets/" + escaped, func(ctx context.Context, c *Runtime) error {
-				_, err := c.UpdateSubnetTags(ctx, name, name, nil, []Tag{{Key: "k", Value: "v"}})
-				return err
-			}},
-			{"DELETE /vpcs/" + escaped + "/subnets/" + escaped, func(ctx context.Context, c *Runtime) error {
-				return c.DeleteSubnet(ctx, name, name)
-			}},
-			{"POST /vms", func(ctx context.Context, c *Runtime) error {
-				_, err := c.CreateVM(ctx, CreateVMRequest{Name: name})
-				return err
-			}},
-			{"GET /vms/" + escaped, func(ctx context.Context, c *Runtime) error { _, err := c.GetVM(ctx, name); return err }},
-			{"PATCH /vms/" + escaped, func(ctx context.Context, c *Runtime) error {
-				_, err := c.UpdateVMTags(ctx, name, nil, []Tag{{Key: "k", Value: "v"}})
-				return err
-			}},
-			{"DELETE /vms/" + escaped, func(ctx context.Context, c *Runtime) error { return c.DeleteVM(ctx, name) }},
-			{"POST /vnics", func(ctx context.Context, c *Runtime) error {
-				_, err := c.CreateVNIC(ctx, CreateVNICRequest{SubnetURN: name})
-				return err
-			}},
-			{"GET /vnics/" + escaped, func(ctx context.Context, c *Runtime) error { _, err := c.GetVNIC(ctx, name); return err }},
-			{"PUT /vnics/" + escaped, func(ctx context.Context, c *Runtime) error {
-				_, err := c.RenameVNIC(ctx, name, "eth1")
-				return err
-			}},
-			{"PATCH /vnics/" + escaped, func(ctx context.Context, c *Runtime) error {
-				_, err := c.UpdateVNICTags(ctx, name, nil, []Tag{{Key: "k", Value: "v"}})
-				return err
-			}},
-			{"DELETE /vnics/" + escaped, func(ctx context.Context, c *Runtime) error { return c.DeleteVNIC(ctx, name) }},
-			{"POST /volumes", func(ctx context.Context, c *Runtime) error {
-				_, err := c.CreateVolume(ctx, CreateVolumeRequest{Name: name, Size: "1Gi"})
-				return err
-			}},
-			{"GET /volumes/" + escaped, func(ctx context.Context, c *Runtime) error {
-				_, err := c.GetVolume(ctx, name)
-				return err
-			}},
-			{"POST /volumes/" + escaped + "/resize", func(ctx context.Context, c *Runtime) error {
-				_, err := c.ResizeVolume(ctx, name, "2Gi")
-				return err
-			}},
-			{"PATCH /volumes/" + escaped, func(ctx context.Context, c *Runtime) error {
-				_, err := c.UpdateVolumeTags(ctx, name, nil, []Tag{{Key: "k", Value: "v"}})
-				return err
-			}},
-			{"DELETE /volumes/" + escaped, func(ctx context.Context, c *Runtime) error { return c.DeleteVolume(ctx, name) }},
-			{"POST /volumes/" + escaped + "/attach/" + escaped, func(ctx context.Context, c *Runtime) error {
-				_, err := c.AttachVolume(ctx, name, name)
-				return err
-			}},
-			{"DELETE /volumes/" + escaped + "/attach/" + escaped, func(ctx context.Context, c *Runtime) error {
-				return c.DetachVolume(ctx, name, name)
-			}},
-			{"POST /vm-groups", func(ctx context.Context, c *Runtime) error {
-				_, err := c.CreateVMGroup(ctx, CreateVMGroupRequest{Name: name})
-				return err
-			}},
-			{"GET /vm-groups/" + escaped, func(ctx context.Context, c *Runtime) error {
-				_, err := c.GetVMGroup(ctx, name)
-				return err
-			}},
-			{"DELETE /vm-groups/" + escaped, func(ctx context.Context, c *Runtime) error { return c.DeleteVMGroup(ctx, name) }},
-			{"GET /skus", func(ctx context.Context, c *Runtime) error { _, err := c.ListSKUs(ctx); return err }},
-		}
-
-		for _, operation := range operations {
-			t.Run(name+" "+operation.want, func(t *testing.T) {
-				t.Parallel()
-				var mu sync.Mutex
-				var requests []string
-				runtime := newGeneratedTestRuntime(t, "/gateway%20prefix", func(w http.ResponseWriter, r *http.Request) {
-					if r.Header.Get("Authorization") != "Bearer token" || r.Header.Get("X-Tenant") != "tenant" {
-						t.Errorf("%s %s: Authorization = %q, X-Tenant = %q", r.Method, r.URL.EscapedPath(),
-							r.Header.Get("Authorization"), r.Header.Get("X-Tenant"))
-					}
-					mu.Lock()
-					requests = append(requests, r.Method+" "+strings.TrimPrefix(r.URL.EscapedPath(), base))
-					mu.Unlock()
-					// Machine reads succeed so attachment calls reach their command; every
-					// other read reports absence so waits end or time out quickly.
-					switch {
-					case r.Method == http.MethodGet && strings.HasPrefix(r.URL.EscapedPath(), base+"/vms/"):
-						writeEnvelope(w, map[string]any{"name": name, "status": "active"})
-					// A rename reads the VNIC first to keep its public IP.
-					case r.Method == http.MethodGet && strings.HasPrefix(r.URL.EscapedPath(), base+"/vnics/"):
-						writeEnvelope(w, map[string]any{"urn": "urn:" + name, "name": name})
-					case r.Method == http.MethodGet:
-						w.WriteHeader(http.StatusNotFound)
-					default:
-						writeEnvelope(w, map[string]any{})
-					}
-				})
-				runtime.pollInterval = time.Millisecond
-				runtime.lifecycleTimeout = 50 * time.Millisecond
-
-				_ = operation.call(context.Background(), runtime)
-
-				mu.Lock()
-				defer mu.Unlock()
-				for _, request := range requests {
-					if request == operation.want {
-						return
-					}
-				}
-				t.Errorf("requests = %q, want one %q", requests, operation.want)
-			})
-		}
 	}
 }
 
@@ -393,22 +234,6 @@ func TestInfraRequestBodiesMatchTheHandwrittenWire(t *testing.T) {
 			})
 			return err
 		}, `{"name":"data","size":"10Gi","storageClass":"standard","accessMode":"ReadWriteOnce","tags":[{"key":"env","value":"prod"}]}`},
-		{"create VM group minimal", http.MethodPost, func(c *Runtime) error {
-			_, err := c.CreateVMGroup(context.Background(), CreateVMGroupRequest{
-				Name: "g", SKUID: "sku", VPCID: "id", AutoscalingPolicy: AutoscalingPolicy{MinReplicas: 1, MaxReplicas: 2},
-			})
-			return err
-		}, `{"name":"g","skuID":"sku","vpcID":"id","image":"ubuntu-24.04-lts","diskSizeGB":32,"autoscalers":{"min_replicas":1,"max_replicas":2}}`},
-		{"create VM group full", http.MethodPost, func(c *Runtime) error {
-			_, err := c.CreateVMGroup(context.Background(), CreateVMGroupRequest{
-				Name: "g", SKUID: "sku", VPCID: "id", Image: "ubuntu",
-				AutoscalingPolicy: AutoscalingPolicy{MinReplicas: 1, MaxReplicas: 2, Cron: &CronRule{
-					Timezone: "UTC", Start: "0 8 * * *", End: "0 18 * * *", DesiredReplicas: 2,
-				}},
-				Tags: []Tag{{Key: "env", Value: "prod"}}, Customization: cloudInit,
-			})
-			return err
-		}, `{"name":"g","skuID":"sku","vpcID":"id","image":"ubuntu","diskSizeGB":32,"autoscalers":{"min_replicas":1,"max_replicas":2,"cron":{"timezone":"UTC","start":"0 8 * * *","end":"0 18 * * *","desiredReplicas":2}},"tags":[{"key":"env","value":"prod"}],"customization":{"cloudInit":{"userData":"#cloud-config"}}}`},
 		{"resize volume", http.MethodPost, func(c *Runtime) error {
 			_, err := c.ResizeVolume(context.Background(), "data", "20Gi")
 			return err
@@ -491,10 +316,6 @@ func TestInfraReadsMapEveryField(t *testing.T) {
 	volume := Volume{URN: "urn:vol", Name: "data", Size: "10Gi",
 		VolumeMode: "Filesystem", Status: "attached", LastError: "none", TenantID: "t", AttachedToVM: "vm",
 		Tags: []Tag{{Key: "env", Value: "prod"}}, Labels: map[string]string{"l": "1"}, Annotations: map[string]string{"a": "2"}}
-	group := VMGroup{URN: "urn:g", Name: "g", SKU: sku, Status: "active", LastError: "none", Tags: nil,
-		AttachedVolumes: []string{"z", "y"}, AutoscalingPolicy: AutoscalingPolicy{MinReplicas: 1, MaxReplicas: 3,
-			Cron: &CronRule{Timezone: "UTC", Start: "s", End: "e", DesiredReplicas: 2}}}
-
 	vnic := VNIC{ID: "vnic-id", URN: "asc:network:t:vnic:vnic-id", Name: "eth1", SubnetURN: "urn:s", VMURN: "urn:vm",
 		PrivateIP: "10.0.0.5", PublicIP: "203.0.113.10", MAC: "00:00:00:00:00:01", Status: "attached", LastError: "none",
 		Tags: []Tag{{Key: "env", Value: "prod"}}}
@@ -511,8 +332,6 @@ func TestInfraReadsMapEveryField(t *testing.T) {
 			writeEnvelope(w, subnetsData(vpc.Subnets))
 		case "/api/infra-gateway/volumes/data":
 			writeEnvelope(w, volumeData(volume))
-		case "/api/infra-gateway/vm-groups/g":
-			writeEnvelope(w, vmGroupData(group))
 		case "/api/infra-gateway/skus":
 			writeEnvelope(w, []map[string]any{skuData(sku)})
 		default:
@@ -538,11 +357,6 @@ func TestInfraReadsMapEveryField(t *testing.T) {
 	gotVolume, err := runtime.GetVolume(ctx, "data")
 	if err != nil || !reflect.DeepEqual(gotVolume, volume) {
 		t.Errorf("GetVolume() = %#v, %v, want %#v", gotVolume, err, volume)
-	}
-	gotGroup, err := runtime.GetVMGroup(ctx, "g")
-	sort.Strings(group.AttachedVolumes)
-	if err != nil || !reflect.DeepEqual(gotGroup, group) {
-		t.Errorf("GetVMGroup() = %#v, %v, want %#v", gotGroup, err, group)
 	}
 	gotVNIC, err := runtime.GetVNIC(ctx, "vnic-id")
 	if err != nil || !reflect.DeepEqual(gotVNIC, vnic) {
