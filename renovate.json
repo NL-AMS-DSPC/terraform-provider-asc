@@ -1,0 +1,59 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "enabledManagers": [
+    "gomod",
+    "github-actions"
+  ],
+  "addLabels": [
+    "dependencies"
+  ],
+  "commitMessagePrefix": "chore(deps):",
+  "prConcurrentLimit": 10,
+  "prHourlyLimit": 0,
+  "rebaseWhen": "auto",
+  "minimumReleaseAge": "7 days",
+  "internalChecksFilter": "strict",
+  "vulnerabilityAlerts": {
+    "enabled": true
+  },
+  "postUpdateOptions": [
+    "gomodTidy"
+  ],
+  "packageRules": [
+    {
+      "matchPackageNames": [
+        "github.com/hashicorp/terraform-plugin-framework",
+        "github.com/hashicorp/terraform-plugin-framework-validators",
+        "github.com/hashicorp/terraform-plugin-go",
+        "github.com/hashicorp/terraform-plugin-testing"
+      ],
+      "groupName": "terraform-plugin"
+    },
+    {
+      "matchPackageNames": [
+        "github.com/oapi-codegen/runtime",
+        "github.com/oapi-codegen/oapi-codegen/v2"
+      ],
+      "groupName": "oapi-codegen"
+    },
+    {
+      "matchManagers": [
+        "gomod"
+      ],
+      "labels": [
+        "go"
+      ]
+    },
+    {
+      "matchManagers": [
+        "github-actions"
+      ],
+      "labels": [
+        "actions"
+      ]
+    }
+  ]
+}
