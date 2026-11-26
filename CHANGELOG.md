@@ -6,6 +6,8 @@ All notable changes to this provider are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-26
+
 This release follows ASC's move from a VPC ID to virtual network interfaces on
 virtual machines, removes VM groups, and contains breaking changes.
 
